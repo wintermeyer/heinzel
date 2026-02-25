@@ -1,4 +1,4 @@
-# claude-sysadmin
+# heinzel
 
 A `CLAUDE.md` configuration for using
 [Claude Code](https://claude.ai/code) as a remote sysadmin for
@@ -15,9 +15,9 @@ Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 session:
 
 ```
-you@mac ~ % git clone https://github.com/wintermeyer/claude-sysadmin.git
-you@mac ~ % cd claude-sysadmin
-you@mac claude-sysadmin % claude
+you@mac ~ % git clone https://github.com/wintermeyer/heinzel.git
+you@mac ~ % cd heinzel
+you@mac heinzel % claude
 ```
 
 Claude Code starts up:
@@ -25,7 +25,7 @@ Claude Code starts up:
 ```
  ▗ ▗   ▖ ▖  Claude Code
             Opus 4.6
-   ▘▘ ▝▝    ~/claude-sysadmin
+   ▘▘ ▝▝    ~/heinzel
 
  ❯ SSH into web1.example.com and upgrade the system.
 ```
@@ -113,10 +113,10 @@ left off.
 - **Safety first** — asks before destructive commands, firewall
   changes, reboots, and network restarts.
 - **Backups** — copies config files to
-  `/var/tmp/claude-sysadmin-backup/` before editing
+  `/var/tmp/heinzel-backup/` before editing
   (auto-cleaned after 30 days).
 - **Changelog** — logs all changes to
-  `/var/log/claude-sysadmin.log` on each server and keeps a
+  `/var/log/heinzel.log` on each server and keeps a
   local copy in `memory/servers/<hostname>/changelog.log`.
 - **Dry-runs** — runs dry-run commands before actual package
   operations when the package manager supports it.
@@ -199,7 +199,7 @@ Need help setting this up for your infrastructure, or want a
 team to manage your servers with AI-assisted tooling?
 
 **[Wintermeyer Consulting](https://wintermeyer-consulting.de)**
-offers consulting and hands-on support for claude-sysadmin
+offers consulting and hands-on support for heinzel
 deployments — from initial setup to ongoing server management.
 
 Contact the project founder Stefan Wintermeyer and his team:
@@ -252,7 +252,7 @@ But the mitigations are also real:
 - **It reads the docs** before running commands it's not sure
   about, which is more than most of us do at 2 AM.
 
-The question isn't whether claude-sysadmin is risk-free — it
+The question isn't whether heinzel is risk-free — it
 isn't. The question is whether a disciplined AI that follows
 every safety rule every time, with a human reviewing every
 command, produces fewer disasters than a human working alone
@@ -262,6 +262,18 @@ I (Stefan Wintermeyer) think the answer is yes — over time,
 and with the right guardrails. But like FSD, it requires you
 to stay in the driver's seat. Keep your hands on the wheel.
 Review every command. Do not blindly approve!
+
+## Why Heinzel?
+
+The name comes from the
+[Heinzelmannchen](https://en.wikipedia.org/wiki/Heinzelm%C3%A4nnchen)
+— the helpful gnomes of Cologne from German folklore. Every
+night, while the people of Cologne slept, the
+Heinzelmannchen crept out and did all the work: baking
+bread, building houses, finishing whatever was left undone.
+An invisible helper that quietly takes care of things — a
+fitting name for a server administration tool that handles
+the tedious work while you review and approve.
 
 ## Contributing
 

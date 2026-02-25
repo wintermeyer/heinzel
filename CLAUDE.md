@@ -5,7 +5,7 @@ when working with code in this repository.
 
 ## Project
 
-claude-sysadmin — Remote administration of Linux servers
+heinzel — Remote administration of Linux servers
 via SSH. Supports any Linux distribution (Debian, Ubuntu,
 RHEL, CentOS, Fedora, Alpine, SUSE, Arch, and others).
 
@@ -164,7 +164,7 @@ changelog and server memory.
 Before editing any config file, back it up:
 
 ```
-BACKUP_DIR="/var/tmp/claude-sysadmin-backup"
+BACKUP_DIR="/var/tmp/heinzel-backup"
 mkdir -p "$BACKUP_DIR"
 cp /etc/some/config.conf \
   "$BACKUP_DIR/config.conf.$(date +%Y%m%d-%H%M%S)"
@@ -174,7 +174,7 @@ find "$BACKUP_DIR" -type f -mtime +30 -delete
 
 ## Changelog
 
-Log to `/var/log/claude-sysadmin.log` on the server.
+Log to `/var/log/heinzel.log` on the server.
 **Every session gets at least one entry** — even if no
 changes were made. If the session was read-only, log a
 one-line summary of what was checked or investigated.
@@ -259,7 +259,7 @@ beyond roughly 30 lines, compact it:
   installed packages into a services summary).
 - Drop historical detail — memory is for current state, not
   a changelog (the changelog lives on the server at
-  `/var/log/claude-sysadmin.log` and locally in
+  `/var/log/heinzel.log` and locally in
   `changelog.log`).
 
 The goal is a quick-reference snapshot of the server, not a
