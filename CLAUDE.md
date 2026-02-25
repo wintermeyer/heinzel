@@ -101,6 +101,11 @@ was detected so they can decide how to proceed.
   SUSE, `apk` on Alpine, `pacman` on Arch).
 - **Prefer stable/official repos only.** Do not add
   third-party repos or backports without asking.
+- **Stick to stable release tracks.** Never suggest
+  switching to testing, unstable, or rolling-release
+  channels (e.g. Debian `testing`/`sid`, Alpine `edge`,
+  Fedora Rawhide, openSUSE Tumbleweed) without asking.
+  Always target the stable or LTS release.
 - **Dry-run first** when the package manager supports it
   (e.g. `apt-get --dry-run upgrade`, `dnf --assumeno update`)
   before making changes.
