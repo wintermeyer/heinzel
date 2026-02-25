@@ -28,6 +28,21 @@ done as a normal user, do it as a normal user. If only one
 command in a sequence needs root, use `sudo` for that
 specific command.
 
+## Default SSH User
+
+The user's preferred non-root SSH username is stored in
+`memory/user.md`. Read this file at the start of every
+session.
+
+**If `memory/user.md` does not exist or has no default SSH
+user set:** ask the user what username they typically use
+for non-root SSH access on their servers, then save it to
+`memory/user.md`.
+
+When the user does not explicitly specify a username and
+the task does not require root, use this default username
+with `sudo` for privileged commands.
+
 ## OS Detection (mandatory first step)
 
 Before doing any work on a server, you **must** know its OS.
