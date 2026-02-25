@@ -43,6 +43,25 @@ When the user does not explicitly specify a username and
 the task does not require root, use this default username
 with `sudo` for privileged commands.
 
+## Sudo Availability
+
+When connecting as a non-root user, `sudo` may prompt for
+a password — which cannot be entered in this
+non-interactive SSH setup. If you discover that `sudo`
+requires a password:
+
+1. **Stop using `sudo` on that server** for the rest of
+   the session.
+2. **Record it** in the server's memory file
+   (`memory/servers/<hostname>/memory.md`) by adding:
+   `- Sudo: requires password (unusable)`
+3. **Fall back to SSH as root** (`ssh root@hostname`) for
+   any commands that need elevated privileges.
+
+On subsequent connections, check the server's memory for
+this flag. If sudo is marked as unusable, connect as root
+directly for privileged tasks — do not attempt `sudo`.
+
 ## OS Detection (mandatory first step)
 
 Before doing any work on a server, you **must** know its OS.
