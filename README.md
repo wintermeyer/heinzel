@@ -10,10 +10,12 @@ while you review and approve each step.
 
 ### Auto-detection on first connection
 
-Open a terminal, `cd` into the cloned repo, and launch Claude
-Code:
+Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+(the CLI) if you haven't already. Then clone the repo and start a
+session:
 
 ```
+you@mac ~ % git clone https://github.com/wintermeyer/claude-sysadmin.git
 you@mac ~ % cd claude-sysadmin
 you@mac claude-sysadmin % claude
 ```
