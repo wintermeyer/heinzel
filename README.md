@@ -88,9 +88,10 @@ you launch Claude Code again and type:
  ❯ Check on web1.example.com.
 ```
 
-Claude reads `memory/servers/web1.example.com.md`, already
-knows it's Debian 12 with nginx and PostgreSQL, and picks up
-right where it left off.
+Claude reads `memory/servers/web1.example.com/memory.md`,
+already knows it's Debian 12 with nginx and PostgreSQL,
+checks the local changelog, and picks up right where it
+left off.
 
 ### More things you can ask
 
@@ -115,7 +116,8 @@ right where it left off.
   `/var/tmp/claude-sysadmin-backup/` before editing
   (auto-cleaned after 30 days).
 - **Changelog** — logs all changes to
-  `/var/log/claude-sysadmin.log` on each server.
+  `/var/log/claude-sysadmin.log` on each server and keeps a
+  local copy in `memory/servers/<hostname>/changelog.log`.
 - **Dry-runs** — runs dry-run commands before actual package
   operations when the package manager supports it.
 - **Stable repos only** — no third-party sources without
@@ -163,7 +165,9 @@ rules/
   suse.md              — openSUSE & SLES rules
 memory/
   MEMORY.md            — Index for server memory
-  servers/             — Per-server memory files (gitignored)
+  servers/<hostname>/
+    memory.md          — Server state snapshot (gitignored)
+    changelog.log      — Local change history (gitignored)
 ```
 
 ## Warning

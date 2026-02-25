@@ -69,7 +69,9 @@ Before doing any work on a server, you **must** know its OS.
 **On subsequent connections to a known server:**
 
 1. Read the server's memory file from
-   `memory/servers/<hostname>.md`.
+   `memory/servers/<hostname>/memory.md` and its local
+   changelog from
+   `memory/servers/<hostname>/changelog.log`.
 2. Read the matching rule file from `rules/`.
 3. Verify the OS version is still current by running
    `cat /etc/os-release` — update the memory file if it
@@ -180,13 +182,41 @@ server. Format:
 [2026-02-25 14:35] Edited /etc/nginx/sites-available/example.conf — added proxy_pass for /api
 ```
 
+## Local Changelog
+
+Mirror every entry from the remote changelog into a local
+file at `memory/servers/<hostname>/changelog.log`. Use
+the same timestamp format but **compress the entries** —
+keep them shorter than the remote log. The local log is
+a quick-reference history, not a verbatim copy.
+
+Example (remote → local):
+
+```
+Remote: [2026-02-25 14:30] Upgraded 12 packages (apt-get upgrade)
+Local:  [2026-02-25 14:30] Upgraded 12 packages
+
+Remote: [2026-02-25 14:35] Edited /etc/nginx/sites-available/example.conf — added proxy_pass for /api
+Local:  [2026-02-25 14:35] nginx: added proxy_pass for /api
+```
+
+**Retention:** trim entries older than 2 years whenever
+you write to the file. Remove any line whose timestamp
+is more than 2 years before today's date.
+
 ## Server Memory
 
-Server details are stored in `memory/servers/<hostname>.md`
-in this repo. These files persist across sessions.
+Each server has its own directory at
+`memory/servers/<hostname>/` containing:
 
-**After first connecting to a server:** detect the OS and
-create the memory file with at least:
+- `memory.md` — current state snapshot (compact)
+- `changelog.log` — local change history (compressed)
+
+These files persist across sessions.
+
+**After first connecting to a server:** create the server
+directory, detect the OS, and create `memory.md` with at
+least:
 
 ```markdown
 # hostname.example.com
@@ -222,8 +252,9 @@ beyond roughly 30 lines, compact it:
 - Merge related items (e.g. collapse a list of individually
   installed packages into a services summary).
 - Drop historical detail — memory is for current state, not
-  a changelog (the changelog lives in
-  `/var/log/claude-sysadmin.log` on the server).
+  a changelog (the changelog lives on the server at
+  `/var/log/claude-sysadmin.log` and locally in
+  `changelog.log`).
 
 The goal is a quick-reference snapshot of the server, not a
 growing log. If you can't tell the server's current state at
