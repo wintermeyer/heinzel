@@ -2,62 +2,76 @@
 
 A `CLAUDE.md` configuration for using
 [Claude Code](https://claude.ai/code) as a remote sysadmin for
-Linux servers.
-
-Imagine telling your terminal *"SSH into web1.example.com and
-upgrade the system"* — and it just does it. It detects the OS,
-runs a dry-run first, backs up configs before touching them,
-performs the upgrade, and gives you a summary when it's done.
-
-Instead of typing commands one by one, you describe what you want
-in plain English. Claude Code connects to your server via SSH,
-figures out the right commands for the server's OS, and executes
-them — while you review and approve each step. It's like
-pair-programming with a sysadmin who never forgets to make a
-backup.
+Linux servers. Describe what you want in plain English — Claude
+connects via SSH, detects the OS, and runs the right commands
+while you review and approve each step.
 
 ## Examples
 
 ### Auto-detection on first connection
 
-**You:** *"SSH into web1.example.com and upgrade the system."*
-
-Claude detects the OS first:
-
-```
-$ ssh root@web1.example.com cat /etc/os-release
-PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
-ID=debian
-VERSION_ID="12"
-...
-```
-
-**Claude:** *"web1.example.com is running Debian 12 (Bookworm).
-I'll use apt-get for package management. Running dry-run
-first..."*
+Open a terminal, `cd` into the cloned repo, and launch Claude
+Code:
 
 ```
-$ ssh root@web1.example.com apt-get update
-[...]
-$ ssh root@web1.example.com apt-get --dry-run upgrade
-12 upgraded, 0 newly installed, 0 to remove.
+you@mac ~ % cd claude-sysadmin
+you@mac claude-sysadmin % claude
 ```
 
-**Claude:** *"12 packages to upgrade including a kernel update.
-This will need a reboot afterwards. Proceed?"*
+Claude Code starts up:
+
+```
+ ▗ ▗   ▖ ▖  Claude Code
+            Opus 4.6
+   ▘▘ ▝▝    ~/claude-sysadmin
+
+ ❯ SSH into web1.example.com and upgrade the system.
+```
+
+Type your request at the prompt — plain English, no special
+syntax. Claude detects the OS, runs a dry-run, and walks you
+through every step:
+
+```
+ ● SSH into web1.example.com to detect the OS first.
+
+ ❯ ssh root@web1.example.com cat /etc/os-release
+   PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+   ID=debian
+   VERSION_ID="12"
+   ...
+
+ ● web1.example.com is running Debian 12 (Bookworm). I'll use
+   apt-get for package management. Let me run a dry-run first
+   to see what needs upgrading.
+
+ ❯ ssh root@web1.example.com apt-get update
+   [...]
+
+ ❯ ssh root@web1.example.com apt-get --dry-run upgrade
+   12 upgraded, 0 newly installed, 0 to remove.
+
+ ● 12 packages to upgrade including a kernel update. This will
+   need a reboot afterwards. Proceed?
+```
+
+You review each command before it runs. Nothing happens
+without your approval.
 
 ### Works across distros
 
-**You:** *"SSH into app.example.com and install nginx."*
+```
+ ❯ SSH into app.example.com and install nginx.
+```
 
 If it's RHEL:
 ```
-$ ssh root@app.example.com dnf install -y nginx
+ ❯ ssh root@app.example.com dnf install -y nginx
 ```
 
 If it's Alpine:
 ```
-$ ssh root@app.example.com apk add nginx
+ ❯ ssh root@app.example.com apk add nginx
 ```
 
 Claude picks the right command automatically based on the
@@ -65,9 +79,12 @@ detected OS.
 
 ### Server memory across sessions
 
-After working on a server, Claude remembers it for next time:
+After working on a server, Claude remembers it. Next week
+you launch Claude Code again and type:
 
-**You (next week):** *"Check on web1.example.com."*
+```
+ ❯ Check on web1.example.com.
+```
 
 Claude reads `memory/servers/web1.example.com.md`, already
 knows it's Debian 12 with nginx and PostgreSQL, and picks up
@@ -75,18 +92,14 @@ right where it left off.
 
 ### More things you can ask
 
-- *"Set up a Let's Encrypt certificate for shop.example.com
-  using certbot."*
-- *"Show me disk usage on db.example.com — it's running low
-  on space."*
-- *"Install and configure PostgreSQL 15 on
-  db2.example.com."*
-- *"Harden the firewall on staging.example.com — only allow
-  SSH, HTTP, and HTTPS."*
-- *"Figure out why cron jobs aren't running on
-  worker.example.com."*
-- *"Check if all servers (web1, web2, db1) need a reboot
-  after the last kernel update."*
+```
+ ❯ Set up a Let's Encrypt certificate for shop.example.com using certbot.
+ ❯ Show me disk usage on db.example.com — it's running low on space.
+ ❯ Install and configure PostgreSQL 15 on db2.example.com.
+ ❯ Harden the firewall on staging.example.com — only allow SSH, HTTP, and HTTPS.
+ ❯ Figure out why cron jobs aren't running on worker.example.com.
+ ❯ Check if all servers (web1, web2, db1) need a reboot after the last kernel update.
+```
 
 ## Features
 

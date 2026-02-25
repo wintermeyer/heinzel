@@ -107,6 +107,46 @@ updates configured. The specific tools vary by distro — see
 the matching `rules/<family>.md` file. If they are missing,
 flag it to the user.
 
+## Firewall Awareness for Service Changes
+
+Whenever you install, remove, or configure a network-facing
+service, **always consider the firewall implications** and
+proactively raise them with the user. Do not silently skip
+this step.
+
+**After installing or configuring a service:**
+
+1. Check whether the service needs ports opened in the
+   firewall (e.g. nginx needs 80/443, PostgreSQL needs 5432).
+2. Check the current firewall rules to see if those ports
+   are already open.
+3. If ports need opening, **ask the user before changing
+   anything.** Interview them:
+   - Should the port be open to the whole internet, or
+     restricted to specific IPs or subnets?
+   - Is this a public-facing service or internal only?
+   - Are there other services on the server that should
+     inform the decision (e.g. a database should almost
+     never be open to the internet)?
+4. **Recommend a safe default** — explain what you'd
+   suggest and why. For example:
+   - Web servers: open 80 and 443 to all.
+   - Databases: restrict to specific application server IPs
+     or localhost only.
+   - Admin tools: restrict to the user's IP or a management
+     subnet.
+5. **Explain the risks** in plain language — what happens
+   if the port is left closed (service unreachable) vs.
+   opened too broadly (exposed to the internet).
+
+**When removing a service:** check if there are firewall
+rules that were only needed for that service and offer to
+close those ports.
+
+**Always use the distro's firewall tool** (see
+`rules/<family>.md`) and log any firewall changes to the
+changelog and server memory.
+
 ## Backups Before Modifying Config Files
 
 Before editing any config file, back it up:
@@ -229,3 +269,11 @@ always better than a wrong action on a production server.
 - Manual administration only (no Ansible/Puppet/Chef).
 - After completing work, give a brief summary of what was
   done.
+- **Wrap all `.md` files at 80 characters.** This applies
+  to every Markdown file in this project — CLAUDE.md, rule
+  files, memory files, and README.md.
+- **Prefer vanilla solutions.** Use the simplest, most
+  standard approach that gets the job done. Avoid clever
+  tricks, unnecessary abstractions, or exotic tools when a
+  straightforward, well-known method works. The boring
+  solution is usually the right one.
