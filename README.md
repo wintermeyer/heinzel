@@ -8,7 +8,6 @@ Imagine telling your terminal *"SSH into web1.example.com and
 upgrade the system"* — and it just does it. It detects the OS,
 runs a dry-run first, backs up configs before touching them,
 performs the upgrade, and gives you a summary when it's done.
-That's what this project enables.
 
 Instead of typing commands one by one, you describe what you want
 in plain English. Claude Code connects to your server via SSH,
@@ -16,114 +15,6 @@ figures out the right commands for the server's OS, and executes
 them — while you review and approve each step. It's like
 pair-programming with a sysadmin who never forgets to make a
 backup.
-
-## Warning
-
-> [!CAUTION]
-> This concept gives an AI agent access to your servers via
-> SSH. This is inherently dangerous!
-
-- Claude can operate as **root** or use **sudo** — a single
-  mistake can take down a server, wipe data, or lock you out
-  permanently.
-- You are trusting an LLM to make decisions on **live production
-  systems**. LLMs can hallucinate, misunderstand context, or
-  produce commands with unintended side effects.
-- A bad firewall rule or network change can **cut off SSH
-  access**, leaving you with no remote way back in.
-- There is **no undo** for many sysadmin operations. Deleted
-  files, overwritten configs, and broken boot loaders don't come
-  with a rollback button.
-
-**This is for experienced Linux sysadmins only.** You should be
-able to recognize a dangerous command before approving it. If you
-aren't comfortable administering Linux servers from the command
-line yourself, do not use this!!!
-
-Always review every command Claude proposes before allowing
-execution. The guardrails in `CLAUDE.md` reduce risk but do not
-eliminate it.
-
-## On Risk: The Full-Self-Driving Argument
-
-Yes, this tool can break your servers. An LLM with root access
-to production systems is a genuinely dangerous idea — there's no
-sugarcoating that. But consider an analogy.
-
-Tesla's Full-Self-Driving can kill people. It has. And yet over
-time, the data shows that it prevents more accidents than it
-causes. The calculus isn't "is it perfect?" — it's "is it better
-than the alternative?" Human drivers are tired, distracted,
-overconfident. They run red lights. They text at the wheel. FSD
-doesn't do any of that. It's not flawless, but it's consistent.
-
-Server administration has a similar problem. Human sysadmins
-make mistakes too — especially when they're tired, rushed, or
-managing dozens of servers at 2 AM during an outage. They forget
-to make backups before editing configs. They run `rm -rf` in the
-wrong directory. They apply firewall rules that lock themselves
-out. They skip the dry-run because they're in a hurry. Every
-experienced sysadmin has a horror story.
-
-Claude doesn't get tired. It doesn't get flustered during an
-outage. It **always** makes a backup before editing a config. It
-**always** runs the dry-run first. It **always** checks the OS
-version before assuming which commands to use. It follows the
-safety checklist every single time, not just when it remembers
-to.
-
-The risks are real:
-
-- An LLM can hallucinate a command that doesn't do what it
-  thinks.
-- It can misunderstand your intent and take the wrong action.
-- A single bad command as root can be unrecoverable.
-
-But the mitigations are also real:
-
-- **You approve every command** before it runs. Claude proposes,
-  you decide.
-- **Guardrails are baked in** — backup procedures, dry-runs,
-  least-privilege, changelog logging. A human might skip these
-  under pressure. Claude won't.
-- **It explains what it's doing and why**, so even less
-  experienced admins can learn and catch mistakes.
-- **It reads the docs** before running commands it's not sure
-  about, which is more than most of us do at 2 AM.
-
-The question isn't whether claude-sysadmin is risk-free — it
-isn't. The question is whether a disciplined AI that follows
-every safety rule every time, with a human reviewing every
-command, produces fewer disasters than a human working alone
-under real-world conditions.
-
-I (Stefan Wintermeyer) think the answer is yes — over time, 
-and with the right guardrails. But like FSD, it requires you 
-to stay in the driver's seat. Keep your hands on the wheel. 
-Review every command. Do not blindly approve!
-
-## What This Is
-
-A set of guardrails and conventions for letting Claude Code SSH
-into your Linux servers to perform administration tasks —
-upgrades, debugging, config changes, etc.
-
-The `CLAUDE.md` file defines safety rules, backup procedures,
-and a changelog format so that Claude operates carefully on live
-systems. Distro-specific rules in `rules/` tell Claude the right
-commands for each OS family.
-
-## Supported Distributions
-
-| Family | Distributions | Rule file |
-|--------|--------------|-----------|
-| Debian | Debian, Ubuntu | `rules/debian.md` |
-| RHEL | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md` |
-| Alpine | Alpine Linux | `rules/alpine.md` |
-| SUSE | openSUSE, SLES | `rules/suse.md` |
-
-Other distributions work too — Claude will apply general Linux
-best practices and let you know which distro it detected.
 
 ## Examples
 
@@ -197,24 +88,7 @@ right where it left off.
 - *"Check if all servers (web1, web2, db1) need a reboot
   after the last kernel update."*
 
-## Usage
-
-1. Clone this repo into your working directory.
-2. Open Claude Code in that directory.
-3. Tell Claude the hostname of your server, e.g. *"SSH into
-   example.com and upgrade the system."*
-
-Claude will auto-detect the OS on first connection and
-remember it for future sessions.
-
-## Prerequisites
-
-- SSH key-based access to your target servers (no
-  password/passphrase prompts). This can be as root, as a
-  normal user, or as a normal user with sudo privileges.
-- Linux on the target servers (any distribution).
-
-## What It Does
+## Features
 
 - **Auto-detects the OS** — reads `/etc/os-release` and applies
   the right commands for the distro.
@@ -232,6 +106,37 @@ remember it for future sessions.
 - **Stable repos only** — no third-party sources without
   explicit approval.
 
+## Supported Distributions
+
+| Family | Distributions | Rule file |
+|--------|--------------|-----------|
+| Debian | Debian, Ubuntu | `rules/debian.md` |
+| RHEL | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md` |
+| Alpine | Alpine Linux | `rules/alpine.md` |
+| SUSE | openSUSE, SLES | `rules/suse.md` |
+
+Other distributions work too — Claude will apply general Linux
+best practices and let you know which distro it detected.
+
+## Getting Started
+
+### Prerequisites
+
+- SSH key-based access to your target servers (no
+  password/passphrase prompts). This can be as root, as a
+  normal user, or as a normal user with sudo privileges.
+- Linux on the target servers (any distribution).
+
+### Setup
+
+1. Clone this repo into your working directory.
+2. Open Claude Code in that directory.
+3. Tell Claude the hostname of your server, e.g. *"SSH into
+   example.com and upgrade the system."*
+
+Claude will auto-detect the OS on first connection and
+remember it for future sessions.
+
 ## Project Structure
 
 ```
@@ -246,6 +151,29 @@ memory/
   servers/             — Per-server memory files (gitignored)
 ```
 
+## Warning
+
+> [!CAUTION]
+> This gives an AI agent access to your servers via SSH.
+> Understand the risks before using it.
+
+- Claude can operate as **root** or use **sudo** — a wrong
+  command can take down a server or lock you out.
+- LLMs can hallucinate, misunderstand context, or produce
+  commands with unintended side effects.
+- A bad firewall rule or network change can **cut off SSH
+  access** with no remote way back in.
+- Many sysadmin operations have **no undo**.
+
+**This is for experienced Linux sysadmins.** You should be
+able to recognize a dangerous command before approving it.
+Always review every command Claude proposes before allowing
+execution.
+
+See [On Risk](#on-risk-the-full-self-driving-argument) below
+for why we think the guardrails make this worthwhile despite
+the risks.
+
 ## Professional Support
 
 Need help setting this up for your infrastructure, or want a
@@ -257,6 +185,64 @@ deployments — from initial setup to ongoing server management.
 
 Contact the project founder Stefan Wintermeyer and his team:
 **sw@wintermeyer-consulting.de**
+
+## On Risk: The Full-Self-Driving Argument
+
+Yes, this tool can break your servers. An LLM with root access
+to production systems is a genuinely dangerous idea — there's no
+sugarcoating that. But consider an analogy.
+
+Tesla's Full-Self-Driving can kill people. It has. And yet over
+time, the data shows that it prevents more accidents than it
+causes. The calculus isn't "is it perfect?" — it's "is it better
+than the alternative?" Human drivers are tired, distracted,
+overconfident. They run red lights. They text at the wheel. FSD
+doesn't do any of that. It's not flawless, but it's consistent.
+
+Server administration has a similar problem. Human sysadmins
+make mistakes too — especially when they're tired, rushed, or
+managing dozens of servers at 2 AM during an outage. They forget
+to make backups before editing configs. They run `rm -rf` in the
+wrong directory. They apply firewall rules that lock themselves
+out. They skip the dry-run because they're in a hurry. Every
+experienced sysadmin has a horror story.
+
+Claude doesn't get tired. It doesn't get flustered during an
+outage. It **always** makes a backup before editing a config. It
+**always** runs the dry-run first. It **always** checks the OS
+version before assuming which commands to use. It follows the
+safety checklist every single time, not just when it remembers
+to.
+
+The risks are real:
+
+- An LLM can hallucinate a command that doesn't do what it
+  thinks.
+- It can misunderstand your intent and take the wrong action.
+- A single bad command as root can be unrecoverable.
+
+But the mitigations are also real:
+
+- **You approve every command** before it runs. Claude proposes,
+  you decide.
+- **Guardrails are baked in** — backup procedures, dry-runs,
+  least-privilege, changelog logging. A human might skip these
+  under pressure. Claude won't.
+- **It explains what it's doing and why**, so even less
+  experienced admins can learn and catch mistakes.
+- **It reads the docs** before running commands it's not sure
+  about, which is more than most of us do at 2 AM.
+
+The question isn't whether claude-sysadmin is risk-free — it
+isn't. The question is whether a disciplined AI that follows
+every safety rule every time, with a human reviewing every
+command, produces fewer disasters than a human working alone
+under real-world conditions.
+
+I (Stefan Wintermeyer) think the answer is yes — over time,
+and with the right guardrails. But like FSD, it requires you
+to stay in the driver's seat. Keep your hands on the wheel.
+Review every command. Do not blindly approve!
 
 ## Contributing
 
