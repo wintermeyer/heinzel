@@ -59,7 +59,12 @@ Before doing any work on a server, you **must** know its OS.
 3. Read the matching rule file from `rules/<family>.md` in
    this repo (e.g. `rules/debian.md`). Follow those
    distro-specific conventions for all subsequent commands.
-4. Create a server memory file (see Server Memory below).
+4. Gather basic hardware info:
+   - CPU: `lscpu` (model, core count)
+   - Memory: `free -h` (total RAM)
+   - Disk: `df -h` (filesystem sizes and usage)
+5. Create a server memory file (see Server Memory below)
+   including the hardware info.
 
 **On subsequent connections to a known server:**
 
@@ -182,6 +187,9 @@ create the memory file with at least:
 # hostname.example.com
 - OS: Debian 12 (Bookworm)
 - Distro family: debian
+- CPU: 4× Intel Xeon E-2236 @ 3.40GHz
+- RAM: 16 GB
+- Disk: 80 GB (/ ext4, 45% used)
 - Last connected: 2026-02-25
 ```
 
