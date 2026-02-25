@@ -174,21 +174,27 @@ find "$BACKUP_DIR" -type f -mtime +30 -delete
 
 ## Changelog
 
-Log all changes to `/var/log/claude-sysadmin.log` on the
-server. Format:
+Log to `/var/log/claude-sysadmin.log` on the server.
+**Every session gets at least one entry** — even if no
+changes were made. If the session was read-only, log a
+one-line summary of what was checked or investigated.
+
+Format:
 
 ```
 [2026-02-25 14:30] Upgraded 12 packages (apt-get upgrade)
 [2026-02-25 14:35] Edited /etc/nginx/sites-available/example.conf — added proxy_pass for /api
+[2026-02-25 15:00] Read-only: checked OS, gathered hardware info
 ```
 
 ## Local Changelog
 
 Mirror every entry from the remote changelog into a local
-file at `memory/servers/<hostname>/changelog.log`. Use
-the same timestamp format but **compress the entries** —
-keep them shorter than the remote log. The local log is
-a quick-reference history, not a verbatim copy.
+file at `memory/servers/<hostname>/changelog.log`. This
+includes read-only session entries. Use the same timestamp
+format but **compress the entries** — keep them shorter
+than the remote log. The local log is a quick-reference
+history, not a verbatim copy.
 
 Example (remote → local):
 
