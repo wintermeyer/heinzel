@@ -1,4 +1,4 @@
-# heinzel
+# Heinzel
 
 A `CLAUDE.md` configuration for using
 [Claude Code](https://claude.ai/code) as a remote sysadmin for
