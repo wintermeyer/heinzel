@@ -1,0 +1,3 @@
+# Server memory files contain real hostnames and server details
+memory/servers/*
+!memory/servers/.gitkeep

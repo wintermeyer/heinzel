@@ -5,8 +5,9 @@ when working with code in this repository.
 
 ## Project
 
-claude-sysadmin — Remote administration of Debian Linux
-servers via SSH.
+claude-sysadmin — Remote administration of Linux servers
+via SSH. Supports any Linux distribution (Debian, Ubuntu,
+RHEL, CentOS, Fedora, Alpine, SUSE, Arch, and others).
 
 ## How It Works
 
@@ -27,13 +28,43 @@ done as a normal user, do it as a normal user. If only one
 command in a sequence needs root, use `sudo` for that
 specific command.
 
+## OS Detection (mandatory first step)
+
+Before doing any work on a server, you **must** know its OS.
+
+**On first connection to a new server:**
+
+1. Run `cat /etc/os-release` to detect the distro and
+   version.
+2. Determine the distro family:
+   - `debian` — Debian, Ubuntu, and derivatives
+   - `rhel` — RHEL, CentOS, Fedora, Rocky Linux, AlmaLinux
+   - `alpine` — Alpine Linux
+   - `suse` — openSUSE, SLES
+3. Read the matching rule file from `rules/<family>.md` in
+   this repo (e.g. `rules/debian.md`). Follow those
+   distro-specific conventions for all subsequent commands.
+4. Create a server memory file (see Server Memory below).
+
+**On subsequent connections to a known server:**
+
+1. Read the server's memory file from
+   `memory/servers/<hostname>.md`.
+2. Read the matching rule file from `rules/`.
+3. Verify the OS version is still current by running
+   `cat /etc/os-release` — update the memory file if it
+   has changed (e.g. after a distro upgrade).
+
+**If no rule file exists for the detected distro**, apply
+general Linux best practices and tell the user which distro
+was detected so they can decide how to proceed.
+
 ## Critical Safety Rules
 
 - **You are working on live production servers.** Treat every
   command with care.
-- **Always check the Debian version first**
-  (`cat /etc/debian_version` or `lsb_release -a`) before
-  doing any work. The server fleet is a mix of versions.
+- **Always detect the OS first** (see above) before doing
+  any work.
 - **Ask before:** reboots, firewall changes, network service
   restarts, any destructive command (`rm -rf`, `dd`, wiping
   data).
@@ -44,12 +75,22 @@ specific command.
   here cuts off SSH access. When network or firewall changes
   are needed, discuss with the user first. Often a reboot is
   safer than restarting networking live.
-- **Use `apt-get`** instead of `apt` — it's more reliable
-  for non-interactive/scripted use.
-- **Prefer stable Debian repos only.** Do not add
+- **Use the appropriate non-interactive package manager** for
+  the detected OS (`apt-get` on Debian/Ubuntu, `dnf` on
+  RHEL 8+/Fedora, `yum` on RHEL 7/CentOS 7, `zypper` on
+  SUSE, `apk` on Alpine, `pacman` on Arch).
+- **Prefer stable/official repos only.** Do not add
   third-party repos or backports without asking.
-- **Dry-run first** when available (e.g.
-  `apt-get --dry-run upgrade`) before making changes.
+- **Dry-run first** when the package manager supports it
+  (e.g. `apt-get --dry-run upgrade`, `dnf --assumeno update`)
+  before making changes.
+
+## Expected Software
+
+Every server should have a firewall and automatic security
+updates configured. The specific tools vary by distro — see
+the matching `rules/<family>.md` file. If they are missing,
+flag it to the user.
 
 ## Backups Before Modifying Config Files
 
@@ -74,15 +115,102 @@ server. Format:
 [2026-02-25 14:35] Edited /etc/nginx/sites-available/example.conf — added proxy_pass for /api
 ```
 
-## Expected Software
+## Server Memory
 
-`ufw` and `unattended-upgrades` should be installed on every
-server. If they are missing, flag it to the user.
+Server details are stored in `memory/servers/<hostname>.md`
+in this repo. These files persist across sessions.
+
+**After first connecting to a server:** detect the OS and
+create the memory file with at least:
+
+```markdown
+# hostname.example.com
+- OS: Debian 12 (Bookworm)
+- Distro family: debian
+- Last connected: 2026-02-25
+```
+
+**Update memory immediately after any system change.** Do
+not wait until the end of the session. If you perform a
+distro upgrade, install or remove packages, change firewall
+rules, modify services, or alter any system state — update
+the memory file right away so it always reflects the current
+state of the server. Examples:
+
+- Distro upgrade: update the OS and version fields.
+- Installed nginx: add it to the services list.
+- Opened port 443 in the firewall: note it.
+- Found a disk running low: add it to notes.
+
+**After completing work:** do a final review of the memory
+file. Make sure everything is current. Remove anything that
+is no longer true.
+
+**Keep memory compact.** If a server's memory file grows
+beyond roughly 30 lines, compact it:
+
+- Remove outdated entries (e.g. a "pending reboot" note
+  after the server has been rebooted).
+- Merge related items (e.g. collapse a list of individually
+  installed packages into a services summary).
+- Drop historical detail — memory is for current state, not
+  a changelog (the changelog lives in
+  `/var/log/claude-sysadmin.log` on the server).
+
+The goal is a quick-reference snapshot of the server, not a
+growing log. If you can't tell the server's current state at
+a glance, the memory file is too long.
+
+**On subsequent connections:** read the memory file first,
+then verify the OS version is still current.
+
+## Read the Docs
+
+Before using any tool, service, or command you are not fully
+certain about, **search for and read its official
+documentation first** — man pages, upstream docs, distro
+wiki, etc. Do not rely on memory alone. Verify syntax,
+flags, and behavior for the specific version installed on
+the server. Getting a flag wrong on a live server can be
+catastrophic.
+
+## Assume a Beginner User
+
+Treat the user as someone who does **not** fully understand
+the risks of server administration. Before executing
+anything potentially dangerous or consequential:
+
+- **Explain what the command does** in plain language.
+- **Explain the risks** — what could go wrong, whether it's
+  reversible, and what the blast radius is (single service,
+  whole server, network access, data loss).
+- **Explain why** you're recommending this approach over
+  alternatives.
+- Do not assume the user knows what terms like "kernel
+  upgrade", "firewall flush", or "service restart" imply.
+  Spell it out.
+
+## When in Doubt, Ask
+
+If anything is unclear or ambiguous — **stop and ask the
+user before proceeding.** Interview them to understand their
+intent. Examples of when to ask:
+
+- The user's request could be interpreted in multiple ways.
+- You're unsure which service, config file, or domain they
+  mean.
+- The task has significant risk and the user hasn't
+  acknowledged it.
+- You need context you don't have (e.g. "is this server
+  serving live traffic right now?").
+- The right approach depends on their priorities (speed vs.
+  safety, downtime tolerance, etc.).
+
+Never guess when you can ask. A short clarifying question is
+always better than a wrong action on a production server.
 
 ## Conventions
 
-- All servers follow vanilla Debian directory conventions —
-  no custom layouts.
 - Manual administration only (no Ansible/Puppet/Chef).
 - After completing work, give a brief summary of what was
   done.
