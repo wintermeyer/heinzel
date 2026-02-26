@@ -6,6 +6,8 @@ Linux servers. Describe what you want in plain English — Claude
 connects via SSH, detects the OS, and runs the right commands
 while you review and approve each step.
 
+[![Demo screencast](https://img.youtube.com/vi/ve_TFyJy_uU/hqdefault.jpg)](https://www.youtube.com/watch?v=ve_TFyJy_uU)
+
 ## Examples
 
 ### Auto-detection on first connection
