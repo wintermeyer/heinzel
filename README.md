@@ -14,9 +14,9 @@ cautious, methodical sysadmin that backs up before
 editing, dry-runs before installing, and asks before
 doing anything destructive.
 
-## 2 min. Demo Screencast on YouTube
+## 2 min Screencast on YouTube
 
-See how one can install and configure a firewall, upgrade the Linux distribution and setup automatic daily security updates by just asking Heinzel for it.
+See how one can install and configure a firewall, upgrade the Linux distribution and setup automatic daily security updates by just asking Heinzel for it:
 
 [![Demo screencast](https://img.youtube.com/vi/ve_TFyJy_uU/hqdefault.jpg)](https://www.youtube.com/watch?v=ve_TFyJy_uU)
 
