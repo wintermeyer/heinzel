@@ -101,8 +101,8 @@ under pressure.
   and applies the right commands for the distro.
   No guessing.
 - **Logs everything** — all changes are recorded in
-  `/var/log/heinzel.log` on the server and mirrored
-  locally in
+  the system journal (`journalctl -t heinzel`) and
+  mirrored locally in
   `memory/servers/<hostname>/changelog.log`.
 - **Remembers servers** — stores OS, services, and
   notes in `memory/servers/` for future sessions.
@@ -111,6 +111,28 @@ under pressure.
 - **Least privilege** — uses a normal user when
   possible, `sudo` only when necessary, root only
   as a last resort.
+
+## Accessing Logs
+
+Heinzel logs every action to the system journal on each
+server. To query the log:
+
+```bash
+# All entries
+journalctl -t heinzel
+
+# Filter by date
+journalctl -t heinzel --since "2026-02-01"
+
+# Last 20 entries
+journalctl -t heinzel -n 20
+```
+
+On Alpine Linux (which uses syslog instead of systemd):
+
+```bash
+grep heinzel /var/log/messages
+```
 
 ## Supported Distributions
 

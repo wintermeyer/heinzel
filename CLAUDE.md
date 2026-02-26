@@ -215,19 +215,28 @@ find "$BACKUP_DIR" -type f -mtime +30 -delete
 
 ## Changelog
 
-Log to `/var/log/heinzel.log` on the server.
+Log to the system journal using `logger -t heinzel "message"`
+on the server. Do **not** write to a custom log file. The
+system logger handles timestamps and log rotation
+automatically, so do not add a `[YYYY-MM-DD HH:MM]` prefix
+— just log the message text.
+
 **Every session gets at least one entry** — even if no
 changes were made. If the session was read-only, log a
 one-line summary of what was checked or investigated.
 
-Format — the full timestamp `[YYYY-MM-DD HH:MM]` is
-**mandatory**. Never omit the time component.
+```
+logger -t heinzel "Upgraded 12 packages (apt-get upgrade)"
+logger -t heinzel "Edited /etc/nginx/sites-available/example.conf — added proxy_pass for /api"
+logger -t heinzel "Read-only: checked OS, gathered hardware info"
+```
 
-```
-[2026-02-25 14:30] Upgraded 12 packages (apt-get upgrade)
-[2026-02-25 14:35] Edited /etc/nginx/sites-available/example.conf — added proxy_pass for /api
-[2026-02-25 15:00] Read-only: checked OS, gathered hardware info
-```
+**Reading back entries:**
+
+- **systemd distros** (Debian, RHEL, SUSE):
+  `journalctl -t heinzel`
+- **Alpine** (OpenRC/syslog):
+  `grep heinzel /var/log/messages`
 
 ## Local Changelog
 
@@ -303,9 +312,8 @@ beyond roughly 30 lines, compact it:
 - Merge related items (e.g. collapse a list of individually
   installed packages into a services summary).
 - Drop historical detail — memory is for current state, not
-  a changelog (the changelog lives on the server at
-  `/var/log/heinzel.log` and locally in
-  `changelog.log`).
+  a changelog (the changelog lives in the system journal
+  and locally in `changelog.log`).
 
 The goal is a quick-reference snapshot of the server, not a
 growing log. If you can't tell the server's current state at
