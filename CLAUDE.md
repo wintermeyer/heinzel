@@ -131,6 +131,13 @@ was detected so they can decide how to proceed.
   here cuts off SSH access. When network or firewall changes
   are needed, discuss with the user first. Often a reboot is
   safer than restarting networking live.
+- **Never remove or block SSH port 22** (or the server's
+  configured SSH port) from the firewall. This is the only
+  way to reach the server — closing it is unrecoverable
+  without physical or console access. If the user asks to
+  close port 22, explain the risk and refuse. Offer
+  alternatives instead (e.g. restricting SSH to specific
+  IPs or subnets).
 - **Use the appropriate non-interactive package manager** for
   the detected OS (`apt-get` on Debian/Ubuntu, `dnf` on
   RHEL 8+/Fedora, `yum` on RHEL 7/CentOS 7, `zypper` on
