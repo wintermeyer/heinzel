@@ -1,99 +1,74 @@
-# Heinzel
+# Heinzel — AI-Powered Linux Server Administration
 
-A `CLAUDE.md` configuration for using
-[Claude Code](https://claude.ai/code) as a remote sysadmin for
-Linux servers. Describe what you want in plain English — Claude
-connects via SSH, detects the OS, and runs the right commands
-while you review and approve each step.
+Tell Heinzel what you want, and it SSHes into your
+server and does it for you — with built-in safety
+guardrails.
+
+Heinzel turns
+[Claude Code](https://claude.ai/code) into a
+cautious, methodical sysadmin that backs up before
+editing, dry-runs before installing, and asks before
+doing anything destructive.
+
+> 3 years ago you searched StackOverflow and
+> copy-pasted commands. A year ago you asked ChatGPT
+> and copy-pasted commands. Today you just describe
+> what you need.
+
+2 min. demo screencast on YouTube:
 
 [![Demo screencast](https://img.youtube.com/vi/ve_TFyJy_uU/hqdefault.jpg)](https://www.youtube.com/watch?v=ve_TFyJy_uU)
+
+## How It Works
+
+1. **Install
+   [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+   and clone the repo**
+   ```
+   git clone https://github.com/wintermeyer/heinzel.git
+   cd heinzel
+   claude
+   ```
+2. **Describe what you need in plain English**
+   ```
+   ❯ Install and configure nginx on web1.example.com
+   ```
+3. **Review and approve each command before it runs**
+   Claude proposes every SSH command, explains what
+   it does and why, and waits for your approval.
+   Nothing runs without your say-so.
 
 ## Examples
 
 ### Auto-detection on first connection
 
-Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-(the CLI) if you haven't already. Then clone the repo and start a
-session:
+On the first connection to any server, Claude detects
+the OS, gathers hardware info, and remembers
+everything for future sessions:
 
 ```
-you@mac ~ % git clone https://github.com/wintermeyer/heinzel.git
-you@mac ~ % cd heinzel
-you@mac heinzel % claude
+ ❯ What OS is installed on app.example.com?
 ```
 
-Claude Code starts up:
-
 ```
- ▗ ▗   ▖ ▖  Claude Code
-            Opus 4.6
-   ▘▘ ▝▝    ~/heinzel
-
- ❯ SSH into web1.example.com and upgrade the system.
+ ❯ Install a firewall on app.example.com and
+   configure it to allow SSH and HTTPS traffic.
 ```
-
-Type your request at the prompt — plain English, no special
-syntax. Claude detects the OS, runs a dry-run, and walks you
-through every step:
-
-```
- ● SSH into web1.example.com to detect the OS first.
-
- ❯ ssh root@web1.example.com cat /etc/os-release
-   PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
-   ID=debian
-   VERSION_ID="12"
-   ...
-
- ● web1.example.com is running Debian 12 (Bookworm). I'll use
-   apt-get for package management. Let me run a dry-run first
-   to see what needs upgrading.
-
- ❯ ssh root@web1.example.com apt-get update
-   [...]
-
- ❯ ssh root@web1.example.com apt-get --dry-run upgrade
-   12 upgraded, 0 newly installed, 0 to remove.
-
- ● 12 packages to upgrade including a kernel update. This will
-   need a reboot afterwards. Proceed?
-```
-
-You review each command before it runs. Nothing happens
-without your approval.
-
-### Works across distros
-
-```
- ❯ SSH into app.example.com and install nginx.
-```
-
-If it's RHEL:
-```
- ❯ ssh root@app.example.com dnf install -y nginx
-```
-
-If it's Alpine:
-```
- ❯ ssh root@app.example.com apk add nginx
-```
-
-Claude picks the right command automatically based on the
-detected OS.
 
 ### Server memory across sessions
 
-After working on a server, Claude remembers it. Next week
-you launch Claude Code again and type:
+After working on a server, Claude remembers it. Next
+week you launch Claude Code again and type:
 
 ```
  ❯ Check on web1.example.com.
 ```
 
-Claude reads `memory/servers/web1.example.com/memory.md`,
-already knows it's Debian 12 with nginx and PostgreSQL,
-checks the local changelog, and picks up right where it
-left off.
+Claude reads
+`memory/servers/web1.example.com/memory.md`, already
+knows it's Debian 12 with nginx and PostgreSQL,
+checks the local changelog, and picks up right where
+it left off.
 
 ### More things you can ask
 
@@ -106,24 +81,36 @@ left off.
  ❯ Check if all servers (web1, web2, db1) need a reboot after the last kernel update.
 ```
 
-## Features
+## Safety & Guardrails
 
-- **Auto-detects the OS** — reads `/etc/os-release` and applies
-  the right commands for the distro.
-- **Remembers servers** — stores OS, services, and notes in
-  `memory/servers/` for future sessions.
-- **Safety first** — asks before destructive commands, firewall
-  changes, reboots, and network restarts.
-- **Backups** — copies config files to
+Heinzel's safety rules are not optional — they're
+baked into every session. Claude follows them
+consistently, even when a human might skip steps
+under pressure.
+
+- **Asks before acting** — destructive commands,
+  firewall changes, reboots, and network restarts
+  all require your explicit approval.
+- **Backs up config files** — copies to
   `/var/backups/heinzel/` before editing
   (auto-cleaned after 30 days).
-- **Changelog** — logs all changes to
-  `/var/log/heinzel.log` on each server and keeps a
-  local copy in `memory/servers/<hostname>/changelog.log`.
-- **Dry-runs** — runs dry-run commands before actual package
-  operations when the package manager supports it.
-- **Stable repos only** — no third-party sources without
-  explicit approval.
+- **Dry-runs first** — runs dry-run commands before
+  actual package operations when the package manager
+  supports it.
+- **Auto-detects the OS** — reads `/etc/os-release`
+  and applies the right commands for the distro.
+  No guessing.
+- **Logs everything** — all changes are recorded in
+  `/var/log/heinzel.log` on the server and mirrored
+  locally in
+  `memory/servers/<hostname>/changelog.log`.
+- **Remembers servers** — stores OS, services, and
+  notes in `memory/servers/` for future sessions.
+- **Stable repos only** — no third-party sources
+  without your explicit approval.
+- **Least privilege** — uses a normal user when
+  possible, `sudo` only when necessary, root only
+  as a last resort.
 
 ## Supported Distributions
 
@@ -134,27 +121,66 @@ left off.
 | Alpine | Alpine Linux | `rules/alpine.md` |
 | SUSE | openSUSE, SLES | `rules/suse.md` |
 
-Other distributions work too — Claude will apply general Linux
-best practices and let you know which distro it detected.
+Other distributions work too — Claude will apply
+general Linux best practices and let you know which
+distro it detected.
 
 ## Getting Started
 
 ### Prerequisites
 
 - SSH key-based access to your target servers (no
-  password/passphrase prompts). This can be as root, as a
-  normal user, or as a normal user with sudo privileges.
+  password/passphrase prompts). This can be as root,
+  as a normal user, or as a normal user with sudo
+  privileges.
 - Linux on the target servers (any distribution).
 
 ### Setup
 
 1. Clone this repo into your working directory.
 2. Open Claude Code in that directory.
-3. Tell Claude the hostname of your server, e.g. *"SSH into
-   example.com and upgrade the system."*
+3. Tell Claude your problem, e.g. *"Find out if
+   there is a webserver running on
+   shop.example.com"*
 
-Claude will auto-detect the OS on first connection and
-remember it for future sessions.
+Claude will auto-detect the OS on first connection
+and remember it for future sessions.
+
+## Risks & Responsibilities
+
+> [!CAUTION]
+> Heinzel operates on live servers via SSH — as root
+> or with sudo. Always review every command before
+> approving it.
+
+This is a tool for **experienced Linux sysadmins**.
+
+The risks are real — an LLM can hallucinate,
+misunderstand your intent, or produce a command with
+unintended side effects. A single bad command as root
+can be unrecoverable! 😱
+
+But consider: human sysadmins make mistakes too —
+especially when tired, rushed, or managing dozens of
+servers at 2 AM during an outage. They forget
+backups, skip dry-runs, and apply firewall rules that
+lock themselves out. Every experienced sysadmin has a
+horror story.
+
+Claude doesn't get tired or flustered. It **always**
+backs up before editing, **always** dry-runs first,
+and **always** checks the OS before assuming which
+commands to use. It follows the safety checklist every
+single time — not just when it remembers to.
+
+The question isn't whether heinzel is risk-free — it
+isn't. The question is whether a disciplined AI that
+follows every safety rule every time, with a human
+reviewing every command, produces fewer disasters than
+a human working alone under real-world conditions.
+
+Stay in the driver's seat. Review every command. Do
+not blindly approve.
 
 ## Project Structure
 
@@ -172,117 +198,39 @@ memory/
     changelog.log      — Local change history (gitignored)
 ```
 
-## Warning
-
-> [!CAUTION]
-> This gives an AI agent access to your servers via SSH.
-> Understand the risks before using it.
-
-- Claude can operate as **root** or use **sudo** — a wrong
-  command can take down a server or lock you out.
-- LLMs can hallucinate, misunderstand context, or produce
-  commands with unintended side effects.
-- A bad firewall rule or network change can **cut off SSH
-  access** with no remote way back in.
-- Many sysadmin operations have **no undo**.
-
-**This is for experienced Linux sysadmins.** You should be
-able to recognize a dangerous command before approving it.
-Always review every command Claude proposes before allowing
-execution.
-
-See [On Risk](#on-risk-the-full-self-driving-argument) below
-for why we think the guardrails make this worthwhile despite
-the risks.
-
-## Professional Support
-
-Need help setting this up for your infrastructure, or want a
-team to manage your servers with AI-assisted tooling?
-
-**[Wintermeyer Consulting](https://wintermeyer-consulting.de)**
-offers consulting and hands-on support for heinzel
-deployments — from initial setup to ongoing server management.
-
-Contact the project founder Stefan Wintermeyer and his team:
-**sw@wintermeyer-consulting.de**
-
-## On Risk: The Full-Self-Driving Argument
-
-Yes, this tool can break your servers. An LLM with root access
-to production systems is a genuinely dangerous idea — there's no
-sugarcoating that. But consider an analogy.
-
-Tesla's Full-Self-Driving can kill people. It has. And yet over
-time, the data shows that it prevents more accidents than it
-causes. The calculus isn't "is it perfect?" — it's "is it better
-than the alternative?" Human drivers are tired, distracted,
-overconfident. They run red lights. They text at the wheel. FSD
-doesn't do any of that. It's not flawless, but it's consistent.
-
-Server administration has a similar problem. Human sysadmins
-make mistakes too — especially when they're tired, rushed, or
-managing dozens of servers at 2 AM during an outage. They forget
-to make backups before editing configs. They run `rm -rf` in the
-wrong directory. They apply firewall rules that lock themselves
-out. They skip the dry-run because they're in a hurry. Every
-experienced sysadmin has a horror story.
-
-Claude doesn't get tired. It doesn't get flustered during an
-outage. It **always** makes a backup before editing a config. It
-**always** runs the dry-run first. It **always** checks the OS
-version before assuming which commands to use. It follows the
-safety checklist every single time, not just when it remembers
-to.
-
-The risks are real:
-
-- An LLM can hallucinate a command that doesn't do what it
-  thinks.
-- It can misunderstand your intent and take the wrong action.
-- A single bad command as root can be unrecoverable.
-
-But the mitigations are also real:
-
-- **You approve every command** before it runs. Claude proposes,
-  you decide.
-- **Guardrails are baked in** — backup procedures, dry-runs,
-  least-privilege, changelog logging. A human might skip these
-  under pressure. Claude won't.
-- **It explains what it's doing and why**, so even less
-  experienced admins can learn and catch mistakes.
-- **It reads the docs** before running commands it's not sure
-  about, which is more than most of us do at 2 AM.
-
-The question isn't whether heinzel is risk-free — it
-isn't. The question is whether a disciplined AI that follows
-every safety rule every time, with a human reviewing every
-command, produces fewer disasters than a human working alone
-under real-world conditions.
-
-I (Stefan Wintermeyer) think the answer is yes — over time,
-and with the right guardrails. But like FSD, it requires you
-to stay in the driver's seat. Keep your hands on the wheel.
-Review every command. Do not blindly approve!
-
-## Why Heinzel?
+## Why the Name Heinzel?
 
 The name comes from the
 [Heinzelmannchen](https://en.wikipedia.org/wiki/Heinzelm%C3%A4nnchen)
-— the helpful gnomes of Cologne from German folklore. Every
-night, while the people of Cologne slept, the
+— the helpful gnomes of Cologne from German folklore.
+Every night, while the people of Cologne slept, the
 Heinzelmannchen crept out and did all the work: baking
-bread, building houses, finishing whatever was left undone.
-An invisible helper that quietly takes care of things — a
-fitting name for a server administration tool that handles
-the tedious work while you review and approve.
+bread, building houses, finishing whatever was left
+undone. An invisible helper that quietly takes care of
+things — a fitting name for a server administration
+tool that handles the tedious work while you review
+and approve.
+
+## Professional Support
+
+Need help setting this up for your infrastructure, or
+want a team to manage your servers with AI-assisted
+tooling?
+
+**[Wintermeyer Consulting](https://wintermeyer-consulting.de)**
+offers consulting and hands-on support for heinzel
+deployments — from initial setup to ongoing server
+management.
+
+Contact the project founder Stefan Wintermeyer and
+his team: **sw@wintermeyer-consulting.de**
 
 ## Contributing
 
-Bug reports, feature requests, and pull requests are very
-welcome! If you have ideas for better guardrails, new distro
-support, or improvements to the safety rules — please open an
-issue or submit a PR.
+Bug reports, feature requests, and pull requests are
+very welcome! If you have ideas for better guardrails,
+new distro support, or improvements to the safety
+rules — please open an issue or submit a PR.
 
 ## License
 
