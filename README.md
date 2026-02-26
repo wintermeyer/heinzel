@@ -4,16 +4,16 @@ Tell Heinzel what you want, and it SSHes into your
 server and does it for you — with built-in safety
 guardrails.
 
+> 3 years ago you searched StackOverflow and
+> copy-pasted commands. A year ago you asked ChatGPT
+> and copy-pasted commands. Today you just describe
+> what you need and Claude Code does the work.
+
 Heinzel turns
 [Claude Code](https://claude.ai/code) into a
 cautious, methodical sysadmin that backs up before
 editing, dry-runs before installing, and asks before
 doing anything destructive.
-
-> 3 years ago you searched StackOverflow and
-> copy-pasted commands. A year ago you asked ChatGPT
-> and copy-pasted commands. Today you just describe
-> what you need.
 
 2 min. demo screencast on YouTube:
 
