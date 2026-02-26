@@ -213,6 +213,7 @@ rules/
   rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
   alpine.md            — Alpine Linux rules
   suse.md              — openSUSE & SLES rules
+  mise.md              — Language runtime manager (mise)
 memory/
   MEMORY.md            — Index for server memory
   servers/<hostname>/

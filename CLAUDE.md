@@ -160,6 +160,23 @@ updates configured. The specific tools vary by distro — see
 the matching `rules/<family>.md` file. If they are missing,
 flag it to the user.
 
+## Programming Language Runtimes
+
+When a task requires a programming language (Node.js,
+Ruby, Python, etc.) on a server, use
+[mise](https://mise.jdx.dev) to install and manage it.
+mise is installed per-user and works across all supported
+distro families.
+
+**See `rules/mise.md`** for installation instructions,
+SSH non-interactive shell setup, and the server memory
+convention.
+
+Do not install language runtimes from distro repos —
+they are often outdated. Do not use other version
+managers (nvm, rbenv, pyenv, etc.) unless the user
+specifically requests it.
+
 ## Firewall Awareness for Service Changes
 
 Whenever you install, remove, or configure a network-facing
