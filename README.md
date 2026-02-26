@@ -6,7 +6,7 @@ guardrails.
 
 - 2020 you searched on stackoverflow.com and copy-pasted commands
 - 2024 you asked ChatGPT and copy-pasted commands
-- Today you ask Heinzel and Claude Code SSHes to the server to get it done
+- Today you ask Heinzel and Claude Code SSHes into the server to just get it done
 
 Heinzel turns
 [Claude Code](https://claude.ai/code) into a
