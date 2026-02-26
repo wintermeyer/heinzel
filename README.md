@@ -113,7 +113,7 @@ left off.
 - **Safety first** — asks before destructive commands, firewall
   changes, reboots, and network restarts.
 - **Backups** — copies config files to
-  `/var/tmp/heinzel-backup/` before editing
+  `/var/backups/heinzel/` before editing
   (auto-cleaned after 30 days).
 - **Changelog** — logs all changes to
   `/var/log/heinzel.log` on each server and keeps a

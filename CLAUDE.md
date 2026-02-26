@@ -205,7 +205,7 @@ changelog and server memory.
 Before editing any config file, back it up:
 
 ```
-BACKUP_DIR="/var/tmp/heinzel-backup"
+BACKUP_DIR="/var/backups/heinzel"
 mkdir -p "$BACKUP_DIR"
 cp /etc/some/config.conf \
   "$BACKUP_DIR/config.conf.$(date +%Y%m%d-%H%M%S)"
@@ -220,7 +220,8 @@ Log to `/var/log/heinzel.log` on the server.
 changes were made. If the session was read-only, log a
 one-line summary of what was checked or investigated.
 
-Format:
+Format — the full timestamp `[YYYY-MM-DD HH:MM]` is
+**mandatory**. Never omit the time component.
 
 ```
 [2026-02-25 14:30] Upgraded 12 packages (apt-get upgrade)
@@ -233,9 +234,11 @@ Format:
 Mirror every entry from the remote changelog into a local
 file at `memory/servers/<hostname>/changelog.log`. This
 includes read-only session entries. Use the same timestamp
-format but **compress the entries** — keep them shorter
-than the remote log. The local log is a quick-reference
-history, not a verbatim copy.
+format but **compress the entries** — shorten the
+*description text*, but never the timestamp. The full
+`[YYYY-MM-DD HH:MM]` format must always be kept intact.
+The local log is a quick-reference history, not a verbatim
+copy.
 
 Example (remote → local):
 
