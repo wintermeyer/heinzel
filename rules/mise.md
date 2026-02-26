@@ -75,23 +75,43 @@ non-login shell where `.bashrc` is typically not
 sourced.
 
 After installing mise, add the shims directory to
-`PATH` in `~/.bash_profile` (as the SSH user, not
-root):
+`PATH` **at the top of `~/.bashrc`** — before the
+interactive guard (`case $- in ...`). This is the
+only reliable way to get mise shims into
+`ssh user@host "command"` on Debian/Ubuntu, because
+`~/.bash_profile` is **not** sourced for non-login,
+non-interactive SSH commands.
 
 ```bash
-echo 'export PATH="$HOME/.local/share/mise/shims:$PATH"' \
-  >> ~/.bash_profile
+# Insert at the very top of ~/.bashrc
+sed -i '1i# mise shims (before interactive guard)\
+export PATH="$HOME/.local/share/mise/shims:$PATH"\
+' ~/.bashrc
 ```
 
-This ensures that language binaries installed by mise
-are available over SSH. **Verify it works:**
+Also create `~/.bash_profile` to source `.bashrc`
+for interactive login shells and set XDG_RUNTIME_DIR
+(needed for systemd user services over SSH):
+
+```bash
+cat > ~/.bash_profile << 'EOF'
+export PATH="$HOME/.local/share/mise/shims:$PATH"
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+
+# Source .bashrc for interactive login shells
+if [ -n "$BASH_VERSION" ] && [ -f "$HOME/.bashrc" ]; then
+    . "$HOME/.bashrc"
+fi
+EOF
+```
+
+**Verify it works:**
 
 ```
 ssh user@host "node --version"
 ```
 
-If `.bash_profile` is not sourced in the server's SSH
-setup, fall back to one of these alternatives:
+If neither file is sourced, fall back to:
 
 1. **Explicit PATH prefix** in commands:
    ```
