@@ -28,20 +28,30 @@ done as a normal user, do it as a normal user. If only one
 command in a sequence needs root, use `sudo` for that
 specific command.
 
-## Default SSH User
+## SSH User
 
-The user's preferred non-root SSH username is stored in
-`memory/user.md`. Read this file at the start of every
-session.
+Each server's SSH username is stored in its memory file
+(`memory/servers/<hostname>/memory.md`) as
+`- SSH user: <name>`.
 
-**If `memory/user.md` does not exist or has no default SSH
-user set:** ask the user what username they typically use
-for non-root SSH access on their servers, then save it to
-`memory/user.md`.
+A global default is stored in `memory/user.md`. Read
+this file at the start of every session.
 
-When the user does not explicitly specify a username and
-the task does not require root, use this default username
-with `sudo` for privileged commands.
+**If `memory/user.md` does not exist or has no default
+SSH user set:** ask the user what username they
+typically use, then save it to `memory/user.md`.
+
+**On first connection to a new server:** ask the user
+which SSH username to use for this server, suggesting
+the global default. Save the answer in the server's
+`memory.md`.
+
+**On subsequent connections:** read the SSH user from
+the server's memory file — do not ask again.
+
+When the user explicitly specifies a username in
+their request, use that instead and update the
+server's memory.
 
 ## Sudo Availability
 
@@ -112,6 +122,11 @@ was detected so they can decide how to proceed.
 - **Absolute taboos (never run without explicit user
   request):** `fdisk`, `parted`, `gdisk`, or any disk
   partitioning tool. Never modify `/etc/ssh/sshd_config`.
+  Never delete or overwrite SSH keys (`authorized_keys`,
+  host keys, private keys). Never halt or power off a
+  server (`halt`, `poweroff`, `shutdown -h`) — reboot
+  is fine, but halting requires physical access to
+  recover.
 - **Firewall & network:** Be extremely careful — a mistake
   here cuts off SSH access. When network or firewall changes
   are needed, discuss with the user first. Often a reboot is
@@ -245,6 +260,7 @@ least:
 
 ```markdown
 # hostname.example.com
+- SSH user: stefan
 - OS: Debian 12 (Bookworm)
 - Distro family: debian
 - CPU: 4× Intel Xeon E-2236 @ 3.40GHz
