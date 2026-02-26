@@ -4,10 +4,9 @@ Tell Heinzel what you want, and it SSHes into your
 server and does it for you — with built-in safety
 guardrails.
 
-> 3 years ago you searched StackOverflow and
-> copy-pasted commands. A year ago you asked ChatGPT
-> and copy-pasted commands. Today you just describe
-> what you need and Claude Code does the work.
+- 2020 you searched on stackoverflow.com and copy-pasted commands
+- 2024 you asked ChatGPT and copy-pasted commands
+- Today you ask Heinzel and Claude Code SSHes to the server to get it done
 
 Heinzel turns
 [Claude Code](https://claude.ai/code) into a
