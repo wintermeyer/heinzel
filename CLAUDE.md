@@ -21,6 +21,10 @@ All work happens over SSH — always keep this in mind.
   specifies a non-root account or when root is not required.
 - **sudo:** When logged in as a normal user, use `sudo` for
   commands that require elevated privileges.
+- **Unprivileged mode:** When neither `sudo` nor root
+  SSH is available, do everything possible as the
+  current user and produce a sysadmin report for tasks
+  that require root.
 
 **Always use the least amount of privileges needed.** Don't
 run everything as root out of convenience. If a task can be
@@ -53,7 +57,9 @@ When the user explicitly specifies a username in
 their request, use that instead and update the
 server's memory.
 
-## Sudo Availability
+## Privilege Escalation
+
+### Sudo
 
 When connecting as a non-root user, `sudo` may prompt for
 a password — which cannot be entered in this
@@ -65,12 +71,105 @@ requires a password:
 2. **Record it** in the server's memory file
    (`memory/servers/<hostname>/memory.md`) by adding:
    `- Sudo: requires password (unusable)`
-3. **Fall back to SSH as root** (`ssh root@hostname`) for
-   any commands that need elevated privileges.
+3. **Attempt root SSH fallback** (see below).
 
 On subsequent connections, check the server's memory for
-this flag. If sudo is marked as unusable, connect as root
-directly for privileged tasks — do not attempt `sudo`.
+this flag. If sudo is marked as unusable, do not attempt
+`sudo` — proceed to root SSH fallback or unprivileged
+mode as recorded in the server's memory.
+
+### Root SSH Fallback
+
+When sudo is unusable and a privileged action is actually
+needed, probe root SSH access once:
+
+```
+ssh -o BatchMode=yes -o ConnectTimeout=5 \
+  root@hostname "id" 2>&1
+```
+
+- **If it works:** record `- Root SSH: available` in
+  the server's memory file. Use `ssh root@hostname` for
+  privileged tasks going forward.
+- **If it fails:** record the following in the server's
+  memory file and enter unprivileged mode:
+  ```
+  - Sudo: requires password (unusable)
+  - Root SSH: unavailable
+  - Privilege mode: unprivileged
+  ```
+
+Only probe when a privileged action is actually needed,
+not speculatively on every connection.
+
+### Unprivileged Mode
+
+When neither `sudo` nor root SSH is available, heinzel
+operates in unprivileged mode. This applies to managed
+servers, shared hosting, or VPS with root disabled.
+
+On subsequent connections, reading
+`Privilege mode: unprivileged` in the server's memory
+skips re-probing and enters this mode directly.
+
+**1. Announcement.** Tell the user clearly:
+"I cannot use sudo and root SSH is not available. I'll
+do everything I can as [user], and give you a report of
+what your sysadmin needs to do."
+
+**2. What to continue doing (userspace):**
+- Read-only system inspection (`ps`, `df`, `free`,
+  `uptime`, `/etc/os-release`, world-readable files)
+- Anything in the user's home directory
+- User-space tools (mise, language runtimes, apps)
+- User-level cron (`crontab -e`)
+- User-level systemd services (`systemctl --user`)
+
+**3. What to defer (needs root):**
+- Package install/remove
+- System service management
+- Firewall changes
+- System config file edits (`/etc/`, `/var/`)
+- Creating system users/groups
+
+**4. During the session:** When a privileged action is
+needed, don't skip it silently — announce it briefly
+("This needs root. Adding to the sysadmin report.") and
+continue with userspace work.
+
+**5. Sysadmin report:** At the end of the session,
+present a Markdown report directly in the conversation.
+The user can copy it and hand it to their admin. Format:
+
+```
+## Sysadmin Report for [hostname]
+
+These tasks require root access. The server runs [OS].
+
+### Package Installation
+    apt-get install -y nginx
+Why: [brief reason]
+
+### Firewall
+    ufw allow 80/tcp
+    ufw allow 443/tcp
+Why: [brief reason]
+
+### Service Configuration
+    systemctl enable nginx
+    systemctl start nginx
+
+### Config File Changes
+[file path, what to change, suggested content]
+```
+
+Rules for the report:
+- Use distro-correct commands (from the loaded rule
+  file)
+- Group by category, not chronological order
+- Include specific commands, not vague instructions
+- Include brief "why" context for each item
+- Omit empty categories
 
 ## OS Detection (mandatory first step)
 
@@ -158,7 +257,9 @@ was detected so they can decide how to proceed.
 Every server should have a firewall and automatic security
 updates configured. The specific tools vary by distro — see
 the matching `rules/<family>.md` file. If they are missing,
-flag it to the user.
+flag it to the user. In unprivileged mode, include missing
+firewall or automatic security updates in the sysadmin
+report instead.
 
 ## Programming Language Runtimes
 
@@ -230,6 +331,10 @@ cp /etc/some/config.conf \
 find "$BACKUP_DIR" -type f -mtime +30 -delete
 ```
 
+In unprivileged mode, use `~/.heinzel-backups/` for
+user-owned files. System config files cannot be edited —
+defer those to the sysadmin report.
+
 ## Changelog
 
 Log to the system journal using `logger -t heinzel "message"`
@@ -254,6 +359,11 @@ logger -t heinzel "Read-only: checked OS, gathered hardware info"
   `journalctl -t heinzel`
 - **Alpine** (OpenRC/syslog):
   `grep heinzel /var/log/messages`
+
+If `logger` fails (restricted syslog access in
+unprivileged mode), log to the local `changelog.log`
+only and note the limitation in the server's memory
+file.
 
 ## Local Changelog
 
