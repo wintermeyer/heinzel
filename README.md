@@ -14,6 +14,10 @@ cautious, methodical sysadmin that backs up before
 editing, dry-runs before installing, and asks before
 doing anything destructive.
 
+## Screencast: Install Ruby and Rails
+
+![Screencast: Install Ruby and Rails](assets/screencast-install-ruby-and-rails.gif)
+
 ## 2 min Screencast on YouTube
 
 See in this example how one can install and configure a firewall, upgrade the Linux distribution and setup automatic daily security updates by just asking Heinzel for it (click on the image to start the [YouTube video](https://www.youtube.com/watch?v=ve_TFyJy_uU)):
