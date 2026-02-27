@@ -8,7 +8,7 @@ guardrails.
 - 2024 you asked ChatGPT and copy-pasted commands
 - Today you ask Heinzel and Claude Code SSHes into the server to just get it done
 
-Heinzel turns
+Heinzel is a CLAUDE.md and a set of rules that turns
 [Claude Code](https://claude.ai/code) into a
 cautious, methodical sysadmin that backs up before
 editing, dry-runs before installing, and asks before
