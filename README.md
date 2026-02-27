@@ -75,6 +75,15 @@ knows it's Debian 12 with nginx and PostgreSQL,
 checks the local changelog, and picks up right where
 it left off.
 
+### Session to-do list
+
+When a multi-step task gets interrupted — connection
+drop, conversation ends, laptop closes — Claude keeps
+a to-do list in `memory/servers/<hostname>/todo.md`
+with checkboxes for each step. On reconnection it
+shows what's still pending and asks whether to
+continue or start fresh.
+
 ### More things you can ask
 
 ```
@@ -255,6 +264,7 @@ memory/
   servers/<hostname>/
     memory.md          — Server state snapshot (gitignored)
     changelog.log      — Local change history (gitignored)
+    todo.md            — Session task list (gitignored)
 ```
 
 ## Why the Name Heinzel?
