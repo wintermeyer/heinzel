@@ -24,7 +24,6 @@ doing anything destructive.
 - [Install the latest stable Ruby and Ruby on Rails](https://www.youtube.com/watch?v=QVvm29eABKY) (1 min)
 - [Install a firewall, upgrade the Linux distribution and setup automatic daily security updates](https://www.youtube.com/watch?v=ve_TFyJy_uU) (2 min)
 
-
 ## How It Works
 
 1. **Install
@@ -43,8 +42,6 @@ doing anything destructive.
    Claude proposes every SSH command, explains what
    it does and why, and waits for your approval.
    Nothing runs without your say-so.
-
-## Examples
 
 ### Auto-detection on first connection
 
@@ -85,15 +82,43 @@ with checkboxes for each step. On reconnection it
 shows what's still pending and asks whether to
 continue or start fresh.
 
-### More things you can ask
+## Command line interface
 
-```
- ❯ Set up a Let's Encrypt certificate for shop.example.com using certbot.
- ❯ Show me disk usage on db.example.com — it's running low on space.
- ❯ Install and configure PostgreSQL 15 on db2.example.com.
- ❯ Harden the firewall on staging.example.com — only allow SSH, HTTP, and HTTPS.
- ❯ Figure out why cron jobs aren't running on worker.example.com.
- ❯ Check if all servers (web1, web2, db1) need a reboot after the last kernel update.
+You can script Heinzel too:
+
+```bash
+$ claude --dangerously-skip-permissions -p "What OS is installed on server1.example.com? Login as root."    
+**server1.example.com** is running **Debian 11 (Bullseye)** on an aarch64 (ARM64) system with 4 CPU cores, 3.8 GB RAM, and a 15 GB root disk (15% used).
+
+Note: Debian 11 reached end of life in August 2024 and only receives long-term support (LTS) until August 2026. You may want to plan an upgrade to Debian 12 (Bookworm) before then.
+$ claude --dangerously-skip-permissions -p "Upgrade server1.example.com to Debian 12. I have a backup. Don't ask me any questions. Just do it. Give me a report afterwards."
+---
+
+## Upgrade Report: server1.example.com
+
+**Debian 11 (Bullseye) -> Debian 12 (Bookworm)** — completed successfully.
+
+### What was done
+
+1. **Verified Debian 11.11 was fully up to date** before starting
+2. **Updated `/etc/apt/sources.list`** from `bullseye` to `bookworm` (backed up first)
+3. **Ran `apt-get upgrade`** — installed packages that could upgrade without removals
+4. **Ran `apt-get full-upgrade`** — completed the full dist-upgrade
+5. **Cleaned up** — `autoremove` removed 28 obsolete packages (410 MB freed)
+6. **Rebooted** into the new kernel 6.1.0-43-arm64
+7. **Removed old kernel** 5.10.0-38-arm64 (257 MB freed)
+8. **Reinstalled `unattended-upgrades`** — it was dropped during the dist-upgrade
+
+### Current state
+
+|                         |                               |
+| ----------------------- | ----------------------------- |
+| **OS**                  | Debian 12.13 (Bookworm)       |
+| **Kernel**              | 6.1.0-43-arm64                |
+| **Disk**                | 15 GB, 19% used               |
+| **nginx**               | running                       |
+| **ufw**                 | active, default deny incoming |
+| **unattended-upgrades** | installed and enabled         |
 ```
 
 ## Safety & Guardrails
@@ -184,11 +209,11 @@ journalctl -t heinzel -n 20
 
 ## Supported Distributions
 
-| Family | Distributions | Rule file |
-|--------|--------------|-----------|
-| Debian | Debian, Ubuntu | `rules/debian.md` |
-| RHEL | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md` |
-| SUSE | openSUSE, SLES | `rules/suse.md` |
+| Family | Distributions                     | Rule file          |
+| ------ | --------------------------------- | ------------------ |
+| Debian | Debian, Ubuntu                    | `rules/debian.md`  |
+| RHEL   | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`    |
+| SUSE   | openSUSE, SLES                    | `rules/suse.md`    |
 
 Other distributions work too — Claude will apply
 general Linux best practices and let you know which
