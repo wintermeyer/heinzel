@@ -20,8 +20,8 @@ doing anything destructive.
 
 ### Other Screencasts on YouTube
 
-- [Install and configure a firewall, upgrade the Linux distribution and setup automatic daily security updates](https://www.youtube.com/watch?v=ve_TFyJy_uU))
-- [Install the latest stable Ruby and Ruby on Rails]([https://www.youtube.com/watch?v=ve_TFyJy_uU](https://www.youtube.com/watch?v=QVvm29eABKY)))
+- [Install a firewall, upgrade the Linux distribution and setup automatic daily security updates](https://www.youtube.com/watch?v=ve_TFyJy_uU))
+- [Install the latest stable Ruby and Ruby on Rails](https://www.youtube.com/watch?v=QVvm29eABKY)
 
 
 ## How It Works
