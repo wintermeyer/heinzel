@@ -87,27 +87,47 @@ continue or start fresh.
 You can script Heinzel too:
 
 ```bash
-$ claude --dangerously-skip-permissions -p "What OS is installed on server1.example.com? Login as root."    
-**server1.example.com** is running **Debian 11 (Bullseye)** on an aarch64 (ARM64) system with 4 CPU cores, 3.8 GB RAM, and a 15 GB root disk (15% used).
+$ claude --dangerously-skip-permissions \
+  -p "What OS is installed on \
+  server1.example.com? Login as root."
+**server1.example.com** is running **Debian 11
+(Bullseye)** on an aarch64 (ARM64) system with
+4 CPU cores, 3.8 GB RAM, and a 15 GB root disk
+(15% used).
 
-Note: Debian 11 reached end of life in August 2024 and only receives long-term support (LTS) until August 2026. You may want to plan an upgrade to Debian 12 (Bookworm) before then.
-$ claude --dangerously-skip-permissions -p "Upgrade server1.example.com to Debian 12. I have a backup. Don't ask me any questions. Just do it. Give me a report afterwards."
+Note: Debian 11 reached end of life in August
+2024 and only receives long-term support (LTS)
+until August 2026. You may want to plan an
+upgrade to Debian 12 (Bookworm) before then.
+$ claude --dangerously-skip-permissions \
+  -p "Upgrade server1.example.com to Debian 12. \
+  I have a backup. Don't ask me any questions. \
+  Just do it. Give me a report afterwards."
 ---
 
 ## Upgrade Report: server1.example.com
 
-**Debian 11 (Bullseye) -> Debian 12 (Bookworm)** — completed successfully.
+**Debian 11 (Bullseye) -> Debian 12 (Bookworm)**
+— completed successfully.
 
 ### What was done
 
-1. **Verified Debian 11.11 was fully up to date** before starting
-2. **Updated `/etc/apt/sources.list`** from `bullseye` to `bookworm` (backed up first)
-3. **Ran `apt-get upgrade`** — installed packages that could upgrade without removals
-4. **Ran `apt-get full-upgrade`** — completed the full dist-upgrade
-5. **Cleaned up** — `autoremove` removed 28 obsolete packages (410 MB freed)
-6. **Rebooted** into the new kernel 6.1.0-43-arm64
-7. **Removed old kernel** 5.10.0-38-arm64 (257 MB freed)
-8. **Reinstalled `unattended-upgrades`** — it was dropped during the dist-upgrade
+1. **Verified Debian 11.11 was fully up to date**
+   before starting
+2. **Updated `/etc/apt/sources.list`** from
+   `bullseye` to `bookworm` (backed up first)
+3. **Ran `apt-get upgrade`** — installed packages
+   that could upgrade without removals
+4. **Ran `apt-get full-upgrade`** — completed the
+   full dist-upgrade
+5. **Cleaned up** — `autoremove` removed 28
+   obsolete packages (410 MB freed)
+6. **Rebooted** into the new kernel
+   6.1.0-43-arm64
+7. **Removed old kernel** 5.10.0-38-arm64
+   (257 MB freed)
+8. **Reinstalled `unattended-upgrades`** — it was
+   dropped during the dist-upgrade
 
 ### Current state
 
