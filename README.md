@@ -18,11 +18,11 @@ doing anything destructive.
 
 ![Screencast: Install Ruby and Rails](assets/screencast-install-ruby-and-rails.gif)
 
-## 2 min Screencast on YouTube
+### Other Screencasts on YouTube
 
-See in this example how one can install and configure a firewall, upgrade the Linux distribution and setup automatic daily security updates by just asking Heinzel for it (click on the image to start the [YouTube video](https://www.youtube.com/watch?v=ve_TFyJy_uU)):
+- [Install and configure a firewall, upgrade the Linux distribution and setup automatic daily security updates](https://www.youtube.com/watch?v=ve_TFyJy_uU))
+- [Install the latest stable Ruby and Ruby on Rails]([https://www.youtube.com/watch?v=ve_TFyJy_uU](https://www.youtube.com/watch?v=QVvm29eABKY)))
 
-[![Demo screencast](https://img.youtube.com/vi/ve_TFyJy_uU/hqdefault.jpg)](https://www.youtube.com/watch?v=ve_TFyJy_uU)
 
 ## How It Works
 
