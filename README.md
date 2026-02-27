@@ -111,7 +111,10 @@ under pressure.
   without your explicit approval.
 - **Least privilege** — uses a normal user when
   possible, `sudo` only when necessary, root only
-  as a last resort.
+  as a last resort. If neither sudo nor root SSH
+  is available, works in unprivileged mode and
+  produces a sysadmin report for tasks that need
+  root.
 
 ## Accessing Logs
 
@@ -154,8 +157,8 @@ distro it detected.
 
 - SSH key-based access to your target servers (no
   password/passphrase prompts). This can be as root,
-  as a normal user, or as a normal user with sudo
-  privileges.
+  as a normal user with sudo, or even a normal user
+  without any root access (unprivileged mode).
 - Linux on the target servers (any distribution).
 
 ### Setup
@@ -172,9 +175,9 @@ and remember it for future sessions.
 ## Risks & Responsibilities
 
 > [!CAUTION]
-> Heinzel operates on live servers via SSH — as root
-> or with sudo. Always review every command before
-> approving it.
+> Heinzel operates on live servers via SSH — as root,
+> with sudo, or in unprivileged mode. Always review
+> every command before approving it.
 
 This is a tool for **experienced Linux sysadmins**.
 
