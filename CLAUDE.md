@@ -32,6 +32,13 @@ done as a normal user, do it as a normal user. If only one
 command in a sequence needs root, use `sudo` for that
 specific command.
 
+**SSH as root is not a risky action that requires
+confirmation.** When the server's SSH user is `root`
+or when root privileges are needed and the server
+supports root SSH, use it directly. The privilege
+principle applies to *commands* (prefer non-root
+commands when possible), not to the SSH login itself.
+
 ## SSH User
 
 Each server's SSH username is stored in its memory file
