@@ -199,8 +199,9 @@ Before doing any work on a server, you **must** know its OS.
    `memory/servers/<hostname>/memory.md` and its local
    changelog from
    `memory/servers/<hostname>/changelog.log`.
-2. Read the matching rule file from `rules/`.
-3. Verify the OS version is still current by running
+2. Check for `todo.md` (see Session To-Do List).
+3. Read the matching rule file from `rules/`.
+4. Verify the OS version is still current by running
    `cat /etc/os-release` — update the memory file if it
    has changed (e.g. after a distro upgrade).
 
@@ -401,6 +402,8 @@ Each server has its own directory at
 
 - `memory.md` — current state snapshot (compact)
 - `changelog.log` — local change history (compressed)
+- `todo.md` — session task list (only present while
+  there is unfinished multi-step work)
 
 These files persist across sessions.
 
@@ -452,6 +455,45 @@ a glance, the memory file is too long.
 
 **On subsequent connections:** read the memory file first,
 then verify the OS version is still current.
+
+## Session To-Do List
+
+When a session involves 2 or more distinct steps where
+an interruption could leave the server in a half-done
+state, create a to-do file to track progress. Do not
+create one for read-only checks or single-step tasks.
+
+**File:** `memory/servers/<hostname>/todo.md`
+
+**Format:**
+
+```markdown
+# To-do: hostname.example.com
+
+Session started: 2026-02-27 14:30
+
+- [x] Check OS version and read memory
+- [x] Upgrade all packages
+- [ ] Configure nginx reverse proxy
+- [ ] Open port 443 in ufw
+```
+
+**Updating:** mark each task `[x]` immediately after it
+completes — do not batch updates. Append new tasks as
+they emerge during the session.
+
+**On reconnection:** if `todo.md` exists when connecting
+to a known server, show the pending (unchecked) items to
+the user and ask whether to continue where you left off
+or start fresh. If the file is older than 30 days, flag
+it as stale and suggest deleting it.
+
+**Cleanup:** delete `todo.md` when all tasks are done.
+If tasks remain pending at the end of a session, leave
+the file in place so the next session can pick it up.
+If the user explicitly abandons the remaining tasks,
+delete the file and note the abandonment in the
+changelog.
 
 ## Verify Before Running
 

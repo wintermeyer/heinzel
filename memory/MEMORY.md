@@ -5,4 +5,8 @@ Server details are stored in
 `memory/servers/<hostname>/memory.md`.
 Local changelogs are stored in
 `memory/servers/<hostname>/changelog.log`.
-Read the relevant files before connecting to a known server.
+Session to-do lists are stored in
+`memory/servers/<hostname>/todo.md` (only present
+while multi-step work is unfinished).
+Read the relevant files before connecting to a known
+server.
