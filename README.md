@@ -120,6 +120,42 @@ under pressure.
   produces a sysadmin report for tasks that need
   root.
 
+## How Heinzel Fights LLM Hallucinations
+
+LLMs can "hallucinate" — confidently produce commands
+with wrong flags, incorrect file paths, or syntax that
+doesn't exist on the server's specific OS and version.
+On a live server, a hallucinated command can be
+dangerous.
+
+Heinzel reduces this risk with multiple layers:
+
+- **Distro-specific rule files** — Instead of relying
+  on the LLM's memory, heinzel loads a verified rule
+  file for each Linux distribution family (Debian,
+  RHEL, SUSE). These files contain the correct
+  commands, package managers, firewall tools, and
+  common pitfalls for each distro. The LLM reads
+  the file and follows it — it doesn't have to
+  guess.
+- **Verify before running** — heinzel is instructed
+  to check `--help`, man pages, or upstream docs
+  before running any command. This catches wrong
+  flags and syntax before they reach the server.
+- **Server memory** — Each server's OS, version,
+  installed services, and configuration are recorded
+  in a memory file. On subsequent connections, the
+  LLM reads facts instead of guessing.
+- **Dry-run first** — Package operations are tested
+  with dry-run flags before actual execution.
+- **Human review** — Every command is shown to you
+  before it runs. You are the final safeguard.
+
+No approach eliminates hallucinations entirely. The
+goal is to minimize what the LLM needs to recall
+from training data by putting verified facts in front
+of it at every step.
+
 ## Accessing Logs
 
 Heinzel logs every action to the system journal on each
@@ -136,19 +172,12 @@ journalctl -t heinzel --since "2026-02-01"
 journalctl -t heinzel -n 20
 ```
 
-On Alpine Linux (which uses syslog instead of systemd):
-
-```bash
-grep heinzel /var/log/messages
-```
-
 ## Supported Distributions
 
 | Family | Distributions | Rule file |
 |--------|--------------|-----------|
 | Debian | Debian, Ubuntu | `rules/debian.md` |
 | RHEL | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md` |
-| Alpine | Alpine Linux | `rules/alpine.md` |
 | SUSE | openSUSE, SLES | `rules/suse.md` |
 
 Other distributions work too — Claude will apply
@@ -219,7 +248,6 @@ CLAUDE.md              — Main instructions for Claude Code
 rules/
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
-  alpine.md            — Alpine Linux rules
   suse.md              — openSUSE & SLES rules
   mise.md              — Language runtime manager (mise)
 memory/
