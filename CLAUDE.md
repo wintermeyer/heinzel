@@ -7,7 +7,7 @@ when working with code in this repository.
 
 heinzel — Remote administration of Linux servers
 via SSH. Supports any Linux distribution (Debian, Ubuntu,
-RHEL, CentOS, Fedora, Alpine, SUSE, Arch, and others).
+RHEL, CentOS, Fedora, SUSE, and others).
 
 ## How It Works
 
@@ -182,7 +182,6 @@ Before doing any work on a server, you **must** know its OS.
 2. Determine the distro family:
    - `debian` — Debian, Ubuntu, and derivatives
    - `rhel` — RHEL, CentOS, Fedora, Rocky Linux, AlmaLinux
-   - `alpine` — Alpine Linux
    - `suse` — openSUSE, SLES
 3. Read the matching rule file from `rules/<family>.md` in
    this repo (e.g. `rules/debian.md`). Follow those
@@ -237,16 +236,23 @@ was detected so they can decide how to proceed.
   close port 22, explain the risk and refuse. Offer
   alternatives instead (e.g. restricting SSH to specific
   IPs or subnets).
+- **Verify the default incoming policy is deny/drop.**
+  After enabling or verifying a firewall, always confirm
+  that the default policy for incoming traffic is
+  deny/drop. If it's set to allow, fix it using the
+  distro's firewall tool (see `rules/<family>.md`). A
+  firewall with a default-allow policy provides no
+  protection.
 - **Use the appropriate non-interactive package manager** for
   the detected OS (`apt-get` on Debian/Ubuntu, `dnf` on
   RHEL 8+/Fedora, `yum` on RHEL 7/CentOS 7, `zypper` on
-  SUSE, `apk` on Alpine, `pacman` on Arch).
+  SUSE).
 - **Prefer stable/official repos only.** Do not add
   third-party repos or backports without asking.
 - **Stick to stable release tracks.** Never suggest
   switching to testing, unstable, or rolling-release
-  channels (e.g. Debian `testing`/`sid`, Alpine `edge`,
-  Fedora Rawhide, openSUSE Tumbleweed) without asking.
+  channels (e.g. Debian `testing`/`sid`, Fedora Rawhide,
+  openSUSE Tumbleweed) without asking.
   Always target the stable or LTS release.
 - **Dry-run first** when the package manager supports it
   (e.g. `apt-get --dry-run upgrade`, `dnf --assumeno update`)
@@ -357,8 +363,6 @@ logger -t heinzel "Read-only: checked OS, gathered hardware info"
 
 - **systemd distros** (Debian, RHEL, SUSE):
   `journalctl -t heinzel`
-- **Alpine** (OpenRC/syslog):
-  `grep heinzel /var/log/messages`
 
 If `logger` fails (restricted syslog access in
 unprivileged mode), log to the local `changelog.log`
@@ -449,14 +453,31 @@ a glance, the memory file is too long.
 **On subsequent connections:** read the memory file first,
 then verify the OS version is still current.
 
-## Read the Docs
+## Verify Before Running
 
-Before using any tool, service, or command you are not fully
-certain about, **search for and read its official
-documentation first** — man pages, upstream docs, distro
-wiki, etc. Do not rely on memory alone. Verify syntax,
-flags, and behavior for the specific version installed on
-the server. Getting a flag wrong on a live server can be
+**Do not trust your training data for command syntax.**
+Before running any command on a server, verify it:
+
+1. **Check `--help` first.** Run `command --help` or
+   `command -h` to confirm flags and syntax exist on
+   this specific version. This is mandatory for any
+   command with flags beyond the basics.
+2. **Read the man page** (`man command`) when `--help`
+   is insufficient — especially for complex tools like
+   `iptables`, `firewall-cmd`, `certbot`, `openssl`.
+3. **Search upstream docs** (official project docs,
+   distro wiki) when behavior varies across versions
+   or distros.
+4. **Check the rule file.** If the command is covered
+   in the loaded `rules/<family>.md` file, use the
+   exact syntax from there.
+5. **When in doubt, show the user.** If you cannot
+   verify a command's behavior, show it to the user
+   and explain your uncertainty before running it.
+
+This applies even to commands you "know." Flags change
+between versions, distros rename or alias commands, and
+defaults differ. A wrong flag on a live server can be
 catastrophic.
 
 ## Assume a Beginner User

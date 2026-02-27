@@ -26,6 +26,13 @@ Enterprise Server (SLES).
 - Reload: `firewall-cmd --reload`
 - Some systems may use SuSEfirewall2 (older) — if so,
   flag it to the user as it's deprecated.
+- Verify the default zone drops unsolicited traffic:
+  `firewall-cmd --get-default-zone` (should be `public`).
+  Then `firewall-cmd --info-zone=public` — the target
+  should be `default` (which means reject). If the zone
+  target is `ACCEPT`, fix with
+  `firewall-cmd --permanent --zone=public
+  --set-target=default` and `firewall-cmd --reload`.
 
 ## Automatic Security Updates
 
@@ -61,3 +68,19 @@ Enterprise Server (SLES).
   stable/predictable.
 - The `zypper` package manager is interactive by default —
   always use `--non-interactive` for scripted operations.
+
+## Common Pitfalls
+
+- `zypper` is interactive by default — always use
+  `--non-interactive` for scripted/SSH commands.
+- Web root is `/srv/www/htdocs/`, not `/var/www/`.
+  Nginx config is in `/etc/nginx/conf.d/`, not
+  `sites-available/`.
+- `firewalld` is shared with RHEL but zone defaults
+  may differ. Check `firewall-cmd --get-active-zones`
+  before making changes.
+- YaST may have configured things in non-standard
+  ways. Check existing config before assuming defaults.
+- Tumbleweed is rolling release — package versions
+  and behavior change frequently. Leap/SLES are
+  stable.

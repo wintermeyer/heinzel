@@ -27,6 +27,13 @@ newer uses `dnf`.
 - Add rule: `firewall-cmd --permanent --add-service=http`
 - Reload: `firewall-cmd --reload`
 - If `firewalld` is not running, flag it to the user.
+- Verify the default zone drops unsolicited traffic:
+  `firewall-cmd --get-default-zone` (should be `public`).
+  Then `firewall-cmd --info-zone=public` — the target
+  should be `default` (which means reject). If the zone
+  target is `ACCEPT`, fix with
+  `firewall-cmd --permanent --zone=public
+  --set-target=default` and `firewall-cmd --reload`.
 
 ## Automatic Security Updates
 
@@ -66,3 +73,23 @@ newer uses `dnf`.
   needed and with user approval.
 - Fedora is a fast-moving distro — package versions and
   available packages differ significantly from RHEL.
+
+## Common Pitfalls
+
+- `dnf` vs `yum` — check the OS version first.
+  RHEL/CentOS 7 uses `yum`, everything newer uses
+  `dnf`. Running the wrong one may fail or behave
+  unexpectedly.
+- `firewall-cmd` changes are temporary by default.
+  Always use `--permanent` and then `--reload`.
+  Forgetting `--permanent` means rules vanish on
+  reboot.
+- SELinux blocks are silent by default. If a service
+  fails after correct configuration, check
+  `ausearch -m avc -ts recent` before assuming the
+  config is wrong.
+- RHEL 8+ uses `nftables` as the backend for
+  `firewalld`. Do not mix `iptables` commands with
+  `firewalld` — they will conflict.
+- EPEL is not enabled by default. Do not assume EPEL
+  packages are available without first checking.

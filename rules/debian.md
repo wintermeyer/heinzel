@@ -21,6 +21,13 @@ Rules for Debian, Ubuntu, and derivatives.
 - **Expected:** `ufw` (Uncomplicated Firewall)
 - Check status: `ufw status verbose`
 - If `ufw` is not installed, flag it to the user.
+- **Critical:** before enabling `ufw`, always allow SSH
+  first: `ufw allow OpenSSH`. Enabling `ufw` without an
+  SSH rule locks you out of the server immediately.
+- After enabling, verify the default policy:
+  `ufw status verbose` — look for
+  `Default: deny (incoming)`. If incoming is set to
+  `allow`, fix with `ufw default deny incoming`.
 
 ## Automatic Security Updates
 
@@ -52,3 +59,24 @@ Rules for Debian, Ubuntu, and derivatives.
   versions may differ.
 - Ubuntu may have `snap` packages — prefer `apt-get` unless
   the user specifically wants snaps.
+
+## Common Pitfalls
+
+- Use `apt-get` not `apt` — `apt` is for interactive
+  use and its output format is unstable.
+- `systemctl restart` vs `systemctl reload` — prefer
+  `reload` when the service supports it (e.g. nginx)
+  to avoid downtime.
+- **Before enabling `ufw`**, always allow SSH first:
+  `ufw allow OpenSSH` (or `ufw allow 22/tcp`). Running
+  `ufw enable` without an SSH rule locks you out of
+  the server immediately. The safe sequence is:
+  `ufw allow OpenSSH && ufw enable`.
+- After that, `ufw` must be enabled (`ufw enable`) —
+  installing alone does nothing.
+- Debian's `nginx` uses `sites-available/` +
+  `sites-enabled/` symlinks. Ubuntu follows the same
+  pattern. Do not put configs directly in `conf.d/`
+  unless there is no `sites-available/` directory.
+- `unattended-upgrades` requires both the package and
+  the apt config — check both.
