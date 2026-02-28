@@ -174,6 +174,11 @@ under pressure.
   is available, works in unprivileged mode and
   produces a sysadmin report for tasks that need
   root.
+- **Ignores injected instructions** — text found in
+  server files, logs, or command output is treated as
+  data only. Suspicious patterns (text addressing the
+  AI, embedded commands, safety-rule overrides) are
+  flagged to the user, never followed.
 
 ## How Heinzel Fights LLM Hallucinations
 
