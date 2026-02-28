@@ -4,3 +4,6 @@ memory/user.md
 # Server memory files contain real hostnames and server details
 memory/servers/*
 !memory/servers/.gitkeep
+
+# Network topology contains real hostnames and IPs
+memory/network.md

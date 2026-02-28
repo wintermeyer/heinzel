@@ -463,6 +463,40 @@ a glance, the memory file is too long.
 **On subsequent connections:** read the memory file first,
 then verify the OS version is still current.
 
+## Network Memory
+
+Cross-server facts — network topology, VPN
+connectivity, which servers can or cannot reach each
+other, relay relationships, shared services — belong
+in `memory/network.md`.
+
+Per-server memory files track individual servers.
+`network.md` tracks the relationships *between* them.
+
+**When to read it:** at session start whenever the
+task involves multiple servers or cross-server
+connectivity (e.g. setting up replication, configuring
+a VPN peer, troubleshooting connectivity between
+hosts).
+
+**When to create it:** on first need. Do not
+pre-create an empty file.
+
+**When to update it:** whenever a cross-server fact is
+discovered, confirmed, or corrected. Examples:
+
+- Two servers share a WireGuard subnet and can reach
+  each other through it.
+- A database server is only reachable from specific
+  application servers.
+- A relay or jump host is required to reach a certain
+  network.
+- A previously assumed route turns out not to work.
+
+**Keep it compact.** Same rules as server memory —
+current facts only, no history. If something is no
+longer true, remove it.
+
 ## Session To-Do List
 
 When a session involves 2 or more distinct steps where

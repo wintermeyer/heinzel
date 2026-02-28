@@ -307,6 +307,7 @@ rules/
   mise.md              — Language runtime manager (mise)
 memory/
   MEMORY.md            — Index for server memory
+  network.md           — Cross-server network facts (gitignored)
   servers/<hostname>/
     memory.md          — Server state snapshot (gitignored)
     changelog.log      — Local change history (gitignored)

@@ -8,5 +8,8 @@ Local changelogs are stored in
 Session to-do lists are stored in
 `memory/servers/<hostname>/todo.md` (only present
 while multi-step work is unfinished).
+Cross-server network facts (topology, VPN
+connectivity, reachability) are stored in
+`memory/network.md`.
 Read the relevant files before connecting to a known
 server.
