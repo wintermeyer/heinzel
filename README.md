@@ -300,6 +300,10 @@ not blindly approve.
 
 ```
 CLAUDE.md              — Main instructions for Claude Code
+.claude/
+  settings.json        — Project-level Claude Code settings
+  hooks/
+    check-updates.sh   — Auto-check for repo updates on session start
 rules/
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
