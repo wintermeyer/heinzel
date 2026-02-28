@@ -400,6 +400,33 @@ In unprivileged mode, use `~/.heinzel-backups/` for
 user-owned files. System config files cannot be edited —
 defer those to the sysadmin report.
 
+## Copying Directories Between Servers
+
+When copying a directory tree from one server to
+another (rsync, scp, tar, etc.), always check for
+symlinks that point outside the copied tree:
+
+```
+find /path/to/copied/dir -type l \
+  -exec readlink -f {} \; \
+  | grep -v '^/path/to/copied/dir' \
+  | sort -u
+```
+
+If any symlinks point to paths outside the directory,
+their targets must also be copied — otherwise the
+links will be broken on the destination server.
+
+Before marking a directory copy as complete, verify
+on the destination:
+
+```
+find /path/to/copied/dir -xtype l
+```
+
+This lists broken symlinks. If any exist, investigate
+and copy the missing targets.
+
 ## Changelog
 
 Log to the system journal using `logger -t heinzel "message"`
