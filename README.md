@@ -296,12 +296,22 @@ detected.
 
 ### Prerequisites
 
-- SSH key-based access to your target servers (no
-  password/passphrase prompts). This can be as root,
-  as a normal user with sudo, or even a normal user
-  without any root access (unprivileged mode).
+- **SSH access** to the target server — either as a
+  normal user or as root. The SSH connection must
+  not prompt for a password or passphrase (use
+  key-based authentication without a passphrase).
+  This is not needed for local administration
+  (localhost / your own machine).
+
+  Quick setup: generate a key with `ssh-keygen`,
+  copy it to the server with `ssh-copy-id user@host`,
+  and test with `ssh user@host`. See the
+  [Arch wiki SSH keys guide](https://wiki.archlinux.org/title/SSH_keys)
+  for details.
+
 - Linux (any distribution) or macOS on the target
-  machines. macOS can also be managed locally.
+  machines. All supported systems can also be
+  managed locally without SSH.
 
 ### Setup
 
