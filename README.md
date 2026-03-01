@@ -1,12 +1,13 @@
-# Heinzel — AI-Powered Linux Server Administration
+# Heinzel — AI-Powered Server & Mac Administration
 
 Tell Heinzel what you want, and it SSHes into your
-server and does it for you — with built-in safety
-guardrails.
+server — or runs commands on your Mac — and does it
+for you, with built-in safety guardrails.
 
 - 2020 you searched on stackoverflow.com and copy-pasted commands
 - 2024 you asked ChatGPT and copy-pasted commands
-- Today you ask Heinzel and Claude Code SSHes into the server to just get it done
+- Today you ask Heinzel and it just gets it done —
+  on a remote server or your own machine
 
 Heinzel is a CLAUDE.md and a set of rules that turns
 [Claude Code](https://claude.ai/code) into a
@@ -43,10 +44,10 @@ doing anything destructive.
    it does and why, and waits for your approval.
    Nothing runs without your say-so.
 
-### Auto-detection on first connection
+### Auto-detection
 
-On the first connection to any server, Claude detects
-the OS, gathers hardware info, and remembers
+The first time you point Heinzel at any machine, Claude
+detects the OS, gathers hardware info, and remembers
 everything for future sessions:
 
 ```
@@ -58,9 +59,9 @@ everything for future sessions:
    configure it to allow SSH and HTTPS traffic.
 ```
 
-### Server memory across sessions
+### Memory across sessions
 
-After working on a server, Claude remembers it. Next
+After working on a machine, Claude remembers it. Next
 week you launch Claude Code again and type:
 
 ```
@@ -81,6 +82,24 @@ a to-do list in `memory/servers/<hostname>/todo.md`
 with checkboxes for each step. On reconnection it
 shows what's still pending and asks whether to
 continue or start fresh.
+
+### Local administration
+
+Heinzel also works on the local machine — no SSH
+needed, commands run directly. The same safety rules,
+memory, and guardrails apply whether the target is a
+remote server or your own laptop.
+
+This works on both Linux and macOS:
+
+```
+ ❯ Update all Homebrew packages on this Mac
+```
+
+```
+ ❯ Check if the firewall is configured on
+   this machine
+```
 
 ## Command line interface
 
@@ -158,8 +177,8 @@ under pressure.
   actual package operations when the package manager
   supports it.
 - **Auto-detects the OS** — reads `/etc/os-release`
-  and applies the right commands for the distro.
-  No guessing.
+  on Linux or `sw_vers` on macOS and applies the
+  right commands for the platform. No guessing.
 - **Logs everything** — all changes are recorded in
   the system journal (`journalctl -t heinzel`) and
   mirrored locally in
@@ -185,15 +204,15 @@ under pressure.
 LLMs can "hallucinate" — confidently produce commands
 with wrong flags, incorrect file paths, or syntax that
 doesn't exist on the server's specific OS and version.
-On a live server, a hallucinated command can be
+On a live system, a hallucinated command can be
 dangerous.
 
 Heinzel reduces this risk with multiple layers:
 
 - **Distro-specific rule files** — Instead of relying
   on the LLM's memory, heinzel loads a verified rule
-  file for each Linux distribution family (Debian,
-  RHEL, SUSE). These files contain the correct
+  file for each platform (Debian, RHEL, SUSE,
+  macOS). These files contain the correct
   commands, package managers, firewall tools, and
   common pitfalls for each distro. The LLM reads
   the file and follows it — it doesn't have to
@@ -230,6 +249,11 @@ journalctl -t heinzel --since "2026-02-01"
 
 # Last 20 entries
 journalctl -t heinzel -n 20
+
+# macOS
+log show \
+  --predicate 'senderImagePath CONTAINS "logger"' \
+  --info --last 7d | grep heinzel
 ```
 
 ## Supported Distributions
@@ -239,10 +263,11 @@ journalctl -t heinzel -n 20
 | Debian | Debian, Ubuntu                    | `rules/debian.md`  |
 | RHEL   | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`    |
 | SUSE   | openSUSE, SLES                    | `rules/suse.md`    |
+| macOS  | macOS (Apple Silicon & Intel)     | `rules/macos.md`   |
 
 Other distributions work too — Claude will apply
-general Linux best practices and let you know which
-distro it detected.
+general best practices and let you know which OS it
+detected.
 
 ## Getting Started
 
@@ -252,7 +277,8 @@ distro it detected.
   password/passphrase prompts). This can be as root,
   as a normal user with sudo, or even a normal user
   without any root access (unprivileged mode).
-- Linux on the target servers (any distribution).
+- Linux (any distribution) or macOS on the target
+  machines. macOS can also be managed locally.
 
 ### Setup
 
@@ -268,11 +294,12 @@ and remember it for future sessions.
 ## Risks & Responsibilities
 
 > [!CAUTION]
-> Heinzel operates on live servers via SSH — as root,
-> with sudo, or in unprivileged mode. Always review
-> every command before approving it.
+> Heinzel operates on live servers and local machines
+> — as root, with sudo, or in unprivileged mode.
+> Always review every command before approving it.
 
-This is a tool for **experienced Linux sysadmins**.
+This is a tool for **experienced sysadmins and
+power users**.
 
 The risks are real — an LLM can hallucinate,
 misunderstand your intent, or produce a command with
@@ -313,6 +340,7 @@ rules/
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
   suse.md              — openSUSE & SLES rules
+  macos.md             — macOS rules
   mise.md              — Language runtime manager (mise)
 memory/
   MEMORY.md            — Index for server memory
@@ -332,19 +360,19 @@ Every night, while the people of Cologne slept, the
 Heinzelmannchen crept out and did all the work: baking
 bread, building houses, finishing whatever was left
 undone. An invisible helper that quietly takes care of
-things — a fitting name for a server administration
+things — a fitting name for a system administration
 tool that handles the tedious work while you review
 and approve.
 
 ## Professional Support
 
 Need help setting this up for your infrastructure, or
-want a team to manage your servers with AI-assisted
-tooling?
+want a team to manage your infrastructure with
+AI-assisted tooling?
 
 **[Wintermeyer Consulting](https://wintermeyer-consulting.de)**
 offers consulting and hands-on support for heinzel
-deployments — from initial setup to ongoing server
+deployments — from initial setup to ongoing system
 management.
 
 Contact the project founder Stefan Wintermeyer and
