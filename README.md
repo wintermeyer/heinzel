@@ -207,8 +207,7 @@ prompts during an unattended upgrade.
 **When to avoid it:**
 
 - First time working on a production server
-- Destructive or irreversible tasks (upgrades, data
-  migrations, firewall changes)
+- When you don't trust Heinzel or don't understand it
 - Any time you want to understand what's happening
   step by step
 
