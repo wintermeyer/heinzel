@@ -1,8 +1,20 @@
 # Heinzel — System Administration with Safety Guardrails
 
-Tell Heinzel what you want, and it SSHes into your
-server — or runs commands on your Mac — and does it
-for you, with built-in safety guardrails.
+Managing systems means remembering the right commands
+for each OS, checking man pages, keeping track of how
+everything is set up and connected — and hoping you
+don't forget a backup or a firewall rule. Heinzel does that for you.
+Describe the task in plain English, review each
+command — or don't, if you prefer the
+`--dangerously-skip-permissions` way — done. It logs every change, asks when
+something is unclear, and gives you a detailed report
+when it's finished.
+
+Using it feels like pair-programming with a colleague
+who always checks the docs first and never skips a
+step because he's in a hurry.
+Not sure yet? Switch to plan mode and just talk it
+through first — no changes until you say go.
 
 - 2020 you searched on stackoverflow.com and copy-pasted commands
 - 2024 you asked ChatGPT and copy-pasted commands
@@ -82,6 +94,21 @@ a to-do list in `memory/servers/<hostname>/todo.md`
 with checkboxes for each step. On reconnection it
 shows what's still pending and asks whether to
 continue or start fresh.
+
+### Plan mode
+
+For complex or unfamiliar tasks, switch to plan mode
+before touching anything:
+
+```
+ ❯ /plan Migrate the database from MySQL to
+   PostgreSQL on db.example.com
+```
+
+Claude explores the server, checks what's running,
+reads configs, and drafts a step-by-step plan — but
+makes no changes. You discuss the approach, adjust
+it, and only when you approve does execution begin.
 
 ### Local administration
 
