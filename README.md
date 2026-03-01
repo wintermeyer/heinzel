@@ -1,4 +1,4 @@
-# Heinzel — AI-Powered Server & Mac Administration
+# Heinzel — System Administration with Safety Guardrails
 
 Tell Heinzel what you want, and it SSHes into your
 server — or runs commands on your Mac — and does it
