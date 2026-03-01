@@ -16,16 +16,12 @@ step because he's in a hurry.
 Not sure yet? Switch to plan mode and just talk it
 through first — no changes until you say go.
 
-- 2020 you searched on stackoverflow.com and copy-pasted commands
-- 2024 you asked ChatGPT and copy-pasted commands
-- Today you ask Heinzel and it just gets it done —
-  on a remote server or your own machine
-
-Heinzel is a CLAUDE.md and a set of rules that turns
+Heinzel is a set of rules that turns
 [Claude Code](https://claude.ai/code) into a
 cautious, methodical sysadmin that backs up before
-editing, dry-runs before installing, and asks before
-doing anything destructive.
+editing, dry-runs before installing, remembers what 
+was done 6 months ago and asks before doing 
+anything destructive.
 
 ## Screencast: Install Ruby and Rails
 
