@@ -183,6 +183,40 @@ $ claude --dangerously-skip-permissions \
 | **unattended-upgrades** | installed and enabled         |
 ```
 
+### About `--dangerously-skip-permissions`
+
+By default Claude Code asks for your approval before
+every tool call — every SSH command, every file read,
+every write. The `--dangerously-skip-permissions` flag
+disables these prompts so Claude runs everything
+without asking.
+
+The name is intentional: **it is dangerous.** You give
+up the ability to review each command before it hits a
+live server. On the other hand, it makes scripting and
+batch work practical — you can't sit and approve 200
+prompts during an unattended upgrade.
+
+**When it makes sense:**
+
+- Non-interactive / scripted use
+  (`claude --dangerously-skip-permissions -p "..."`)
+- Read-only tasks (checking OS, gathering info)
+- Disposable environments (dev VMs, containers)
+
+**When to avoid it:**
+
+- First time working on a production server
+- Destructive or irreversible tasks (upgrades, data
+  migrations, firewall changes)
+- Any time you want to understand what's happening
+  step by step
+
+Without the flag, Heinzel's safety rules still apply —
+Claude still backs up configs, dry-runs first, and
+follows least privilege. The flag only removes *your*
+approval step, not the built-in guardrails.
+
 ## Safety & Guardrails
 
 Heinzel's safety rules are not optional — they're
@@ -315,8 +349,15 @@ detected.
 
 ### Setup
 
-1. Clone this repo into your working directory.
-2. Open Claude Code in that directory.
+1. Clone this repo and enter the directory:
+   ```
+   git clone https://github.com/wintermeyer/heinzel.git
+   cd heinzel
+   ```
+2. Start Claude Code:
+   ```
+   claude
+   ```
 3. Tell Claude your problem, e.g. *"Find out if
    there is a webserver running on
    shop.example.com"*
