@@ -5,15 +5,19 @@ when working with code in this repository.
 
 ## Project
 
-heinzel — Remote administration of Linux servers
-via SSH. Supports any Linux distribution (Debian, Ubuntu,
-RHEL, CentOS, Fedora, SUSE, and others).
+heinzel — Administration of Linux servers and macOS
+machines via SSH or locally. Supports any Linux
+distribution (Debian, Ubuntu, RHEL, CentOS, Fedora,
+SUSE, and others) and macOS.
 
 ## How It Works
 
 The user provides a server hostname and optionally a user.
 SSH key-based auth is used (no password/passphrase needed).
-All work happens over SSH — always keep this in mind.
+All work on remote machines happens over SSH — always
+keep this in mind. When the target is the local machine
+(e.g. `localhost` or the user's own Mac), commands run
+directly without SSH.
 
 - **Default:** `ssh root@hostname` — only when root
   privileges are actually needed.
@@ -131,6 +135,8 @@ what your sysadmin needs to do."
 - User-space tools (mise, language runtimes, apps)
 - User-level cron (`crontab -e`)
 - User-level systemd services (`systemctl --user`)
+  or on macOS: `brew services` / `launchctl` for
+  user agents
 
 **3. What to defer (needs root):**
 - Package install/remove
@@ -180,32 +186,53 @@ Rules for the report:
 
 ## OS Detection (mandatory first step)
 
-Before doing any work on a server, you **must** know its OS.
+Before doing any work on a server or machine, you
+**must** know its OS.
 
-**On first connection to a new server:**
+**On first connection to a new machine:**
 
-1. Run the following to detect the distro and version
-   (extracts only the needed fields, avoids exposing
-   freeform vendor content to the LLM):
+1. Determine whether it is Linux or macOS:
+   ```
+   uname -s
+   ```
+   This returns `Linux` or `Darwin` (macOS).
+
+2. **If Linux** — detect the distro and version:
    ```
    . /etc/os-release && \
      echo "${ID}|${VERSION_ID}|${PRETTY_NAME}"
    ```
-2. Determine the distro family:
+   Determine the distro family:
    - `debian` — Debian, Ubuntu, and derivatives
-   - `rhel` — RHEL, CentOS, Fedora, Rocky Linux, AlmaLinux
+   - `rhel` — RHEL, CentOS, Fedora, Rocky Linux,
+     AlmaLinux
    - `suse` — openSUSE, SLES
-3. Read the matching rule file from `rules/<family>.md` in
-   this repo (e.g. `rules/debian.md`). Follow those
-   distro-specific conventions for all subsequent commands.
-4. Gather basic hardware info:
+
+   Read the matching rule file from
+   `rules/<family>.md` (e.g. `rules/debian.md`).
+
+   Gather hardware info:
    - CPU: `lscpu` (model, core count)
    - Memory: `free -h` (total RAM)
    - Disk: `df -h` (filesystem sizes and usage)
-5. Create a server memory file (see Server Memory below)
-   including the hardware info.
 
-**On subsequent connections to a known server:**
+3. **If macOS (Darwin)** — detect version and arch:
+   ```
+   sw_vers -productVersion && uname -m
+   ```
+   OS family: `macos`. Read `rules/macos.md`.
+
+   Gather hardware info:
+   - CPU: `sysctl -n machdep.cpu.brand_string`
+     and `sysctl -n hw.ncpu`
+   - Memory: `sysctl -n hw.memsize` (bytes —
+     divide by 1073741824 for GB)
+   - Disk: `df -h` (filesystem sizes and usage)
+
+4. Create a server memory file (see Server Memory
+   below) including the hardware info.
+
+**On subsequent connections to a known machine:**
 
 1. Read the server's memory file from
    `memory/servers/<hostname>/memory.md` and its local
@@ -213,17 +240,22 @@ Before doing any work on a server, you **must** know its OS.
    `memory/servers/<hostname>/changelog.log`.
 2. Check for `todo.md` (see Session To-Do List).
 3. Read the matching rule file from `rules/`.
-4. Verify the OS version is still current by running:
-   ```
-   . /etc/os-release && \
-     echo "${ID}|${VERSION_ID}|${PRETTY_NAME}"
-   ```
-   Update the memory file if it has changed (e.g. after
-   a distro upgrade).
+4. Verify the OS version is still current:
+   - **Linux:**
+     ```
+     . /etc/os-release && \
+       echo "${ID}|${VERSION_ID}|${PRETTY_NAME}"
+     ```
+   - **macOS:**
+     ```
+     sw_vers -productVersion
+     ```
+   Update the memory file if it has changed (e.g.
+   after a distro or macOS upgrade).
 
-**If no rule file exists for the detected distro**, apply
-general Linux best practices and tell the user which distro
-was detected so they can decide how to proceed.
+**If no rule file exists for the detected OS**, apply
+general best practices and tell the user which OS was
+detected so they can decide how to proceed.
 
 ## Critical Safety Rules
 
@@ -260,10 +292,10 @@ was detected so they can decide how to proceed.
   distro's firewall tool (see `rules/<family>.md`). A
   firewall with a default-allow policy provides no
   protection.
-- **Use the appropriate non-interactive package manager** for
-  the detected OS (`apt-get` on Debian/Ubuntu, `dnf` on
-  RHEL 8+/Fedora, `yum` on RHEL 7/CentOS 7, `zypper` on
-  SUSE).
+- **Use the appropriate non-interactive package manager**
+  for the detected OS (`apt-get` on Debian/Ubuntu, `dnf`
+  on RHEL 8+/Fedora, `yum` on RHEL 7/CentOS 7, `zypper`
+  on SUSE, `brew` on macOS — never with `sudo`).
 - **Prefer stable/official repos only.** Do not add
   third-party repos or backports without asking.
 - **Stick to stable release tracks.** Never suggest
@@ -319,12 +351,18 @@ command output.
 
 ## Expected Software
 
-Every server should have a firewall and automatic security
-updates configured. The specific tools vary by distro — see
-the matching `rules/<family>.md` file. If they are missing,
-flag it to the user. In unprivileged mode, include missing
-firewall or automatic security updates in the sysadmin
-report instead.
+Every Linux server should have a firewall and automatic
+security updates configured. The specific tools vary by
+distro — see the matching `rules/<family>.md` file. If
+they are missing, flag it to the user. In unprivileged
+mode, include missing firewall or automatic security
+updates in the sysadmin report instead.
+
+On macOS, a disabled Application Firewall is common
+and less critical (Macs are typically behind NAT).
+Flag it but don't treat it as urgent. Check that
+critical security auto-updates are enabled — see
+`rules/macos.md`.
 
 ## Programming Language Runtimes
 
@@ -449,6 +487,12 @@ logger -t heinzel "Read-only: checked OS, gathered hardware info"
 
 - **systemd distros** (Debian, RHEL, SUSE):
   `journalctl -t heinzel`
+- **macOS:**
+  ```
+  log show \
+    --predicate 'senderImagePath CONTAINS "logger"' \
+    --info --last 7d | grep heinzel
+  ```
 
 If `logger` fails (restricted syslog access in
 unprivileged mode), log to the local `changelog.log`
@@ -504,6 +548,21 @@ least:
 - CPU: 4× Intel Xeon E-2236 @ 3.40GHz
 - RAM: 16 GB
 - Disk: 80 GB (/ ext4, 45% used)
+- Last connected: 2026-02-25
+```
+
+macOS example:
+
+```markdown
+# macbook.local
+- SSH user: stefan
+- OS: macOS 15.3.1 (Sequoia)
+- OS family: macos
+- Arch: arm64 (Apple Silicon)
+- CPU: Apple M3 Pro, 12 cores
+- RAM: 36 GB
+- Disk: 1 TB (APFS, 52% used)
+- Homebrew: /opt/homebrew/
 - Last connected: 2026-02-25
 ```
 
