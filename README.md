@@ -21,9 +21,9 @@ OS, services, and quirks so you don't have to. Not
 sure yet? Switch to plan mode and just talk it through
 first — no changes until you say go.
 
-## Screencast: Install Ruby and Rails
+## Screencast: Debug and fix some webserver problems
 
-![Screencast: Install Ruby and Rails](assets/screencast-install-ruby-and-rails.gif)
+![Screencast: Debug and fix some webserver problems](assets/webshop-bugfix-example.gif)
 
 ### Other Screencasts on YouTube
 

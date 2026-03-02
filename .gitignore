@@ -7,3 +7,6 @@ memory/servers/*
 
 # Network topology contains real hostnames and IPs
 memory/network.md
+
+# macOS
+.DS_Store
