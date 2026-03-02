@@ -72,22 +72,27 @@ server's memory.
 
 ### Sudo
 
-When connecting as a non-root user, `sudo` may prompt for
-a password — which cannot be entered in this
-non-interactive SSH setup. If you discover that `sudo`
-requires a password:
+When connecting as a non-root user and a privileged
+action is first needed, probe whether sudo works
+without a password:
 
-1. **Stop using `sudo` on that server** for the rest of
-   the session.
-2. **Record it** in the server's memory file
-   (`memory/servers/<hostname>/memory.md`) by adding:
-   `- Sudo: requires password (unusable)`
-3. **Attempt root SSH fallback** (see below).
+```
+sudo -n true 2>/dev/null
+```
 
-On subsequent connections, check the server's memory for
-this flag. If sudo is marked as unusable, do not attempt
-`sudo` — proceed to root SSH fallback or unprivileged
-mode as recorded in the server's memory.
+- **Exit code 0** → sudo works without a password.
+  Record `- Sudo: passwordless` in the server's memory
+  file. Use `sudo` normally going forward.
+- **Exit code non-0** → sudo requires a password
+  (unusable in non-interactive SSH). Record
+  `- Sudo: requires password (unusable)` in the
+  server's memory file. Do not attempt `sudo` again —
+  proceed to root SSH fallback (see below).
+
+On subsequent connections, check the server's memory
+for the sudo flag. If sudo is marked as unusable, skip
+the probe and proceed to root SSH fallback or
+unprivileged mode as recorded in the server's memory.
 
 ### Root SSH Fallback
 
