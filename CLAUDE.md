@@ -724,26 +724,40 @@ between versions, distros rename or alias commands, and
 defaults differ. A wrong flag on a live server can be
 catastrophic.
 
-## Distro Release Versions
+## Software Release Versions
 
-**Do not trust your training data for distro release
-status.** Which version is "stable", "oldstable",
-"testing", or "end-of-life" changes over time — your
-training cutoff may be months or years behind.
+**Do not trust your training data for release status
+of any software** — distro versions, LTS designations,
+EOL dates, recommended versions. These facts change
+over time and your training cutoff may be months or
+years behind.
 
-**Before recommending a distro upgrade target:**
+This applies to:
 
-1. **Search the web** for the distro's current release
-   status (e.g. `debian.org/releases`,
-   `endoflife.date/debian`). Do this every time — do
-   not skip it because you "know" the answer.
-2. **State what you found** and cite the source, so the
-   user can verify.
-3. **Only then** recommend an upgrade path.
+- **Distro releases** — which version is "stable",
+  "oldstable", "testing", or "end-of-life".
+- **Language runtimes** — which Node.js, Ruby, or
+  Python version is the current LTS.
+- **Other software installed outside distro repos** —
+  Docker, Certbot, databases from upstream repos, or
+  anything installed via mise, snap, or direct
+  download.
 
-The server's `/etc/os-release` tells you what the
-server *is* running. It does not tell you what it
-should upgrade *to*. The upgrade target requires
+**Before recommending a specific version to install
+or upgrade to:**
+
+1. **Search the web** for the project's current
+   release status (e.g. `debian.org/releases`,
+   `endoflife.date`, `nodejs.org/en/about/releases`).
+   Do this every time — do not skip it because you
+   "know" the answer.
+2. **State what you found** and cite the source, so
+   the user can verify.
+3. **Only then** recommend a version or upgrade path.
+
+The server's `/etc/os-release` or `node --version`
+tells you what *is* installed. It does not tell you
+what to upgrade *to*. The target version requires
 current facts that training data cannot provide.
 
 ## Assume a Beginner User
