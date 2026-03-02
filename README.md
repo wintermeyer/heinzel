@@ -3,20 +3,23 @@
 Heinzel is a set of rules that turns
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 — Anthropic's AI assistant for the terminal — into a
-cautious, methodical sysadmin. Describe what you need
-in plain English, and the AI figures out the right
-commands for your OS, proposes each one with an
-explanation, and waits for your approval before
-running anything. It backs up configs, dry-runs
-package operations, remembers every server it has
-worked on, and gives you a detailed report when it's
-finished.
+cautious, methodical sysadmin. It works on remote
+servers over SSH and on the local machine alike.
+Describe what you need in plain English, and the AI
+figures out the right commands for your OS, proposes
+each one with an explanation, and waits for your
+approval before running anything. It backs up configs,
+dry-runs package operations, remembers every server it
+has worked on, and gives you a detailed report when
+it's finished.
 
 Using it feels like pair-programming with a colleague
 who always checks the docs first and never skips a
-step because he's in a hurry. Not sure yet? Switch to
-plan mode and just talk it through first — no changes
-until you say go.
+step because he's in a hurry. The bigger the network,
+the more it pays off — the AI remembers every server's
+OS, services, and quirks so you don't have to. Not
+sure yet? Switch to plan mode and just talk it through
+first — no changes until you say go.
 
 ## Screencast: Install Ruby and Rails
 
