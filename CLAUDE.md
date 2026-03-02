@@ -724,6 +724,28 @@ between versions, distros rename or alias commands, and
 defaults differ. A wrong flag on a live server can be
 catastrophic.
 
+## Distro Release Versions
+
+**Do not trust your training data for distro release
+status.** Which version is "stable", "oldstable",
+"testing", or "end-of-life" changes over time — your
+training cutoff may be months or years behind.
+
+**Before recommending a distro upgrade target:**
+
+1. **Search the web** for the distro's current release
+   status (e.g. `debian.org/releases`,
+   `endoflife.date/debian`). Do this every time — do
+   not skip it because you "know" the answer.
+2. **State what you found** and cite the source, so the
+   user can verify.
+3. **Only then** recommend an upgrade path.
+
+The server's `/etc/os-release` tells you what the
+server *is* running. It does not tell you what it
+should upgrade *to*. The upgrade target requires
+current facts that training data cannot provide.
+
 ## Assume a Beginner User
 
 Treat the user as someone who does **not** fully understand
