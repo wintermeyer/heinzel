@@ -434,6 +434,25 @@ user explicitly asks — never automatically.
 as a regular user. List skipped checks (with reasons)
 at the end of the report.
 
+## Security Audit
+
+Security configuration checks. Only run when the user
+explicitly asks — never automatically.
+
+**When triggered:**
+
+1. Read `rules/security.md` (audit checks).
+2. Read the server's `memory.md` for context.
+3. Run all applicable checks.
+4. Present the report in the format defined in
+   `rules/security.md`.
+5. Log a one-line summary to the system journal and
+   mirror it to the local `changelog.log`.
+
+**In unprivileged mode:** use config file fallbacks.
+List any checks that could not be performed at the
+end of the report.
+
 ## Programming Language Runtimes
 
 When a task requires a programming language (Node.js,

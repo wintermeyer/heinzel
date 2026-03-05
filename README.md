@@ -102,6 +102,17 @@ firewall, SSL certificates, failed services, and
 server-specific services. Problems are highlighted
 at the top of a concise report.
 
+### Security audit
+
+Check security configuration on any server:
+
+```
+ ❯ Run a security audit on app.example.com
+```
+
+Claude checks SSH password authentication settings,
+firewall status, and reports issues by severity.
+
 ### Plan mode
 
 For complex or unfamiliar tasks, switch to plan mode
@@ -426,6 +437,7 @@ rules/
   suse.md              — openSUSE & SLES rules
   macos.md             — macOS rules
   housekeeping.md      — Routine server inspection checklist
+  security.md          — Security audit checks
   mise.md              — Language runtime manager (mise)
 memory/
   MEMORY.md            — Index for server memory
