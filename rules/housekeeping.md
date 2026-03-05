@@ -343,6 +343,17 @@ specific check.
 
 - **WARN** if critical auto-updates are disabled
 
+### Homebrew Packages
+
+Only check if `brew` is available on the system.
+
+```bash
+command -v brew &>/dev/null && brew outdated
+```
+
+- **WARN** if any outdated packages are found —
+  report the count and list them
+
 ### Application Firewall
 
 ```bash
