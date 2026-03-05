@@ -381,6 +381,32 @@ Flag it but don't treat it as urgent. Check that
 critical security auto-updates are enabled — see
 `rules/macos.md`.
 
+## Housekeeping
+
+Routine server health inspections. Only run when the
+user explicitly asks — never automatically.
+
+**When triggered:**
+
+1. Read `rules/housekeeping.md` (baseline checks).
+2. Read `memory/housekeeping.md` (custom checks) if
+   it exists.
+3. Read the server's `memory.md` to determine which
+   service-specific checks apply.
+4. Run baseline checks + any matching
+   service-specific checks + custom checks.
+5. Present the report in the format defined in
+   `rules/housekeeping.md`.
+6. Update `memory.md` if the checks revealed changed
+   facts (e.g. significant disk usage change, new or
+   removed service).
+7. Log a one-line summary to the system journal and
+   mirror it to the local `changelog.log`.
+
+**In unprivileged mode:** run every check that works
+as a regular user. List skipped checks (with reasons)
+at the end of the report.
+
 ## Programming Language Runtimes
 
 When a task requires a programming language (Node.js,

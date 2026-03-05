@@ -8,5 +8,8 @@ memory/servers/*
 # Network topology contains real hostnames and IPs
 memory/network.md
 
+# User-added custom housekeeping checks
+memory/housekeeping.md
+
 # macOS
 .DS_Store

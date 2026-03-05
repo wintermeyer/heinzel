@@ -89,6 +89,19 @@ with checkboxes for each step. On reconnection it
 shows what's still pending and asks whether to
 continue or start fresh.
 
+### Housekeeping checks
+
+Run routine health inspections on any server:
+
+```
+ ❯ Run housekeeping on bremen1.wintermeyer.de
+```
+
+Claude checks disk, memory, load, pending updates,
+firewall, SSL certificates, failed services, and
+server-specific services. Problems are highlighted
+at the top of a concise report.
+
 ### Plan mode
 
 For complex or unfamiliar tasks, switch to plan mode
@@ -412,9 +425,11 @@ rules/
   rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
   suse.md              — openSUSE & SLES rules
   macos.md             — macOS rules
+  housekeeping.md      — Routine server inspection checklist
   mise.md              — Language runtime manager (mise)
 memory/
   MEMORY.md            — Index for server memory
+  housekeeping.md      — User-added custom checks (gitignored)
   network.md           — Cross-server network facts (gitignored)
   servers/<hostname>/
     memory.md          — Server state snapshot (gitignored)
