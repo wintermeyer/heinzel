@@ -15,16 +15,36 @@ SUSE, and others) and macOS.
 The user provides a server hostname and optionally a user.
 SSH key-based auth is used (no password/passphrase needed).
 All work on remote machines happens over SSH — always
-keep this in mind. When the target is the local machine
-(e.g. `localhost` or the user's own Mac), commands run
-directly without SSH.
+keep this in mind.
+
+### Local mode
+
+When the target is `localhost`, the user's own
+hostname, or otherwise clearly the local machine,
+heinzel operates in **local mode**:
+
+- **No SSH.** Commands run directly in the shell.
+- **No user prompt.** Use the current OS user — do
+  not ask which user to use.
+- **Sudo still applies.** When a privileged action is
+  needed, probe `sudo -n true` as usual. If sudo is
+  unavailable, enter unprivileged mode (no root SSH
+  fallback — there is no SSH).
+
+Several sections below (SSH User, Privilege
+Escalation, Server Memory) have remote-only steps.
+Skip those steps in local mode — they are marked
+or implied by the rules above.
+
+### Remote mode (SSH)
 
 - **Default:** `ssh root@hostname` — only when root
   privileges are actually needed.
 - **Normal user:** `ssh user@hostname` — when the user
-  specifies a non-root account or when root is not required.
-- **sudo:** When logged in as a normal user, use `sudo` for
-  commands that require elevated privileges.
+  specifies a non-root account or when root is not
+  required.
+- **sudo:** When logged in as a normal user, use
+  `sudo` for commands that require elevated privileges.
 - **Unprivileged mode:** When neither `sudo` nor root
   SSH is available, do everything possible as the
   current user and produce a sysadmin report for tasks
@@ -157,6 +177,9 @@ command output.
 
 ## SSH User
 
+**Local mode:** skip this section entirely. There is
+no SSH user — commands run as the current OS user.
+
 Each server's SSH username is stored in its memory file
 (`memory/servers/<hostname>/memory.md`) as
 `- SSH user: <name>`.
@@ -208,8 +231,12 @@ unprivileged mode as recorded in the server's memory.
 
 ### Root SSH Fallback
 
-When sudo is unusable and a privileged action is actually
-needed, probe root SSH access once:
+**Local mode:** skip this section. There is no SSH to
+fall back to. If sudo is unusable, go directly to
+unprivileged mode.
+
+When sudo is unusable and a privileged action is
+actually needed, probe root SSH access once:
 
 ```
 ssh -o BatchMode=yes -o ConnectTimeout=5 \
@@ -598,11 +625,26 @@ least:
 - Last connected: 2026-02-25
 ```
 
-macOS example:
+macOS remote example:
 
 ```markdown
 # macbook.local
 - SSH user: stefan
+- OS: macOS 15.3.1 (Sequoia)
+- OS family: macos
+- Arch: arm64 (Apple Silicon)
+- CPU: Apple M3 Pro, 12 cores
+- RAM: 36 GB
+- Disk: 1 TB (APFS, 52% used)
+- Homebrew: /opt/homebrew/
+- Last connected: 2026-02-25
+```
+
+Local mode example (no SSH user field):
+
+```markdown
+# localhost
+- Mode: local
 - OS: macOS 15.3.1 (Sequoia)
 - OS family: macos
 - Arch: arm64 (Apple Silicon)
