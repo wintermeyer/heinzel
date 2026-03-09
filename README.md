@@ -407,7 +407,10 @@ detected.
    cp memory/user.md.example memory/user.md
    ```
    Edit `memory/user.md` and set your default SSH
-   username and any per-server overrides.
+   username and any per-server overrides. You can
+   also set a preferred language in the
+   `# Preferences` section (e.g. `Language: German`)
+   — heinzel will communicate in that language.
 3. Start Claude Code:
    ```
    claude
@@ -494,7 +497,7 @@ rules/
 memory/
   MEMORY.md            — Index for server memory
   user.md.example      — SSH username template (copy to user.md)
-  user.md              — Your SSH usernames (gitignored)
+  user.md              — Your preferences and SSH usernames (gitignored)
   blacklist.md         — Blocked servers (gitignored)
   readonly.md          — Read-only servers (gitignored)
   housekeeping.md      — User-added custom checks (gitignored)

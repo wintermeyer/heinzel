@@ -359,6 +359,45 @@ When the user explicitly specifies a username in
 their request, use that instead and update the
 per-server override in `memory/user.md`.
 
+## User Language
+
+**File:** `memory/user.md` (same file as SSH
+usernames).
+
+heinzel communicates in the user's preferred
+language. The preference is set in `memory/user.md`
+under a `# Preferences` heading:
+
+    # Preferences
+    Language: German
+
+**If the line is missing or the file has no
+Preferences section:** default to English. Do not
+ask.
+
+**What to translate:** all conversational output —
+explanations, questions, warnings, summaries,
+reports, risk descriptions, and recommendations.
+This includes housekeeping reports, security audit
+reports, sysadmin reports, and session summaries.
+
+**What stays in English — do not translate:**
+- Shell commands and command output
+- File paths, package names, service names
+- Technical terms without a natural equivalent
+  (SSH, sudo, firewall, DNS, etc.)
+- Server memory files (`memory.md`,
+  `changelog.log`, `todo.md`)
+- Log entries written via `logger -t heinzel`
+- Config file contents
+- Rule files and CLAUDE.md itself
+
+**When the user writes in a specific language:**
+respond in that language regardless of the
+preference setting. The preference is a default,
+not a constraint — match the user's language in
+the current message when it differs.
+
 ## Privilege Escalation
 
 ### Sudo
