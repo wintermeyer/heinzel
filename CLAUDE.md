@@ -788,6 +788,86 @@ If the user explicitly abandons the remaining tasks,
 delete the file and note the abandonment in the
 changelog.
 
+## Session Lock
+
+A courtesy lock to prevent two Claude Code sessions
+from making overlapping changes on the same server.
+
+**Lock file:** `/tmp/heinzel.lock` on the target
+machine (remote server or local machine).
+
+**Contents** (plain text, 3 lines):
+
+```
+Started: 2026-03-09 14:30
+Task: Upgrading packages and configuring nginx
+Expiry: at:42
+```
+
+The third line records the expiry mechanism:
+`Expiry: at:<job_id>` or `Expiry: pid:<pid>`. This
+is used to cancel the timer on normal cleanup.
+
+**When to skip:** read-only sessions — housekeeping,
+security audits, inspections, status checks — never
+acquire or check the lock. Only modifying sessions
+use it.
+
+**Before the first modifying action on a server:**
+
+1. Check if `/tmp/heinzel.lock` exists.
+2. **If it exists:**
+   - Show the lock contents (when it started, what
+     task).
+   - If the timestamp is older than 3 hours, note
+     that it is likely stale (e.g. from a crashed or
+     abandoned session).
+   - Ask the user: proceed anyway (override the lock)
+     or abort.
+3. **If it does not exist** (or the user overrides):
+   create `/tmp/heinzel.lock` with the current
+   timestamp and a short summary of the task, then
+   start the auto-expiry timer (see below).
+
+**Auto-expiry:** immediately after creating the lock
+file, set a timer to remove it after 3 hours.
+
+1. Try `at` first:
+   ```
+   echo "rm -f /tmp/heinzel.lock" \
+     | at now + 3 hours 2>/dev/null
+   ```
+   If successful, parse the job ID from `at`'s output
+   and append `Expiry: at:<job_id>` to the lock file.
+
+2. If `at` fails (not installed or `atd` not running),
+   fall back to a background process:
+   ```
+   nohup sh -c 'sleep 10800 && rm -f \
+     /tmp/heinzel.lock' >/dev/null 2>&1 &
+   ```
+   Capture `$!` and append `Expiry: pid:<pid>` to the
+   lock file.
+
+This ensures the lock is cleaned up automatically if
+the session crashes or the network connection drops.
+Both methods survive SSH disconnects.
+
+**Cleanup:** on normal session end, read the
+`Expiry:` line from the lock file and cancel the
+timer before deleting:
+
+- `at:<job_id>` → `atrm <job_id>`
+- `pid:<pid>` → `kill <pid> 2>/dev/null`
+
+Then `rm -f /tmp/heinzel.lock`. The auto-expiry
+timer is a safety net — do not rely on it for
+normal cleanup.
+
+This is a soft/courtesy mechanism. The user can always
+override the lock and proceed. It exists to prevent
+accidental overlap, not to enforce exclusivity.
+
 ## Verify Before Running
 
 **Do not trust your training data for command syntax.**

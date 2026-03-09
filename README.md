@@ -90,6 +90,16 @@ with checkboxes for each step. On reconnection it
 shows what's still pending and asks whether to
 continue or start fresh.
 
+### Session lock
+
+When a modifying session starts, Claude places a lock
+file (`/tmp/heinzel.lock`) on the target machine. If
+another session tries to modify the same server, it
+sees the lock, shows who's working and on what, and
+asks before proceeding. Read-only sessions (e.g.
+housekeeping) skip the lock entirely. Stale locks
+older than 3 hours are flagged automatically.
+
 ### Housekeeping checks
 
 Run routine health inspections on any server:
