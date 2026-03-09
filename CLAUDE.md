@@ -348,6 +348,12 @@ Before doing any work on a server or machine, you
 
 **On first connection to a new machine:**
 
+0. **Check for DNS alias first.** If the hostname
+   is not `localhost` or the local machine, follow
+   the DNS Aliases section below. If the hostname
+   turns out to be an alias for a known server,
+   skip the rest of OS detection entirely.
+
 1. Determine whether it is Linux or macOS:
    ```
    uname -s
@@ -405,6 +411,101 @@ Before doing any work on a server or machine, you
 **If no rule file exists for the detected OS**, apply
 general best practices and tell the user which OS was
 detected so they can decide how to proceed.
+
+## DNS Aliases
+
+The same physical server can have multiple DNS names
+(e.g. `bremen3.wintermeyer.de` and
+`graphrag.fb12.uni-bremen.de` resolve to the same
+IP). heinzel detects this automatically using the
+`- IP:` field in server memory files.
+
+**Canonical name** = the first hostname used for a
+server. Its directory holds all memory files.
+Additional DNS names become filesystem symlinks to
+the canonical directory.
+
+**Local mode:** skip alias detection entirely. The
+local machine is always `localhost`.
+
+### Detection (on every new hostname)
+
+When connecting to a hostname that has no
+`memory/servers/<hostname>/` directory (and is not
+a symlink):
+
+1. **Resolve the IP:**
+   ```
+   dig +short <hostname> | head -1
+   ```
+   Fallback if `dig` is unavailable:
+   ```
+   python3 -c "import socket; \
+     print(socket.gethostbyname('<hostname>'))"
+   ```
+
+2. **Compare against known servers.** Scan existing
+   `memory/servers/*/memory.md` files (skip
+   symlinks — only check real directories) for a
+   matching `- IP:` line.
+
+3. **Match found → alias.** The hostname is another
+   name for an existing server.
+   - Create a symlink:
+     ```
+     ln -s <canonical> \
+       memory/servers/<alias-hostname>
+     ```
+   - Add a `- DNS alias: <alias-hostname>` line to
+     the canonical server's `memory.md` (one line
+     per alias).
+   - Skip OS detection — the canonical memory
+     already has everything.
+
+4. **No match → new server.** Proceed with the
+   normal first-connection flow (OS detection,
+   hardware info, memory file creation). Include
+   the resolved IP as the `- IP:` field.
+
+### Subsequent connections via alias
+
+When connecting via a hostname that is a symlink in
+`memory/servers/`:
+
+- Follow the symlink and read the canonical
+  `memory.md`.
+- Use the **alias hostname** (not the canonical
+  name) for SSH commands and `user.md` lookups.
+  Each alias can have its own SSH user.
+
+### IP verification
+
+On every connection to a known server (whether by
+canonical name or alias), verify the current IP
+matches `- IP:` in memory:
+
+```
+dig +short <hostname> | head -1
+```
+
+If the IP has changed, **stop and tell the user.**
+Possible causes:
+
+- The server migrated to a new IP → update
+  `- IP:` in memory.
+- An alias now points to a different server →
+  detach it (remove symlink, remove
+  `- DNS alias:` line, treat as a new server).
+
+Ask the user which case applies before proceeding.
+
+### Removing an alias
+
+1. Delete the symlink from `memory/servers/`.
+2. Remove the `- DNS alias:` line from the
+   canonical server's `memory.md`.
+3. Remove the alias hostname's entry from
+   `memory/user.md` if present.
 
 ## Expected Software
 
@@ -648,6 +749,7 @@ least:
 
 ```markdown
 # hostname.example.com
+- IP: 203.0.113.10
 - OS: Debian 12 (Bookworm)
 - Distro family: debian
 - CPU: 4× Intel Xeon E-2236 @ 3.40GHz
@@ -663,6 +765,7 @@ macOS remote example:
 
 ```markdown
 # macbook.local
+- IP: 203.0.113.20
 - OS: macOS 15.3.1 (Sequoia)
 - OS family: macos
 - Arch: arm64 (Apple Silicon)
@@ -677,6 +780,7 @@ Local mode example (no SSH user field):
 
 ```markdown
 # localhost
+- IP: 127.0.0.1
 - Mode: local
 - OS: macOS 15.3.1 (Sequoia)
 - OS family: macos

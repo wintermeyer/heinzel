@@ -66,6 +66,14 @@ everything for future sessions:
    configure it to allow SSH and HTTPS traffic.
 ```
 
+### DNS alias detection
+
+When multiple DNS names point to the same server,
+Heinzel detects this automatically by comparing IP
+addresses. The first hostname becomes the canonical
+name; additional names become symlinks that share the
+same memory. Each alias can have its own SSH user.
+
 ### Memory across sessions
 
 After working on a machine, Claude remembers it. Next
