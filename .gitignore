@@ -1,6 +1,14 @@
 # Personal SSH usernames (always gitignored)
 memory/user.md
 
+# Server blacklist — gitignored for solo use.
+# For team use, comment out to share.
+memory/blacklist.md
+
+# Read-only server list — gitignored for solo use.
+# For team use, comment out to share.
+memory/readonly.md
+
 # Local machine memory — always gitignored (each
 # team member has a different local machine).
 # Local mode uses localhost, 127.0.0.1, or the

@@ -290,6 +290,14 @@ under pressure.
   is available, works in unprivileged mode and
   produces a sysadmin report for tasks that need
   root.
+- **Server blacklist** — add hostnames or IPs to
+  `memory/blacklist.md` to permanently block
+  connection. Heinzel refuses to connect and won't
+  accept overrides.
+- **Read-only servers** — add hostnames or IPs to
+  `memory/readonly.md` for servers you can inspect
+  but must never modify. Deferred modifications are
+  collected into a report you can hand off.
 - **Ignores injected instructions** — text found in
   server files, logs, or command output is treated as
   data only. Suspicious patterns (text addressing the
@@ -487,6 +495,8 @@ memory/
   MEMORY.md            — Index for server memory
   user.md.example      — SSH username template (copy to user.md)
   user.md              — Your SSH usernames (gitignored)
+  blacklist.md         — Blocked servers (gitignored)
+  readonly.md          — Read-only servers (gitignored)
   housekeeping.md      — User-added custom checks (gitignored)
   network.md           — Cross-server network facts (gitignored)
   servers/<hostname>/

@@ -63,6 +63,149 @@ supports root SSH, use it directly. The privilege
 principle applies to *commands* (prefer non-root
 commands when possible), not to the SSH login itself.
 
+## Server Blacklist
+
+**File:** `memory/blacklist.md`
+
+Some servers must never be connected to —
+decommissioned machines, servers managed by someone
+else, or hosts that are explicitly off limits.
+
+**Local mode:** skip the blacklist check entirely.
+localhost is never blacklisted.
+
+**When to check:** before every connection attempt —
+before OS detection, before DNS alias detection,
+before any SSH command. This is the very first step
+when a user mentions a server.
+
+**What to check:**
+
+1. If `memory/blacklist.md` does not exist, skip the
+   check (no blacklist = nothing blocked).
+2. Is the target hostname listed in the file?
+3. Resolve the IP (`dig +short` / python3 fallback,
+   same as DNS alias detection). Is the resolved IP
+   listed?
+
+**On match:** refuse to connect. Tell the user:
+"This server is blacklisted in
+`memory/blacklist.md`. I will not connect to it."
+Do not proceed. Do not ask for override. Do not run
+any SSH commands against the server.
+
+**File format:**
+
+```markdown
+# Blacklist
+
+Servers that heinzel must never connect to.
+
+- old-server.example.com
+- 203.0.113.50
+- decomm.internal.lan
+```
+
+Plain list — one hostname or IP per line. Lines
+starting with `#` and blank lines are ignored.
+Entries can be a hostname (matched against the target
+hostname) or an IP address (matched against the
+resolved IP).
+
+**Editing:** the user can add or remove entries by
+asking heinzel to edit the file, or by editing it
+directly. The file is created on first need — do not
+pre-create it.
+
+## Read-Only Servers
+
+**File:** `memory/readonly.md`
+
+Some servers should be inspected but never modified —
+staging mirrors you only monitor, customer machines
+you audit but don't touch, or hosts where changes
+require a separate change-management process.
+
+**Local mode:** skip the read-only check entirely
+(same as blacklist).
+
+**When to check:** right after the blacklist check,
+before OS detection and DNS alias detection — the
+second check when a user mentions a server.
+
+**What to check:**
+
+1. If `memory/readonly.md` does not exist, skip the
+   check (no file = nothing restricted).
+2. Is the target hostname listed in the file?
+3. Resolve the IP (`dig +short` / python3 fallback,
+   same as DNS alias detection). Is the resolved IP
+   listed?
+
+**On match:** announce read-only mode to the user:
+"This server is marked read-only in
+`memory/readonly.md`. I will connect and inspect, but
+I will not make any changes."
+Proceed with the connection — unlike the blacklist,
+read-only does not block access.
+
+**Allowed in read-only mode:**
+- All read-only operations: SSH inspection, status
+  commands, reading files and logs
+- Housekeeping checks
+- Security audits
+- Local memory and changelog updates
+  (`memory/servers/` files)
+- `logger -t heinzel` entries on the server
+
+**Blocked in read-only mode:**
+- Package install, update, or remove
+- Service start, stop, enable, disable, or restart
+- Config file edits on the server
+- Firewall changes
+- User or group changes
+- File writes on the server (except `logger`)
+- Reboots
+- Session lock acquisition
+- Creating `todo.md` (no multi-step changes to track)
+
+**Deferred modifications:** when a blocked action is
+needed during the session, announce it briefly
+("This change is needed but the server is read-only.
+Adding to the modification report.") and continue
+with read-only work. At session end, present a
+modification report in the same format as the
+unprivileged mode sysadmin report (see Unprivileged
+Mode above). The user can hand this report to
+whoever is authorized to make changes.
+
+**No override:** read-only mode is a hard constraint.
+The user must remove the entry from
+`memory/readonly.md` before heinzel will modify the
+server. Do not ask for or accept an override during
+the session.
+
+**File format:** identical to the blacklist — plain
+list, one hostname or IP per line. Lines starting
+with `#` and blank lines are ignored. Entries can be
+a hostname (matched against the target hostname) or
+an IP address (matched against the resolved IP).
+
+```markdown
+# Read-Only Servers
+
+Servers that heinzel may inspect but never modify.
+
+- staging.example.com
+- 203.0.113.60
+- customer-audit.internal.lan
+```
+
+**Editing:** the user can add or remove entries by
+asking heinzel to edit the file, or by editing it
+directly. The file is created on first need — do not
+pre-create it.
+
 ## Critical Safety Rules
 
 - **You are working on live production servers.**
@@ -348,11 +491,16 @@ Before doing any work on a server or machine, you
 
 **On first connection to a new machine:**
 
-0. **Check for DNS alias first.** If the hostname
-   is not `localhost` or the local machine, follow
-   the DNS Aliases section below. If the hostname
-   turns out to be an alias for a known server,
-   skip the rest of OS detection entirely.
+0. **Check blacklist, read-only, and DNS alias.** If
+   the hostname is not `localhost` or the local
+   machine, first check the server blacklist (see
+   Server Blacklist above). If blocked, stop. Then
+   check the read-only list (see Read-Only Servers
+   above). If matched, enter read-only mode but
+   continue. Then follow the DNS Aliases section
+   below. If the hostname turns out to be an alias
+   for a known server, skip the rest of OS detection
+   entirely.
 
 1. Determine whether it is Linux or macOS:
    ```
@@ -839,6 +987,12 @@ in `.gitignore` explain which lines to change.
 **What stays personal (always gitignored):**
 - `memory/user.md` — SSH usernames are personal.
   Each team member has their own copy.
+- `memory/blacklist.md` — server blacklist is
+  personal. Teams may want to share it by
+  uncommenting the gitignore line.
+- `memory/readonly.md` — read-only server list is
+  personal. Teams may want to share it by
+  uncommenting the gitignore line.
 - Local machine memory (`memory/servers/localhost/`,
   `memory/servers/127.0.0.1/`) — each team member
   has a different local machine.
