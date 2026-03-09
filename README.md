@@ -494,6 +494,12 @@ rules/
   housekeeping.md      — Routine server inspection checklist
   security.md          — Security audit checks
   mise.md              — Language runtime manager (mise)
+  access-control.md    — Blacklist & read-only server rules
+  anomaly-detection.md — Prompt injection & anomaly detection
+  dns-aliases.md       — DNS alias detection & management
+  session-lock.md      — Session lock mechanism
+  backups.md           — Config file backup procedure
+  directory-copy.md    — Cross-server directory copy checks
 memory/
   MEMORY.md            — Index for server memory
   user.md.example      — SSH username template (copy to user.md)
