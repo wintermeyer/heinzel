@@ -9,8 +9,9 @@ Describe what you need in plain English, and the AI
 figures out the right commands for your OS, proposes
 each one with an explanation, and waits for your
 approval before running anything. It backs up configs,
-dry-runs package operations, remembers every server it
-has worked on, and gives you a detailed report when
+tests commands before real execution, remembers every
+server it has worked on, and gives you a detailed
+report when
 it's finished.
 
 Using it feels like pair-programming with a colleague
@@ -234,7 +235,7 @@ prompts during an unattended upgrade.
   step by step
 
 Without the flag, Heinzel's safety rules still apply —
-Claude still backs up configs, dry-runs first, and
+Claude still backs up configs, tests before applying, and
 follows least privilege. The flag only removes *your*
 approval step, not the built-in guardrails.
 
@@ -251,9 +252,9 @@ under pressure.
 - **Backs up config files** — copies to
   `/var/backups/heinzel/` before editing
   (auto-cleaned after 30 days).
-- **Dry-runs first** — runs dry-run commands before
-  actual package operations when the package manager
-  supports it.
+- **Tests before applying** — uses dry-run, test, or
+  validation modes before real execution whenever a
+  tool supports it.
 - **Auto-detects the OS** — reads `/etc/os-release`
   on Linux or `sw_vers` on macOS and applies the
   right commands for the platform. No guessing.
@@ -303,8 +304,8 @@ Heinzel reduces this risk with multiple layers:
   installed services, and configuration are recorded
   in a memory file. On subsequent connections, the
   LLM reads facts instead of guessing.
-- **Dry-run first** — Package operations are tested
-  with dry-run flags before actual execution.
+- **Test before apply** — Commands with a dry-run,
+  test, or validation mode are checked that way first.
 - **Human review** — Every command is shown to you
   before it runs. You are the final safeguard.
 

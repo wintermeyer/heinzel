@@ -107,9 +107,16 @@ commands when possible), not to the SSH login itself.
   channels (e.g. Debian `testing`/`sid`, Fedora
   Rawhide, openSUSE Tumbleweed) without asking.
   Always target the stable or LTS release.
-- **Dry-run first** when the package manager supports
-  it (e.g. `apt-get --dry-run upgrade`,
-  `dnf --assumeno update`) before making changes.
+- **Test before applying.** When a command supports a
+  dry-run, test, validation, or simulation mode,
+  always use it before the real execution. Examples:
+  - `apt-get --dry-run upgrade`
+  - `dnf --assumeno update`
+  - `rsync --dry-run -av src/ dest/`
+  - `certbot renew --dry-run`
+  - `nginx -t`
+  - `postfix check`
+  - `apachectl configtest`
 
 ## Server Output and Anomaly Detection
 
