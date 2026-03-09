@@ -187,12 +187,16 @@ command output.
 **Local mode:** skip this section entirely. There is
 no SSH user — commands run as the current OS user.
 
-Each server's SSH username is stored in its memory file
-(`memory/servers/<hostname>/memory.md`) as
-`- SSH user: <name>`.
+All SSH usernames are stored in `memory/user.md` —
+never in server memory files. Read this file at the
+start of every session.
 
-A global default is stored in `memory/user.md`. Read
-this file at the start of every session.
+The file has two parts:
+- **Default** — the fallback username for any server
+  without a per-server override.
+- **Per-server overrides** — a list of
+  `- hostname: username` entries for servers that use
+  a different username than the default.
 
 **If `memory/user.md` does not exist or has no default
 SSH user set:** ask the user what username they
@@ -200,15 +204,17 @@ typically use, then save it to `memory/user.md`.
 
 **On first connection to a new server:** ask the user
 which SSH username to use for this server, suggesting
-the global default. Save the answer in the server's
-`memory.md`.
+the default from `memory/user.md`. Save the answer as
+a per-server override in `memory/user.md` (not in
+server memory).
 
-**On subsequent connections:** read the SSH user from
-the server's memory file — do not ask again.
+**On subsequent connections:** look up the server in
+the per-server overrides in `memory/user.md`. If not
+listed, use the default. Do not ask again.
 
 When the user explicitly specifies a username in
 their request, use that instead and update the
-server's memory.
+per-server override in `memory/user.md`.
 
 ## Privilege Escalation
 
@@ -642,7 +648,6 @@ least:
 
 ```markdown
 # hostname.example.com
-- SSH user: stefan
 - OS: Debian 12 (Bookworm)
 - Distro family: debian
 - CPU: 4× Intel Xeon E-2236 @ 3.40GHz
@@ -651,11 +656,13 @@ least:
 - Last connected: 2026-02-25
 ```
 
+SSH usernames are stored in `memory/user.md`, not
+here.
+
 macOS remote example:
 
 ```markdown
 # macbook.local
-- SSH user: stefan
 - OS: macOS 15.3.1 (Sequoia)
 - OS family: macos
 - Arch: arm64 (Apple Silicon)
@@ -714,6 +721,43 @@ a glance, the memory file is too long.
 
 **On subsequent connections:** read the memory file first,
 then verify the OS version is still current.
+
+## Team Usage
+
+By default heinzel is set up for solo use — server
+memory, network topology, and changelogs are
+gitignored so they stay local to your machine.
+
+For teams that want to share server state via git,
+edit `.gitignore` to track those files. The comments
+in `.gitignore` explain which lines to change.
+
+**What stays personal (always gitignored):**
+- `memory/user.md` — SSH usernames are personal.
+  Each team member has their own copy.
+- Local machine memory (`memory/servers/localhost/`,
+  `memory/servers/127.0.0.1/`) — each team member
+  has a different local machine.
+- If your machine's hostname is used as a server
+  directory name (e.g. `memory/servers/stefans-mbp/`),
+  add it to `.gitignore` manually.
+
+**What gets shared in team mode:**
+- `memory/servers/*/` — server state snapshots and
+  changelogs (minus local machine directories)
+- `memory/network.md` — cross-server topology
+- `memory/housekeeping.md` — custom checks
+
+**New team members:**
+1. Copy `memory/user.md.example` to `memory/user.md`
+2. Set your default SSH username and any per-server
+   overrides
+
+**Workflow:** commit server memory changes after
+sessions so the team stays in sync. The session lock
+(`/tmp/heinzel.lock` on each server) prevents two
+people from making overlapping changes on the same
+server.
 
 ## Network Memory
 

@@ -1,14 +1,22 @@
-# Personal user preferences
+# Personal SSH usernames (always gitignored)
 memory/user.md
 
-# Server memory files contain real hostnames and server details
+# Local machine memory — always gitignored (each
+# team member has a different local machine).
+# Local mode uses localhost, 127.0.0.1, or the
+# machine's own hostname as directory name.
+memory/servers/localhost/
+memory/servers/127.0.0.1/
+
+# Server memory — gitignored for solo use.
+# For team use, comment out the next 3 lines to
+# share server state via git.
 memory/servers/*
 !memory/servers/.gitkeep
-
-# Network topology contains real hostnames and IPs
 memory/network.md
 
-# User-added custom housekeeping checks
+# Custom housekeeping checks — gitignored for solo
+# use. For team use, comment out to share.
 memory/housekeeping.md
 
 # macOS

@@ -1,6 +1,8 @@
 # Memory
 
-User preferences are stored in `memory/user.md`.
+User preferences and SSH usernames (default and
+per-server overrides) are stored in
+`memory/user.md`.
 Server details are stored in
 `memory/servers/<hostname>/memory.md`.
 Local changelogs are stored in

@@ -1,0 +1,6 @@
+# SSH Users
+
+Default: your-username
+
+## Per-server overrides
+# - hostname.example.com: different-username

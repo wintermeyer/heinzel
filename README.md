@@ -386,16 +386,41 @@ detected.
    git clone https://github.com/wintermeyer/heinzel.git
    cd heinzel
    ```
-2. Start Claude Code:
+2. Set up your SSH username:
+   ```
+   cp memory/user.md.example memory/user.md
+   ```
+   Edit `memory/user.md` and set your default SSH
+   username and any per-server overrides.
+3. Start Claude Code:
    ```
    claude
    ```
-3. Tell Claude your problem, e.g. *"Find out if
+4. Tell Claude your problem, e.g. *"Find out if
    there is a webserver running on
    shop.example.com"*
 
 Claude will auto-detect the OS on first connection
 and remember it for future sessions.
+
+### Team setup
+
+Heinzel supports team use where multiple people share
+server state via git while keeping SSH usernames
+personal.
+
+1. Each team member copies `memory/user.md.example`
+   to `memory/user.md` and sets their own SSH
+   usernames. This file is always gitignored.
+2. Edit `.gitignore` to track server memory — the
+   comments in the file explain which lines to
+   comment out.
+3. If any team member uses heinzel locally (on their
+   own machine), add their machine's hostname
+   directory to `.gitignore` (e.g.
+   `memory/servers/stefans-mbp/`).
+4. Commit server memory changes after sessions so the
+   team stays in sync.
 
 ## Risks & Responsibilities
 
@@ -452,6 +477,8 @@ rules/
   mise.md              — Language runtime manager (mise)
 memory/
   MEMORY.md            — Index for server memory
+  user.md.example      — SSH username template (copy to user.md)
+  user.md              — Your SSH usernames (gitignored)
   housekeeping.md      — User-added custom checks (gitignored)
   network.md           — Cross-server network facts (gitignored)
   servers/<hostname>/
