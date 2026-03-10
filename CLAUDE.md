@@ -52,6 +52,19 @@ heinzel operates in **local mode**:
 confirmation.** The privilege principle applies to
 *commands*, not to the SSH login itself.
 
+### SSH Options
+
+Always use these options on every SSH and
+SCP/rsync-over-SSH command:
+
+    ssh -o BatchMode=yes -o ConnectTimeout=5 …
+
+- **BatchMode=yes** — never prompt for passwords
+  or passphrases; fail immediately if key auth
+  fails.
+- **ConnectTimeout=5** — give up after 5 seconds
+  if the host is unreachable.
+
 ## Access Control (Blacklist & Read-Only)
 
 Read `rules/access-control.md` for full details.
