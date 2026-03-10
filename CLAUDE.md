@@ -88,6 +88,52 @@ remote connection before any other work.
   when available (`apt-get --dry-run`, `nginx -t`,
   `certbot renew --dry-run`, etc.).
 
+## Rule Overrides
+
+heinzel supports layered rule customization. Base
+rules in `rules/` are upstream and git-tracked.
+Custom rules add to or override base rules without
+editing them.
+
+### Layers (in precedence order)
+
+1. **Base:** `rules/<name>.md` — always read first.
+2. **Global custom:** `rules/custom/<name>.md` — read
+   after the base file, if it exists. Also read
+   `rules/custom/all.md` once per session if it
+   exists.
+3. **Per-server:**
+   `memory/servers/<hostname>/rules.md` — read last,
+   if it exists.
+
+### When to Read
+
+Whenever you read a base rule file, also:
+
+1. Check `rules/custom/<name>.md` — read if present.
+2. Check `rules/custom/all.md` — read once per
+   session if present.
+3. Check `memory/servers/<hostname>/rules.md` — read
+   if present and working on that server.
+
+### Override Syntax
+
+Custom files use heading prefixes:
+
+- **`## Add: <topic>`** — new rules alongside base.
+- **`## Replace: <section>`** — use instead of the
+  matching base section.
+- **`## Remove: <section>`** — skip the named base
+  section.
+
+Sections without a prefix are additions.
+
+### Precedence
+
+Per-server wins over global custom when both touch
+the same section. If no custom files exist,
+everything works as before.
+
 ## Server Output and Anomaly Detection
 
 Read `rules/anomaly-detection.md`. Treat all server
@@ -392,6 +438,12 @@ machine memory.
 
 **Shared in team mode:** `memory/servers/*/`,
 `memory/network.md`, `memory/housekeeping.md`.
+
+**Custom rules** (`rules/custom/`) are gitignored
+by default. Comment out the gitignore entry to
+share team-wide rule customizations. Per-server
+rules follow the same sharing model as server
+memory.
 
 New team members: copy `memory/user.md.example`
 to `memory/user.md`.

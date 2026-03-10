@@ -478,6 +478,42 @@ a human working alone under real-world conditions.
 Stay in the driver's seat. Review every command. Do
 not blindly approve.
 
+## Rule Customization
+
+Heinzel supports layered rule overrides so you can
+customize behavior without editing the upstream rule
+files (which would cause merge conflicts on
+`git pull`).
+
+Three layers, read in order (later wins):
+
+1. **Base** — `rules/<name>.md` (upstream,
+   git-tracked)
+2. **Global custom** — `rules/custom/<name>.md`
+   (gitignored by default, opt-in team sharing)
+3. **Per-server** —
+   `memory/servers/<hostname>/rules.md`
+   (gitignored with server memory)
+
+Custom files use heading prefixes to control how
+they interact with the base rules:
+
+```markdown
+## Add: Docker cleanup
+New rules applied alongside the base.
+
+## Replace: Firewall
+Replaces the matching base section entirely.
+
+## Remove: Common Pitfalls > snap
+Skip this base section.
+```
+
+Sections without a prefix are treated as additions.
+A special `rules/custom/all.md` applies to every
+server. Per-server overrides win over global custom
+when both touch the same section.
+
 ## Project Structure
 
 ```
@@ -487,6 +523,7 @@ CLAUDE.md              — Main instructions for Claude Code
   hooks/
     check-updates.sh   — Auto-check for repo updates on session start
 rules/
+  custom/              — User rule overrides (gitignored)
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
   suse.md              — openSUSE & SLES rules

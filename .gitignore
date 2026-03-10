@@ -27,5 +27,11 @@ memory/network.md
 # use. For team use, comment out to share.
 memory/housekeeping.md
 
+# Custom rule overrides — gitignored for solo use.
+# For team use, comment out the next 2 lines to
+# share custom rules via git.
+rules/custom/*
+!rules/custom/.gitkeep
+
 # macOS
 .DS_Store
