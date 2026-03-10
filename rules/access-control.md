@@ -74,7 +74,7 @@ read-only does not block access.
 - Service start, stop, enable, disable, or restart
 - Config file edits on the server
 - Firewall, user/group, or file write changes
-- Reboots, session lock acquisition
+- Reboots
 - Creating `todo.md`
 
 **Deferred modifications:** when a blocked action is

@@ -67,7 +67,8 @@ remote connection before any other work.
   service restarts, any destructive command.
 - **Absolute taboos (never run without explicit user
   request):** `fdisk`, `parted`, `gdisk`, or any
-  disk partitioning tool. Never modify
+  disk partitioning tool. Exception: `fdisk -l`
+  (read-only listing) is allowed. Never modify
   `/etc/ssh/sshd_config`. Never delete or overwrite
   SSH keys. Never halt or power off a server.
 - **Firewall & network:** Be extremely careful — a
@@ -459,11 +460,6 @@ For multi-step sessions (2+ steps), create
 `memory/servers/<hostname>/todo.md`. Mark tasks
 `[x]` immediately on completion. On reconnection,
 show pending items. Delete when all done.
-
-## Session Lock
-
-Read `rules/session-lock.md`. Courtesy lock at
-`/tmp/heinzel.lock` to prevent overlapping changes.
 
 ## Verify Before Running
 
