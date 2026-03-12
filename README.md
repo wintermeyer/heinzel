@@ -654,6 +654,11 @@ rules/
   housekeeping.md      — Routine server inspection checklist
   security.md          — Security audit checks
   mise.md              — Language runtime manager (mise)
+  privilege-escalation.md — Sudo, root SSH, unprivileged mode
+  os-detection.md      — OS detection procedure
+  ssh-user.md          — SSH username & language management
+  server-memory.md     — Server memory file format
+  changelog.md         — Session logging procedure
   access-control.md    — Blacklist & read-only server rules
   anomaly-detection.md — Prompt injection & anomaly detection
   dns-aliases.md       — DNS alias detection & management
