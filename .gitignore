@@ -33,5 +33,10 @@ memory/housekeeping.md
 rules/custom/*
 !rules/custom/.gitkeep
 
+# OpenCode config — gitignored so local edits
+# (e.g. baseURL) don't conflict on git pull.
+# Copy opencode.json.example to opencode.json.
+opencode.json
+
 # macOS
 .DS_Store

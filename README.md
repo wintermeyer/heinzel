@@ -1,27 +1,30 @@
 # Heinzel — System Administration with Safety Guardrails
 
-Heinzel is a set of rules that turns
-[Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-— Anthropic's AI assistant for the terminal — into a
-cautious, methodical sysadmin. It works on Linux,
-FreeBSD, and macOS — remote servers over SSH and the
-local machine alike.
+Heinzel is a set of rules that turns an AI coding
+assistant into a cautious, methodical sysadmin. It
+works with
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code),
+[OpenCode](https://opencode.ai), or any other
+terminal-based AI tool that can read project files
+and run shell commands. It supports Linux, FreeBSD,
+and macOS — remote servers over SSH and the local
+machine alike.
+
 Describe what you need in plain English, and the AI
 figures out the right commands for your OS, proposes
 each one with an explanation, and waits for your
 approval before running anything. It backs up configs,
 tests commands before real execution, remembers every
 server it has worked on, and gives you a detailed
-report when
-it's finished.
+report when it's finished.
 
 Using it feels like pair-programming with a colleague
 who always checks the docs first and never skips a
 step because he's in a hurry. The bigger the network,
 the more it pays off — the AI remembers every server's
 OS, services, and quirks so you don't have to. Not
-sure yet? Switch to plan mode and just talk it through
-first — no changes until you say go.
+sure yet? Ask the AI to plan first before making
+changes — no changes until you say go.
 
 ## Screencast: Debug and fix some webserver problems
 
@@ -35,28 +38,28 @@ first — no changes until you say go.
 
 ## How It Works
 
-1. **Install
-   [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-   and clone the repo**
+1. **Clone the repo and start your AI tool**
    ```
    git clone https://github.com/wintermeyer/heinzel.git
    cd heinzel
-   claude
    ```
+   Then launch your preferred AI coding assistant
+   from inside the directory (e.g. `claude` for
+   Claude Code, `opencode` for OpenCode).
 2. **Describe what you need in plain English**
    ```
    ❯ Install and configure nginx on web1.example.com
    ```
 3. **Review and approve each command before it runs**
-   Claude proposes every SSH command, explains what
+   The AI proposes every SSH command, explains what
    it does and why, and waits for your approval.
    Nothing runs without your say-so.
 
 ### Auto-detection
 
-The first time you point Heinzel at any machine, Claude
-detects the OS, gathers hardware info, and remembers
-everything for future sessions:
+The first time you point Heinzel at any machine, the
+AI detects the OS, gathers hardware info, and
+remembers everything for future sessions:
 
 ```
  ❯ What OS is installed on app.example.com?
@@ -77,14 +80,14 @@ same memory. Each alias can have its own SSH user.
 
 ### Memory across sessions
 
-After working on a machine, Claude remembers it. Next
-week you launch Claude Code again and type:
+After working on a machine, the AI remembers it.
+Next week you start a new session and type:
 
 ```
  ❯ Check on web1.example.com.
 ```
 
-Claude reads
+It reads
 `memory/servers/web1.example.com/memory.md`, already
 knows it's Debian 12 with nginx and PostgreSQL,
 checks the local changelog, and picks up right where
@@ -93,11 +96,11 @@ it left off.
 ### Session to-do list
 
 When a multi-step task gets interrupted — connection
-drop, conversation ends, laptop closes — Claude keeps
-a to-do list in `memory/servers/<hostname>/todo.md`
-with checkboxes for each step. On reconnection it
-shows what's still pending and asks whether to
-continue or start fresh.
+drop, conversation ends, laptop closes — Heinzel
+keeps a to-do list in
+`memory/servers/<hostname>/todo.md` with checkboxes
+for each step. On reconnection it shows what's still
+pending and asks whether to continue or start fresh.
 
 ### Housekeeping checks
 
@@ -107,7 +110,7 @@ Run routine health inspections on any server:
  ❯ Run housekeeping on bremen1.wintermeyer.de
 ```
 
-Claude checks disk, memory, load, pending updates,
+Heinzel checks disk, memory, load, pending updates,
 firewall, SSL certificates, failed services, and
 server-specific services. Problems are highlighted
 at the top of a concise report.
@@ -120,10 +123,10 @@ Check security configuration on any server:
  ❯ Run a security audit on app.example.com
 ```
 
-Claude checks SSH password authentication settings,
+Heinzel checks SSH password authentication settings,
 firewall status, and reports issues by severity.
 
-### Plan mode
+### Plan mode (Claude Code)
 
 For complex or unfamiliar tasks, switch to plan mode
 before touching anything:
@@ -133,10 +136,14 @@ before touching anything:
    PostgreSQL on db.example.com
 ```
 
-Claude explores the server, checks what's running,
+The AI explores the server, checks what's running,
 reads configs, and drafts a step-by-step plan — but
 makes no changes. You discuss the approach, adjust
 it, and only when you approve does execution begin.
+
+> **Note:** The `/plan` command is a Claude Code
+> feature. OpenCode does not have an equivalent —
+> simply ask the AI to plan before acting.
 
 ### Local administration
 
@@ -156,9 +163,90 @@ This works on both Linux and macOS:
    this machine
 ```
 
-## Command line interface
+## Supported AI Tools
 
-You can script Heinzel too:
+Heinzel is tool-agnostic. Any terminal-based AI
+coding assistant that reads project files and runs
+shell commands will pick up the rules in `CLAUDE.md`
+and the `rules/` directory.
+
+### Claude Code
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+is Anthropic's CLI for Claude. It natively reads
+`CLAUDE.md` and is the primary tool Heinzel was
+developed with.
+
+```
+claude
+```
+
+### OpenCode with Ollama
+
+[OpenCode](https://opencode.ai) is an open-source
+terminal AI tool that supports many providers,
+including local free models via
+[Ollama](https://ollama.com). This lets you run
+Heinzel entirely on your own hardware — no cloud
+API required.
+
+**1. Install Ollama and pull a model**
+
+```bash
+ollama pull qwen3.5:9b
+```
+
+**2. Expand the context window**
+
+Ollama defaults to 4096 tokens — too small for
+agentic tool use. Create a variant with a larger
+context:
+
+```bash
+ollama run qwen3.5:9b
+>>> /set parameter num_ctx 16384
+>>> /save qwen3.5:9b-16k
+>>> /bye
+```
+
+**3. Configure OpenCode**
+
+Copy the example config and adjust if needed:
+
+```bash
+cp opencode.json.example opencode.json
+```
+
+Edit `opencode.json` to match your setup — e.g.
+change the `baseURL` if Ollama runs on a different
+host (`http://192.168.0.3:11434/v1`), or change the
+model name. The file is gitignored so local edits
+won't conflict on `git pull`.
+
+**4. Launch OpenCode**
+
+```
+opencode
+```
+
+Select the Ollama model from the model picker (search for qwen). 
+Start the model picker by typing `/models` in the OpenCode terminal.
+
+> **Note:** Larger models (14B+) produce more
+> reliable tool calls. If you have the GPU memory,
+> prefer a bigger model. The `tools: true` flag is
+> required for agentic features. See the
+> [OpenCode provider docs](https://opencode.ai/docs/providers/)
+> for more configuration options.
+
+## Command Line Interface
+
+You can script Heinzel from the command line without
+entering the interactive UI.
+
+### Claude Code
+
+Use the `-p` flag to pass a prompt directly:
 
 ```bash
 $ claude --dangerously-skip-permissions \
@@ -215,7 +303,32 @@ $ claude --dangerously-skip-permissions \
 | **unattended-upgrades** | installed and enabled         |
 ```
 
-### About `--dangerously-skip-permissions`
+### OpenCode
+
+Use the `run` command to pass a prompt directly:
+
+```bash
+opencode run "What OS is installed on \
+  server1.example.com?"
+```
+
+Useful flags for scripting:
+
+- `--format json` — machine-readable JSON output
+- `-m provider/model` — override the model
+- `-f file.txt` — attach files to the prompt
+- `-c` — continue the previous session
+
+For repeated calls without startup overhead, use the
+headless server:
+
+```bash
+opencode serve
+opencode run --attach http://localhost:4096 \
+  "Check disk usage on web1.example.com"
+```
+
+## About `--dangerously-skip-permissions` (Claude Code)
 
 By default Claude Code asks for your approval before
 every tool call — every SSH command, every file read,
@@ -244,14 +357,14 @@ prompts during an unattended upgrade.
   step by step
 
 Without the flag, Heinzel's safety rules still apply —
-Claude still backs up configs, tests before applying, and
-follows least privilege. The flag only removes *your*
-approval step, not the built-in guardrails.
+the AI still backs up configs, tests before applying,
+and follows least privilege. The flag only removes
+*your* approval step, not the built-in guardrails.
 
 ## Safety & Guardrails
 
 Heinzel's safety rules are not optional — they're
-baked into every session. Claude follows them
+baked into every session. The AI follows them
 consistently, even when a human might skip steps
 under pressure.
 
@@ -333,8 +446,8 @@ of it at every step.
 
 ## Accessing Logs
 
-Heinzel logs every action to the system journal on each
-server. To query the log:
+Heinzel logs every action to the system journal on
+each server. To query the log:
 
 ```bash
 # All entries
@@ -354,15 +467,15 @@ log show \
 
 ## Supported Distributions
 
-| Family | Distributions                     | Rule file          |
-| ------ | --------------------------------- | ------------------ |
-| Debian | Debian, Ubuntu                    | `rules/debian.md`  |
-| RHEL   | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`    |
-| SUSE   | openSUSE, SLES                    | `rules/suse.md`    |
-| macOS  | macOS (Apple Silicon & Intel)      | `rules/macos.md`   |
+| Family  | Distributions                     | Rule file          |
+| ------- | --------------------------------- | ------------------ |
+| Debian  | Debian, Ubuntu                    | `rules/debian.md`  |
+| RHEL    | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`   |
+| SUSE    | openSUSE, SLES                    | `rules/suse.md`   |
+| macOS   | macOS (Apple Silicon & Intel)     | `rules/macos.md`   |
 | FreeBSD | FreeBSD (all versions)            | `rules/freebsd.md` |
 
-Other distributions work too — Claude will apply
+Other distributions work too — the AI will apply
 general best practices and let you know which OS it
 detected.
 
@@ -370,6 +483,10 @@ detected.
 
 ### Prerequisites
 
+- **An AI coding assistant** that runs in the
+  terminal — e.g.
+  [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+  or [OpenCode](https://opencode.ai).
 - **SSH access** to the target server — either as a
   normal user or as root. The SSH connection must
   not prompt for a password or passphrase (use
@@ -383,8 +500,8 @@ detected.
   [Arch wiki SSH keys guide](https://wiki.archlinux.org/title/SSH_keys)
   for details.
 
-- Linux (any distribution) or macOS on the target
-  machines. All supported systems can also be
+- Linux (any distribution), FreeBSD, or macOS on the
+  target machines. All supported systems can also be
   managed locally without SSH.
 
 ### Setup
@@ -403,15 +520,15 @@ detected.
    also set a preferred language in the
    `# Preferences` section (e.g. `Language: German`)
    — heinzel will communicate in that language.
-3. Start Claude Code:
+3. Start your AI tool from within the directory:
    ```
-   claude
+   claude        # for Claude Code
+   opencode      # for OpenCode
    ```
-4. Tell Claude your problem, e.g. *"Find out if
-   there is a webserver running on
-   shop.example.com"*
+4. Describe your task, e.g. *"Find out if there is
+   a webserver running on shop.example.com"*
 
-Claude will auto-detect the OS on first connection
+The AI will auto-detect the OS on first connection
 and remember it for future sessions.
 
 ### Team setup
@@ -455,11 +572,12 @@ backups, skip dry-runs, and apply firewall rules that
 lock themselves out. Every experienced sysadmin has a
 horror story.
 
-Claude doesn't get tired or flustered. It **always**
-backs up before editing, **always** dry-runs first,
-and **always** checks the OS before assuming which
-commands to use. It follows the safety checklist every
-single time — not just when it remembers to.
+A well-configured AI doesn't get tired or flustered.
+It **always** backs up before editing, **always**
+dry-runs first, and **always** checks the OS before
+assuming which commands to use. It follows the safety
+checklist every single time — not just when it
+remembers to.
 
 The question isn't whether heinzel is risk-free — it
 isn't. The question is whether a disciplined AI that
@@ -509,15 +627,21 @@ when both touch the same section.
 ## Project Structure
 
 ```
-CLAUDE.md              — Main instructions for Claude Code
-.claude/
+CLAUDE.md              — Main instructions (read by Claude Code
+                         and OpenCode)
+opencode.json.example  — OpenCode config template (copy to
+                         opencode.json)
+opencode.json          — Your local OpenCode config (gitignored)
+.claude/               — Claude Code only
   settings.json        — Project-level Claude Code settings
   hooks/
-    check-updates.sh   — Auto-check for repo updates on session start
+    check-updates.sh   — Auto-check for repo updates on
+                         session start
 rules/
   custom/              — User rule overrides (gitignored)
   debian.md            — Debian & Ubuntu rules
-  rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
+  rhel.md              — RHEL, CentOS, Fedora, Rocky,
+                         Alma rules
   suse.md              — openSUSE & SLES rules
   macos.md             — macOS rules
   freebsd.md           — FreeBSD rules
@@ -525,7 +649,8 @@ rules/
   cloud-image.md       — Cloud image deployment
   dual-boot.md         — Dual-boot setup workflow
   os-replacement.md    — OS wipe-and-replace workflow
-  partition-staging.md — Swap reclaim & hot-migrate for repartitioning
+  partition-staging.md — Swap reclaim & hot-migrate for
+                         repartitioning
   housekeeping.md      — Routine server inspection checklist
   security.md          — Security audit checks
   mise.md              — Language runtime manager (mise)
@@ -536,12 +661,15 @@ rules/
   directory-copy.md    — Cross-server directory copy checks
 memory/
   MEMORY.md            — Index for server memory
-  user.md.example      — SSH username template (copy to user.md)
-  user.md              — Your preferences and SSH usernames (gitignored)
+  user.md.example      — SSH username template (copy to
+                         user.md)
+  user.md              — Your preferences and SSH usernames
+                         (gitignored)
   blacklist.md         — Blocked servers (gitignored)
   readonly.md          — Read-only servers (gitignored)
   housekeeping.md      — User-added custom checks (gitignored)
-  network.md           — Cross-server network facts (gitignored)
+  network.md           — Cross-server network facts
+                         (gitignored)
   servers/<hostname>/
     memory.md          — Server state snapshot (gitignored)
     changelog.log      — Local change history (gitignored)
