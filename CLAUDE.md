@@ -255,9 +255,27 @@ show pending items. Delete when all done.
 
 ## Software Release Versions
 
-Always search the web for current release status
-before recommending a version to install or upgrade
-to. Cite the source.
+**MANDATORY: Always perform a live web search for
+current release/version information before
+recommending, installing, or upgrading any
+software.** This applies to:
+
+- OS releases (e.g. latest Debian stable, FreeBSD
+  release, macOS version)
+- Programming language runtimes (e.g. Node.js LTS,
+  Ruby, Python)
+- Any package or tool being installed or upgraded
+
+Do NOT rely on your training data for version
+numbers — it is often outdated. You MUST search the
+web every time, even if you believe you know the
+answer. Cite the source URL in your response.
+
+If you do not have access to a web search tool,
+**warn the user immediately** that you cannot verify
+current versions and that any version numbers you
+provide may be outdated. Do not silently fall back
+to training data.
 
 ## Conventions
 
