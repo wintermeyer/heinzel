@@ -3,8 +3,9 @@
 Heinzel is a set of rules that turns
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 — Anthropic's AI assistant for the terminal — into a
-cautious, methodical sysadmin. It works on remote
-servers over SSH and on the local machine alike.
+cautious, methodical sysadmin. It works on Linux,
+FreeBSD, and macOS — remote servers over SSH and the
+local machine alike.
 Describe what you need in plain English, and the AI
 figures out the right commands for your OS, proposes
 each one with an explanation, and waits for your
@@ -358,7 +359,8 @@ log show \
 | Debian | Debian, Ubuntu                    | `rules/debian.md`  |
 | RHEL   | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`    |
 | SUSE   | openSUSE, SLES                    | `rules/suse.md`    |
-| macOS  | macOS (Apple Silicon & Intel)     | `rules/macos.md`   |
+| macOS  | macOS (Apple Silicon & Intel)      | `rules/macos.md`   |
+| FreeBSD | FreeBSD (all versions)            | `rules/freebsd.md` |
 
 Other distributions work too — Claude will apply
 general best practices and let you know which OS it
@@ -518,6 +520,12 @@ rules/
   rhel.md              — RHEL, CentOS, Fedora, Rocky, Alma rules
   suse.md              — openSUSE & SLES rules
   macos.md             — macOS rules
+  freebsd.md           — FreeBSD rules
+  efi-boot.md          — EFI boot management & dual-boot
+  cloud-image.md       — Cloud image deployment
+  dual-boot.md         — Dual-boot setup workflow
+  os-replacement.md    — OS wipe-and-replace workflow
+  partition-staging.md — Swap reclaim & hot-migrate for repartitioning
   housekeeping.md      — Routine server inspection checklist
   security.md          — Security audit checks
   mise.md              — Language runtime manager (mise)

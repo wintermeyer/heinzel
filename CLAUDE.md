@@ -5,10 +5,11 @@ when working with code in this repository.
 
 ## Project
 
-heinzel — Administration of Linux servers and macOS
-machines via SSH or locally. Supports any Linux
-distribution (Debian, Ubuntu, RHEL, CentOS, Fedora,
-SUSE, and others) and macOS.
+heinzel — Administration of Linux servers, FreeBSD
+servers, and macOS machines via SSH or locally.
+Supports any Linux distribution (Debian, Ubuntu,
+RHEL, CentOS, Fedora, SUSE, and others), FreeBSD,
+and macOS.
 
 ## How It Works
 
@@ -79,9 +80,10 @@ remote connection before any other work.
 - **Ask before:** reboots, firewall changes, network
   service restarts, any destructive command.
 - **Absolute taboos (never run without explicit user
-  request):** `fdisk`, `parted`, `gdisk`, or any
-  disk partitioning tool. Exception: `fdisk -l`
-  (read-only listing) is allowed. Never modify
+  request):** any command that modifies the partition
+  table. Read-only partition inspection (e.g.
+  `lsblk`, `fdisk -l`, `gpart show`,
+  `diskutil list`) is always allowed. Never modify
   `/etc/ssh/sshd_config`. Never delete or overwrite
   SSH keys. Never halt or power off a server.
 - **Firewall & network:** Be extremely careful — a
@@ -94,8 +96,8 @@ remote connection before any other work.
   deny/drop.** See `rules/<family>.md`.
 - **Use the appropriate non-interactive package
   manager** for the detected OS (`apt-get`,
-  `dnf`, `yum`, `zypper`, `brew` — never with
-  `sudo` on macOS).
+  `dnf`, `yum`, `zypper`, `pkg`, `brew` — never
+  with `sudo` on macOS).
 - **Prefer stable/official repos only.**
 - **Stick to stable release tracks.**
 - **Test before applying.** Use dry-run/test modes
@@ -305,7 +307,15 @@ its OS.
    Read `rules/macos.md`. Gather hardware info
    (`sysctl` for CPU/RAM, `df -h`).
 
-4. Create a server memory file.
+4. **If FreeBSD** — detect version and arch:
+   ```
+   freebsd-version && uname -m
+   ```
+   Read `rules/freebsd.md`. Gather hardware info
+   (`sysctl` for CPU/RAM, `df -h`,
+   `zpool status` if ZFS).
+
+5. Create a server memory file.
 
 **On subsequent connections:**
 
