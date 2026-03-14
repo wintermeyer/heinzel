@@ -152,6 +152,70 @@ Rules for FreeBSD (all versions).
   compatible at the pool level, but mixing is not
   recommended for root pools.
 
+## Console Configuration
+
+The correct `console` setting in `/boot/loader.conf`
+depends on the platform and architecture:
+
+| Platform                    | Console setting   |
+|-----------------------------|-------------------|
+| Physical server (VGA)       | `vidconsole`      |
+| Physical server (serial)    | `comconsole`      |
+| UTM / QEMU **x86_64** (EFI)| `vidconsole`      |
+| UTM / QEMU **ARM64** (EFI) | `efi`             |
+| QEMU with `-nographic`      | `comconsole`      |
+
+**x86_64 QEMU/UTM:** QEMU emulates a VGA text-mode
+adapter on x86_64, so `vidconsole` works. Using
+`console="efi"` on x86_64 causes "Display output is
+not active" in UTM — the EFI framebuffer console is
+not initialized by x86_64 QEMU firmware.
+
+**ARM64 UTM:** No VGA text mode exists on ARM64.
+`vidconsole` fails. The `efi` console uses the EFI
+framebuffer — this is the one that shows the boot
+menu on the VM display. **Use `console="efi"` only
+for ARM64 UTM/QEMU EFI VMs.**
+
+If the wrong console is set, the loader prints
+"console ... is unavailable" and "no valid
+consoles!" and falls back to `spinconsole` (which
+discards all output). The kernel may boot but
+produce no visible output and potentially fail
+silently. SSH may still work if the kernel fully
+boots.
+
+**Quick fix from the loader prompt:**
+```
+set console="vidconsole"   # x86_64
+set console="efi"          # ARM64
+boot
+```
+
+## Boot Loader (Lua-based, 14.x+)
+
+Starting with FreeBSD 14.x, the boot loader uses
+Lua scripts in `/boot/lua/`. The entry point is
+`/boot/lua/loader.lua`.
+
+- **If `/boot/lua/loader.lua` is missing,** the
+  loader drops to an `OK` prompt instead of booting
+  the kernel. This looks like a boot failure but the
+  kernel and root filesystem may be intact.
+- **Quick fix from the `OK` prompt:**
+  ```
+  load kernel
+  load -t rootfs ufs:/dev/ada0p2
+  boot
+  ```
+  (Replace `ada0p2` with the actual root partition.)
+- **Permanent fix:** re-extract `base.txz` which
+  contains `/boot/lua/`.
+- **When extracting `base.txz` manually** (e.g.
+  during SSH-only OS replacement), always verify
+  `/boot/lua/loader.lua` exists after extraction.
+  A tar truncation error can silently skip files.
+
 ## Common Pitfalls
 
 - **No `systemctl`** — use `service` and `sysrc`.
@@ -170,8 +234,46 @@ Rules for FreeBSD (all versions).
   separate maintenance.
 - **Boot loader:** FreeBSD uses its own loader
   (`/boot/loader.efi`), not GRUB or systemd-boot.
-  Config is in `/boot/loader.conf`.
+  Config is in `/boot/loader.conf`. Always set
+  `vfs.root.mountfrom` explicitly (e.g.
+  `vfs.root.mountfrom="ufs:/dev/ada0p3"`) —
+  auto-detection can fail after cross-OS
+  replacement or when EFI boot entries change.
 - **No `journalctl`** — logs are in `/var/log/`.
+- **`sudo` is not installed by default** — install
+  with `pkg install sudo` and configure
+  `/usr/local/etc/sudoers`.
+
+## QEMU/UTM Emulated x86_64 Workarounds
+
+**OpenSSL SIGSEGV on emulated Skylake CPU:**
+FreeBSD's base `sshd` (and `openssh-portable`)
+crash with signal 11 when OpenSSL's hardware-
+accelerated crypto (AES-NI, AVX assembly) runs on
+QEMU's emulated Skylake CPU. The crash occurs
+during RSA key loading.
+
+**Fix:** disable OpenSSL hardware acceleration with
+`OPENSSL_ia32cap=0`. Create wrapper scripts:
+
+```
+# For base sshd:
+mv /usr/sbin/sshd /usr/sbin/sshd.real
+cat > /usr/sbin/sshd << 'EOF'
+#!/bin/sh
+export OPENSSL_ia32cap=0
+exec /usr/sbin/sshd.real "$@"
+EOF
+chmod +x /usr/sbin/sshd
+```
+
+This affects ANY program using OpenSSL crypto on
+emulated x86_64 QEMU. If other services crash with
+SIGSEGV in libcrypto, apply the same workaround.
+
+**Does not affect:** native ARM64 UTM VMs (Apple
+Silicon with HVF), physical servers, or QEMU VMs
+with KVM hardware virtualization.
   Use `tail`, `grep`, or `less`. Heinzel changelog
   uses `logger` which writes to syslog.
 - **`sudo` is not installed by default** — install

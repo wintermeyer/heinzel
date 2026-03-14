@@ -217,6 +217,63 @@ console output. This does not mean the boot failed.
   serial console in `loader.conf` (FreeBSD) if
   console output is needed.
 
+## QEMU Cross-OS Installation and EFI
+
+When using QEMU to install a new OS (see
+`rules/os-replacement.md` §"QEMU as a Cross-OS
+Chroot Alternative"), the QEMU VM's EFI is
+separate from the real hardware's EFI NVRAM.
+
+**QEMU cannot update the real EFI NVRAM.** Boot
+entries created inside QEMU only exist in QEMU's
+virtual NVRAM and are lost when QEMU shuts down.
+
+**The real EFI NVRAM still has the old OS's boot
+entries.** After the QEMU installation, the
+firmware will try the old entry first (e.g.
+`EFI/debian/grubx64.efi`). If that file was
+deleted during installation, the firmware should
+fall back to `EFI/BOOT/BOOTX64.EFI` — but some
+firmware implementations do not fall back
+reliably.
+
+**Before rebooting into the new OS:**
+
+1. **Always install the new boot loader at the
+   fallback path** `EFI/BOOT/BOOTX64.EFI` (x86_64)
+   or `EFI/BOOT/BOOTAA64.EFI` (ARM64). This is
+   the EFI standard fallback that firmware uses
+   when no boot entry matches.
+2. **Use `efibootmgr` from the tmpfs rescue** (or
+   the old OS before it's destroyed) to create a
+   new boot entry and update BootOrder:
+   ```
+   efibootmgr -c -d /dev/sda -p 1 \
+     -l '\EFI\freebsd\loader.efi' \
+     -L "FreeBSD"
+   efibootmgr -o XXXX   # new entry first
+   ```
+3. **Prefer BootNext** for the first boot into the
+   new OS (see §"BootNext" above).
+4. **Delete old boot entries** only after the new
+   OS is confirmed working.
+
+If `efibootmgr` is not available in the rescue
+environment, rely on the fallback path and verify
+that the firmware finds it.
+
+**When relying on the fallback path:** delete the
+old OS's EFI directory (e.g. `EFI/debian/`) so
+the firmware's existing boot entries fail
+gracefully and fall through to the fallback. If
+old EFI files remain, the firmware may try to
+boot the old boot loader (which will fail because
+the root partition is gone) and may not fall
+through to the fallback depending on
+implementation. Clean the EFI partition from
+within the QEMU install shell before shutting
+down QEMU.
+
 ## Memory Convention
 
 When recording boot configuration in server memory:

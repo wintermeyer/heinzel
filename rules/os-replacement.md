@@ -167,9 +167,25 @@ Choose installation method based on access:
   fails silently on these platforms. Replace GRUB
   with systemd-boot before first boot (see
   `rules/efi-boot.md`, `rules/cloud-image.md`).
-- **SSH-only replacement:** use debootstrap (or
-  QEMU + debootstrap for cross-OS). See
-  §"SSH-Only Replacement via Hot-Migration".
+- **SSH-only replacement (same OS family):** use
+  debootstrap (or equivalent) via tmpfs rescue.
+  See §"SSH-Only Replacement via Hot-Migration".
+- **SSH-only replacement (cross-OS, e.g. Linux →
+  FreeBSD):** use **mfsBSD** (runs entirely from
+  RAM). dd an mfsBSD image to the disk, reboot,
+  SSH in, and install the new OS. The disk is
+  completely free because the running OS is in
+  RAM. See §"SSH-Only Cross-OS via mfsBSD".
+  For repeatable deployments, use
+  [AutoBSD](https://gitlab.com/btrgk-lab/freebsd/autobsd)
+  to build custom mfsBSD-based autoinstaller
+  images with `installerconfig`.
+
+  **Never use the regular FreeBSD memstick/disc1
+  installer for same-disk SSH-only replacement.**
+  The installer mounts root from the disk — any
+  attempt to partition that disk from rc.local or
+  installerconfig destroys the running system.
 - **Network install (PXE):** if available in the
   datacenter.
 - **In-place via rescue mode:** some providers offer
@@ -310,11 +326,15 @@ image.
    `/etc/pwd.db`, `/etc/spwd.db`, etc.) must exist
    inside the tmpfs root.
 
-3. **Copy ALL of `/lib`, not a subset.** Missing a
-   single library (e.g. `libpam.so`, `libz.so`)
-   causes `sshd-session` to abort on every new
-   connection. Copy the entire `/lib/` directory.
-   On FreeBSD this is ~10 MB — always affordable.
+3. **Copy libraries using `ldd`, not by copying
+   all of `/lib`.** On FreeBSD, `/lib` is ~10 MB
+   and can be copied wholesale. On Linux (especially
+   with QEMU installed), `/lib` can be 700+ MB —
+   too large for tmpfs. Instead, use `ldd` on each
+   rescue binary and copy only the specific
+   libraries it needs. Missing a library causes
+   `sshd-session` to abort, so verify every binary
+   works in the chroot before proceeding.
 
 4. **Start the rescue sshd on a new port, then
    VERIFY it works before proceeding.** Connect to
@@ -327,6 +347,29 @@ image.
    last lifeline. Keep it running until you have
    confirmed the rescue sshd accepts connections
    and runs commands.
+
+6. **Never `umount -l /` (lazy-unmount root).**
+   Lazy-unmounting `/` orphans the rescue chroot's
+   mountpoint path. Even though the tmpfs and its
+   contents survive in memory, the VFS path to the
+   chroot root becomes unreachable. New SSH
+   connections fail because `sshd-session` cannot
+   be forked into the chroot — both the rescue
+   sshd and the original sshd die. The server
+   stays pingable but is permanently locked out.
+
+   **Instead: leave `/` mounted.** The rescue sshd
+   runs from tmpfs; it does not need `/` to be
+   unmounted. QEMU (or dd) writes to `/dev/sda`
+   as a raw block device — this works even while
+   the old filesystem is still mounted. The kernel
+   caches become stale but that is harmless since
+   nothing reads from the old root after pivoting
+   to the rescue. Unmount only `/boot/efi` (needed
+   for EFI partition changes) and `swapoff`
+   (frees the swap partition). The old root on
+   `/dev/sdaN` gets overwritten and is gone after
+   reboot.
 
 ### Building the Tmpfs Rescue Root
 
@@ -390,6 +433,159 @@ UseDNS no
 Subsystem sftp /usr/libexec/sftp-server
 EOF
 ```
+
+### Linux (Debian 13+ / OpenSSH 10.x) Adjustments
+
+OpenSSH 10.x splits sshd into three binaries.
+Copy all three into the chroot:
+
+```
+cp /usr/sbin/sshd $T/usr/sbin/
+cp /usr/lib/openssh/sshd-session \
+   $T/usr/lib/openssh/
+cp /usr/lib/openssh/sshd-auth \
+   $T/usr/lib/openssh/
+cp /usr/lib/openssh/sftp-server \
+   $T/usr/lib/openssh/
+```
+
+**Critical sshd_config settings for chroot:**
+
+```
+UsePAM no          # PAM libraries are not in
+                   # the chroot
+UseDNS no          # no resolver in chroot
+```
+
+Without `UsePAM no`, sshd-auth fails silently
+and all logins are rejected.
+
+**nsswitch.conf must use `files` only:**
+
+```
+cat > $T/etc/nsswitch.conf << 'EOF'
+passwd:         files
+group:          files
+shadow:         files
+hosts:          files
+EOF
+```
+
+If `nsswitch.conf` references `systemd` (Debian
+default), user lookups fail and sshd reports
+"invalid user root" even though `/etc/passwd`
+is correct.
+
+**The user's login shell must exist in chroot:**
+
+sshd validates that the user's shell (from
+`/etc/passwd`) exists. If root's shell is
+`/bin/bash`, copy `bash` into the chroot:
+
+```
+cp /bin/bash $T/bin/
+```
+
+Without it, sshd rejects the login with
+"User root not allowed because shell /bin/bash
+does not exist."
+
+**Privilege separation directory:**
+
+```
+mkdir -p $T/run/sshd
+```
+
+OpenSSH 10.x looks in `/run/sshd` (not
+`/var/run/sshd`).
+
+**Open the rescue port in the firewall** before
+starting the rescue sshd — otherwise the
+connection will time out:
+
+```
+ufw allow 2223/tcp    # Linux
+# or: pfctl rule      # FreeBSD
+```
+
+### Additional Rescue Binaries (CRITICAL)
+
+The rescue environment must include tools beyond
+sshd. **Verify each binary is present and
+functional** after building the rescue — do not
+rely on silent `cp ... || true` patterns.
+
+**`efibootmgr` (Linux):**
+
+Required for creating boot entries and setting
+BootNext. Copy the binary AND all its shared
+libraries:
+
+```
+cp /usr/sbin/efibootmgr $T/usr/sbin/
+ldd /usr/sbin/efibootmgr 2>/dev/null | \
+  grep -oP '/\S+\.so\S*' | while read lib; do
+    dir=$(dirname "$lib")
+    mkdir -p "$T$dir"
+    cp -n "$lib" "$T$lib" 2>/dev/null
+  done
+# Verify:
+chroot $T /usr/sbin/efibootmgr --version
+```
+
+Without `efibootmgr`, you cannot set BootNext and
+must rely on the EFI fallback path
+(`EFI/BOOT/BOOTX64.EFI`), which is less reliable.
+
+**`reboot`:**
+
+On Linux, `reboot` links against `libsystemd`,
+which is large and complex. The chroot's `reboot`
+will fail with missing library errors. Alternatives:
+
+1. **SysRq (preferred):** mount `/proc` in the
+   chroot, then:
+   ```
+   echo 1 > /proc/sys/kernel/sysrq
+   echo s > /proc/sysrq-trigger   # sync
+   sleep 1
+   echo u > /proc/sysrq-trigger   # remount ro
+   sleep 1
+   echo b > /proc/sysrq-trigger   # reboot
+   ```
+2. **Copy a static `reboot`** (e.g. from busybox).
+3. Use `kill -TERM 1` to ask init to reboot (may
+   not work from chroot).
+
+**Warning:** On virtual machines (UTM/QEMU), SysRq
+`b` may power off the VM instead of rebooting it.
+The hypervisor decides whether to restart the guest.
+If the VM does not come back after SysRq reboot,
+the user must start it manually from the
+hypervisor console.
+
+**QEMU and ROM files (when using QEMU inside
+rescue):**
+
+If QEMU is included in the rescue for cross-OS
+installation, copy ROM files alongside the binary:
+
+```
+mkdir -p $T/usr/share/qemu
+cp /usr/share/seabios/vgabios-stdvga.bin \
+   $T/usr/share/qemu/
+cp /usr/share/seabios/vgabios.bin \
+   $T/usr/share/qemu/
+cp /usr/share/seabios/bios-256k.bin \
+   $T/usr/share/qemu/
+cp /usr/share/qemu/efi-virtio.rom \
+   $T/usr/share/qemu/
+cp /usr/share/qemu/kvmvapic.bin \
+   $T/usr/share/qemu/
+```
+
+Without these, QEMU fails at startup with
+"failed to find romfile" errors.
 
 ### Starting and Verifying the Rescue sshd
 
@@ -521,6 +717,16 @@ the new rootfs in a lightweight VM instead:
    is now fully configured and ready to boot
    natively.
 
+**Prefer manual shell installation over interactive
+installers.** Dialog-based installers (FreeBSD's
+bsdinstall, Debian's d-i) use escape sequences for
+cursor movement that break when sent through serial
+pipes. Instead: boot the ISO to a live shell, then
+partition, extract, and configure manually. For
+FreeBSD: boot the installer ISO, exit to "Live
+System" or login at the console, then use `gpart`,
+`newfs`, `tar` to install by hand.
+
 ### When to prefer QEMU over manual extraction
 
 - The new OS needs many packages installed or
@@ -542,6 +748,234 @@ the new rootfs in a lightweight VM instead:
   has most packages pre-installed.
 - QEMU is not available or cannot be installed on
   the old OS.
+
+### QEMU Serial Console for Headless Use
+
+When running QEMU over SSH (no graphical display),
+the guest OS console must be routed to a serial
+port that you can read and write.
+
+**Required QEMU flags:**
+
+```
+qemu-system-x86_64 \
+  -nographic \
+  -monitor tcp:127.0.0.1:4445,server,nowait \
+  -cpu max \
+  ...
+```
+
+- `-nographic` removes the VGA adapter and
+  redirects the BIOS, boot loader, and serial
+  console to stdio. **Without this, the boot
+  loader and kernel output go to an invisible
+  virtual VGA and the serial port stays empty.**
+- `-monitor tcp:...` puts the QEMU monitor on a
+  separate TCP port so `sendkey` commands can be
+  sent without interfering with stdio.
+- Do **not** use `-vga none -display none` with a
+  separate `-serial chardev:socket` — the boot
+  loader still uses VGA BIOS calls (INT 10h) and
+  its output will go nowhere.
+
+**Keeping stdin writable (for interactive guests):**
+
+When QEMU reads from stdin (via `-nographic`), it
+must have a writable file descriptor. If stdin is
+`/dev/null`, the guest receives EOF and cannot
+accept typed input on the serial console.
+
+Use a named pipe with a persistent writer:
+
+```
+mkfifo /tmp/qemu_in
+sleep 86400 > /tmp/qemu_in &
+qemu-system-x86_64 ... -nographic \
+  < /tmp/qemu_in > /tmp/qemu_out.log 2>&1 &
+```
+
+Send input to the guest serial:
+`printf "command\n" > /tmp/qemu_in`
+
+Read output: `tail /tmp/qemu_out.log`
+
+**Sending keystrokes via the QEMU monitor:**
+
+The `sendkey` command sends PS/2 keyboard events
+to the guest, independent of serial. Use it to
+interact with boot menus that read from keyboard
+(e.g. FreeBSD's boot loader menu before switching
+to `comconsole`):
+
+```
+exec 3<>/dev/tcp/127.0.0.1/4445
+echo "sendkey 3" >&3   # press "3"
+echo "sendkey ret" >&3  # press Enter
+exec 3>&-
+```
+
+Note: after the guest switches console to serial
+(e.g. FreeBSD `set console="comconsole"`), the
+boot loader reads from serial, not keyboard.
+Further input must go through the FIFO, not
+`sendkey`.
+
+**FreeBSD-specific console setup:**
+
+The FreeBSD boot loader defaults to `vidconsole`
+(VGA). To get output on serial:
+
+1. At the boot menu, press `3` (Escape to loader
+   prompt) — send via `sendkey` since the menu
+   reads from keyboard.
+2. Type `set console="comconsole"` — send via
+   `sendkey` (still on keyboard). Each character
+   must be sent individually:
+   ```
+   for key in s e t spc c o n s o l e \
+     equal shift-apostrophe c o m c o n \
+     s o l e shift-apostrophe; do
+     echo "sendkey $key" >&3
+     sleep 0.15
+   done
+   echo "sendkey ret" >&3
+   ```
+3. Type `boot` — send via the FIFO (the loader
+   now reads from serial after the console switch).
+
+**Timing is critical.** The boot menu has a
+10-second default timeout. Send `sendkey 3` within
+5 seconds of QEMU starting the ISO boot. If the
+timeout expires, the kernel boots with VGA as
+primary. The serial console still receives kernel
+messages and the installer dialog (with escape
+sequences), so interaction is possible but fragile.
+
+**If you miss the boot menu:** The installer still
+outputs to serial as secondary console. Accept the
+terminal type prompt (press Enter via FIFO for
+vt100 default), then use Tab + Enter to navigate
+to "Shell" in the installer menu.
+
+Or pre-configure `console="comconsole"` in
+`/boot/loader.conf` for subsequent boots.
+
+**TCG (software emulation) performance:**
+
+Without KVM/HVF, QEMU uses TCG. Expect:
+- FreeBSD kernel boot: 3–8 minutes
+- base.txz extraction (~170 MB): 5–10 minutes
+- RSA 4096-bit key generation: 1–3 minutes
+
+Budget at least 20 minutes for a full FreeBSD
+installation under TCG.
+
+### QEMU Device Name Mapping (CRITICAL)
+
+**Device names inside QEMU do not match the real
+hardware.** The QEMU virtual disk uses virtio
+(`vtbd0` in FreeBSD, `vda` in Linux), but the
+real server's disk controller determines the
+native device name.
+
+| Controller     | Linux    | FreeBSD   |
+|----------------|----------|-----------|
+| SATA / AHCI    | `sda`    | `ada0`    |
+| virtio-blk     | `vda`    | `vtbd0`   |
+| virtio-scsi    | `sda`    | `da0`     |
+| NVMe           | `nvme0n1`| `nvd0`    |
+| IDE            | `sda`    | `ada0`    |
+
+**Before launching QEMU, record the real device
+names** from the running OS:
+
+```
+# Linux — check the block device name
+lsblk -o NAME,TRAN   # TRAN column shows: sata,
+                      # nvme, virtio, usb
+```
+
+If Linux shows `sda` with transport `sata`, the
+FreeBSD device name will be `ada0`. If it shows
+`vda` with transport `virtio`, it's `vtbd0`.
+
+**After the QEMU installation, fix all device
+references** before rebooting:
+
+- `/etc/fstab` (FreeBSD) — replace `vtbd0` with
+  the real device name (e.g. `ada0`)
+- `/etc/fstab` (Linux) — replace `vda` with the
+  real name (e.g. `sda`)
+- `/boot/loader.conf` `vfs.root.mountfrom` — set
+  this explicitly with the real device name
+- Any scripts or configs referencing device paths
+
+**Always set `vfs.root.mountfrom` in
+`/boot/loader.conf`** with the real device name:
+
+```
+# In /boot/loader.conf (using real device name):
+vfs.root.mountfrom="ufs:/dev/ada0p3"
+# Console — see rules/freebsd.md §Console:
+console="vidconsole"  # x86_64 UTM/QEMU or VGA
+# console="efi"       # ARM64 UTM/QEMU only
+```
+
+**Console must match the target platform, not QEMU.**
+When installing FreeBSD via QEMU for a target that
+boots natively, the console in loader.conf must
+match the real hardware (e.g. `efi` for a UTM VM,
+`vidconsole` for physical server). See
+`rules/freebsd.md` §"Console Configuration".
+
+Without it, the loader guesses root from
+`currdev`, which may resolve differently between
+QEMU and real hardware. An explicit
+`vfs.root.mountfrom` eliminates guesswork.
+
+**The FreeBSD boot loader auto-detects `currdev`**
+from the EFI boot path, so the kernel will mount
+root correctly even with wrong fstab. But `fsck`
+and `mount -a` during multi-user boot will fail
+if fstab has the wrong device names, potentially
+dropping to single-user mode.
+
+### Post-Extraction Verification (MANDATORY)
+
+After extracting the new OS (base.txz, kernel.txz,
+debootstrap, cloud image, etc.), **always verify
+critical files exist** before proceeding:
+
+**FreeBSD:**
+```
+# All of these must exist:
+ls /mnt/boot/kernel/kernel      # kernel binary
+ls /mnt/boot/lua/loader.lua     # boot loader
+                                # scripts (14.x+)
+ls /mnt/boot/loader.conf        # loader config
+ls /mnt/etc/passwd               # user database
+ls /mnt/etc/rc.conf              # service config
+ls /mnt/usr/sbin/sshd            # SSH server
+```
+
+**Linux (Debian):**
+```
+ls /mnt/boot/vmlinuz-*           # kernel
+ls /mnt/boot/initrd.img-*        # initramfs
+ls /mnt/etc/fstab                # mount table
+ls /mnt/usr/sbin/sshd            # SSH server
+```
+
+If any critical file is missing, **stop and
+re-extract.** Do not reboot. A common cause is
+tar truncation errors — re-download and re-extract
+the archive.
+
+**FreeBSD 14.x+:** The boot loader uses Lua
+scripts in `/boot/lua/`. If `/boot/lua/loader.lua`
+is missing, the loader drops to an `OK` prompt
+instead of booting the kernel. This is a fatal
+extraction failure — re-extract `base.txz`.
 
 ## Manual Package Extraction into Offline Rootfs
 
@@ -679,6 +1113,65 @@ Fix partition types as a post-replacement step,
 after the new OS is booted and confirmed working.
 Verify with `fdisk -l` or `gpart show` — look for
 type names that belong to the old OS.
+
+## SSH-Only Cross-OS via mfsBSD
+
+When replacing one OS with a completely different one
+over SSH (e.g. Linux → FreeBSD), use **mfsBSD** — a
+FreeBSD system that runs entirely from RAM.
+
+### Why mfsBSD
+
+mfsBSD loads the entire OS into a memory filesystem
+at boot. Once booted, the disk is completely free —
+no mounted filesystems, no page cache dependencies.
+The autoinstaller (or manual SSH session) can safely
+partition, format, and write to the disk without
+risk of crashing the running OS.
+
+**This solves the fundamental problem** of same-disk
+replacement: regular installer media (memstick,
+disc1 ISO) mount root from the disk. Partitioning
+that disk destroys the running system.
+
+### Pre-built mfsBSD images
+
+Download from https://mfsbsd.vx.sk/:
+
+- **Standard:** minimal FreeBSD in RAM, sshd
+  enabled, root password `mfsroot`.
+- **Special Edition (SE):** includes `base.txz`
+  and `kernel.txz` for installation — no network
+  download needed.
+- **Mini:** stripped-down with dropbear SSH.
+
+### Workflow
+
+1. Build tmpfs rescue on the running Linux (sshd
+   only — no QEMU needed).
+2. Download mfsBSD SE image.
+3. dd the image to `/dev/sda` from the rescue.
+4. Reboot.
+5. mfsBSD boots into RAM, starts sshd.
+6. SSH in (`root` / `mfsroot`) and run the install
+   script: partition, format, extract base+kernel,
+   configure, set up EFI bootloader.
+7. Reboot into the installed FreeBSD.
+
+Step 6 can be fully scripted from the local machine
+using `sshpass` or SSH with password authentication.
+
+### AutoBSD (repeatable deployments)
+
+For automated, repeatable installations, use
+[AutoBSD](https://gitlab.com/btrgk-lab/freebsd/autobsd)
+to build custom mfsBSD-based images with
+`installerconfig` pre-baked. The built image
+auto-installs FreeBSD without any SSH interaction.
+
+AutoBSD requires a FreeBSD system to build images.
+Use it for fleet deployments; use raw mfsBSD + SSH
+for one-off replacements.
 
 ## Cross-Family Considerations
 
