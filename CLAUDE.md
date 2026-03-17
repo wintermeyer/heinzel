@@ -97,6 +97,23 @@ remote connection before any other work.
 - **Test before applying.** Use dry-run/test modes
   when available.
 
+## Verify Before Running
+
+Do not trust your training data for command syntax.
+Before running any command on a server, verify it:
+
+1. **Check `--help` first.** Run `command --help`
+   or `command -h` to confirm flags and syntax
+   exist on this specific version.
+2. **Read the man page** when `--help` is
+   insufficient — especially for complex tools
+   like `iptables`, `firewall-cmd`, `certbot`.
+3. **Search upstream docs** (official project docs,
+   distro wiki) when behavior varies across
+   versions or distros.
+4. **Check the rule file** — use the exact syntax
+   from the loaded `rules/<family>.md` file.
+
 ## Rule Overrides
 
 Whenever you read a base rule file in `rules/`, also
