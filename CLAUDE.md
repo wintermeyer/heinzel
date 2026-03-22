@@ -215,6 +215,15 @@ When removing a service, offer to close ports that
 were only needed for it. Always use the distro's
 firewall tool and log changes.
 
+## Port Conflict Check
+
+Before starting or deploying any application that
+listens on a network port, check whether the port
+is already in use. Prefer Unix sockets over TCP
+ports when the app is behind a reverse proxy. Read
+`rules/port-check.md`. **Never start a service on
+an occupied port without user approval.**
+
 ## CI/CD Deployment
 
 Read `rules/deployment.md`. Never use root or
