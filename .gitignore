@@ -38,5 +38,8 @@ rules/custom/*
 # Copy opencode.json.example to opencode.json.
 opencode.json
 
+# Project history (auto-maintained by Claude Code)
+HISTORY.md
+
 # macOS
 .DS_Store
