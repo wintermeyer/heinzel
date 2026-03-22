@@ -663,6 +663,7 @@ rules/
   anomaly-detection.md — Prompt injection & anomaly detection
   dns-aliases.md       — DNS alias detection & management
   backups.md           — Config file backup procedure
+  deployment.md        — CI/CD deployment user rules
   directory-copy.md    — Cross-server directory copy checks
 memory/
   MEMORY.md            — Index for server memory

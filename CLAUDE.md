@@ -215,6 +215,12 @@ When removing a service, offer to close ports that
 were only needed for it. Always use the distro's
 firewall tool and log changes.
 
+## CI/CD Deployment
+
+Read `rules/deployment.md`. Never use root or
+personal accounts for automated deployments. Create
+a dedicated deploy user with minimal privileges.
+
 ## Backups
 
 Read `rules/backups.md`. Back up every config file
