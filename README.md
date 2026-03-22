@@ -665,6 +665,10 @@ rules/
   backups.md           — Config file backup procedure
   deployment.md        — CI/CD deployment user rules
   directory-copy.md    — Cross-server directory copy checks
+  port-check.md        — Port conflict detection before
+                         starting services
+  version-check.md     — Proactive stable version checking
+                         and upgrade nudges
 memory/
   MEMORY.md            — Index for server memory
   user.md.example      — SSH username template (copy to

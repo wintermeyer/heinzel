@@ -309,6 +309,13 @@ current versions and that any version numbers you
 provide may be outdated. Do not silently fall back
 to training data.
 
+## Version Check
+
+Read `rules/version-check.md`. Proactively check
+for newer stable versions of installed software
+during housekeeping and when touching specific
+software. Nudge the user but never force upgrades.
+
 ## Conventions
 
 - Manual administration only (no

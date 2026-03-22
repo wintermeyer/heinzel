@@ -42,6 +42,7 @@ Kernel     6.1.0-31 (matches installed — no reboot
            needed)
 Updates    0 pending
 Auto-updates  unattended-upgrades active
+Versions   2 updates available (see below)
 ```
 
 **Rules:**
@@ -379,6 +380,12 @@ sntp -t 1 time.apple.com 2>&1
 ```
 
 - **WARN** if time offset > 5 seconds
+
+## Version Status
+
+Run the version check procedure from
+`rules/version-check.md` for all Tier 1 software.
+Include the "Versions" section in the report.
 
 ## Service-Specific Checks
 
