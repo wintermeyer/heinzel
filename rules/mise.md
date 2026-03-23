@@ -32,9 +32,54 @@ those should come from the distro's package manager.
   which provides the language runtime binaries. Both
   must be in PATH.
 
+## Pre-Install Check
+
+Before installing mise, check whether it is already
+present on the system. A system-wide installation
+(via package manager) is preferred over a per-user
+standalone install.
+
+**Step 1 — Check if mise exists for the SSH user:**
+
+```
+# Remote
+ssh user@host "command -v mise"
+
+# Local
+command -v mise
+```
+
+If `command -v mise` succeeds, mise is already
+installed. Check the path to determine the type:
+
+```
+ssh user@host "which mise"
+```
+
+- **System-wide** (`/usr/bin/mise`,
+  `/usr/local/bin/mise`): Use it as-is. Skip the
+  Installation section. Proceed to SSH
+  Non-Interactive Shell Setup (shims PATH still
+  needs to be configured per user).
+- **User-local** (`~/.local/bin/mise`): Use it
+  as-is. Skip the Installation section. Proceed to
+  SSH Non-Interactive Shell Setup if not already
+  configured.
+
+If `command -v mise` fails, proceed to Installation.
+
+**Note:** When a system-wide mise is found, do
+**not** install a second copy locally. The shims
+directory (`~/.local/share/mise/shims`) is still
+per-user and still needs PATH setup — only the
+`~/.local/bin` part of the PATH setup can be
+skipped.
+
 ## Installation
 
-mise is installed as **the SSH user** (not root).
+Only install mise when the Pre-Install Check found
+no existing installation. mise is installed as
+**the SSH user** (not root).
 
 ### Default: Standalone Installer (no root)
 
@@ -106,12 +151,16 @@ zypper install -y mise
 
 ### Which Method to Use
 
-- **Default:** standalone installer — always try this
-  first.
-- **Alternative:** distro package — only when the user
-  explicitly prefers it and root access is available.
-- **Unprivileged mode:** standalone installer is the
-  only option (no root for package manager installs).
+1. **Check first:** run the Pre-Install Check. If
+   mise already exists, skip installation entirely.
+2. **Default:** standalone installer — always try
+   this first when no mise is found.
+3. **Alternative:** distro package — only when the
+   user explicitly prefers it and root access is
+   available.
+4. **Unprivileged mode:** standalone installer is
+   the only option (no root for package manager
+   installs).
 
 ## SSH Non-Interactive Shell Setup
 
