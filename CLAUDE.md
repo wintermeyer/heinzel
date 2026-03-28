@@ -68,6 +68,11 @@ remote connection before any other work.
 
 ## Critical Safety Rules
 
+- **Never fabricate server facts.** Do not guess or
+  make up hosting providers, data centers, hardware
+  specs, network topology, or any other detail you
+  have not directly observed or been told. If you
+  don't know, say so.
 - **You are working on live production servers.**
 - **Always detect the OS first** before doing any
   work.
