@@ -53,6 +53,29 @@ when sockets are not practical (e.g. the app must
 be reachable directly, or the framework lacks
 socket support).
 
+## Avoid Default Framework Ports
+
+When deploying a web framework, **never use its
+default port**. Default ports collide when multiple
+apps share a server and make the setup fragile.
+
+| Framework          | Default | Start searching at |
+|--------------------|--------:|--------------------|
+| Ruby on Rails      |    3000 | 3001               |
+| Phoenix Framework  |    4000 | 4001               |
+
+**Port selection procedure:**
+
+1. Start at the default port **+ 1** (see table).
+2. Run the port check (see below) for that port.
+3. If occupied, increment by 1 and check again.
+4. Repeat until a free port is found.
+5. Configure the application to use the free port.
+
+This applies to both TCP ports and when Unix sockets
+are not practical. When a Unix socket is used
+instead, port selection is not needed.
+
 ## Check Commands
 
 Run the appropriate command for the detected OS.
