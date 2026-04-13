@@ -157,6 +157,12 @@ Read `rules/os-detection.md`. Before doing any work
 on a server, you **must** detect its OS and create a
 server memory file.
 
+## Activity Check
+
+Read `rules/activity-check.md`. On every connection,
+check the system journal for recent heinzel activity
+and summarize it for the user.
+
 ## DNS Aliases
 
 Read `rules/dns-aliases.md` for the full detection,

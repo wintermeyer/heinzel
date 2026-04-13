@@ -43,6 +43,8 @@ its OS.
 
 1. Read memory file and changelog.
 2. Check for `todo.md`.
-3. Read the matching rule file.
-4. Verify OS version is still current. Update memory
+3. Run the activity check
+   (see `rules/activity-check.md`).
+4. Read the matching rule file.
+5. Verify OS version is still current. Update memory
    if changed.
