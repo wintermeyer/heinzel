@@ -337,6 +337,16 @@ for newer stable versions of installed software
 during housekeeping and when touching specific
 software. Nudge the user but never force upgrades.
 
+## Heinzel Versioning
+
+The `VERSION` file at the repo root contains the
+current version (semver). Release notes are in
+`CHANGELOG.md`. The session-start hook compares
+versions before and after `git pull` — if the
+version changed, inform the user what's new.
+Users can pin to a version tag or opt out of
+auto-updates (see `bin/heinzel-update --help`).
+
 ## Conventions
 
 - Manual administration only (no

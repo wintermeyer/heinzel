@@ -1,0 +1,123 @@
+#!/bin/sh
+# heinzel-update — update, pin, or check heinzel version.
+#
+# Usage:
+#   heinzel-update            Pull latest from main
+#   heinzel-update --check    Show current version and
+#                             check for updates
+#   heinzel-update --pin VER  Pin to a version tag
+#                             (e.g. --pin v0.1.0)
+#   heinzel-update --unpin    Return to main and pull
+set -e
+
+# Find the repo root (this script lives in bin/).
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+cd "$REPO_DIR"
+
+current_version() {
+  if [ -f VERSION ]; then
+    cat VERSION
+  else
+    echo "unknown"
+  fi
+}
+
+show_changelog_section() {
+  VER="$1"
+  if [ -f CHANGELOG.md ]; then
+    sed -n "/^## ${VER}/,/^## /{/^## ${VER}/d;/^## /d;p;}" \
+      CHANGELOG.md | sed '/^$/d'
+  fi
+}
+
+case "${1:-}" in
+  --check)
+    echo "heinzel $(current_version)"
+    BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+    if [ -z "$BRANCH" ]; then
+      TAG=$(git describe --tags --exact-match 2>/dev/null || true)
+      if [ -n "$TAG" ]; then
+        echo "Pinned to $TAG"
+      else
+        echo "On detached HEAD"
+      fi
+      exit 0
+    fi
+    if [ "$BRANCH" != "main" ]; then
+      echo "On branch '$BRANCH' (not main)"
+      exit 0
+    fi
+    git fetch --quiet origin main
+    LOCAL=$(git rev-parse HEAD)
+    REMOTE=$(git rev-parse origin/main)
+    if [ "$LOCAL" = "$REMOTE" ]; then
+      echo "Up to date."
+    else
+      AHEAD=$(git rev-list --count origin/main..HEAD)
+      BEHIND=$(git rev-list --count HEAD..origin/main)
+      [ "$BEHIND" -gt 0 ] && echo "$BEHIND commit(s) behind origin/main."
+      [ "$AHEAD" -gt 0 ] && echo "$AHEAD commit(s) ahead of origin/main."
+    fi
+    ;;
+
+  --pin)
+    VER="${2:?Usage: heinzel-update --pin VERSION (e.g. v0.1.0)}"
+    if ! git rev-parse "$VER" >/dev/null 2>&1; then
+      echo "Error: tag '$VER' not found."
+      echo "Available tags:"
+      git tag --sort=-v:refname | head -10
+      exit 1
+    fi
+    git checkout "$VER"
+    echo "heinzel pinned to $VER ($(current_version))"
+    echo "Auto-update is disabled while pinned."
+    echo "Run 'heinzel-update --unpin' to return to main."
+    ;;
+
+  --unpin)
+    git checkout main
+    git pull --quiet
+    echo "heinzel unpinned — now on main ($(current_version))"
+    ;;
+
+  --help|-h)
+    echo "Usage: heinzel-update [--check|--pin VER|--unpin]"
+    echo ""
+    echo "  (no args)   Pull latest from main"
+    echo "  --check     Show version and update status"
+    echo "  --pin VER   Pin to a version tag (e.g. v0.1.0)"
+    echo "  --unpin     Return to main and pull latest"
+    ;;
+
+  "")
+    # Default: pull latest.
+    BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+    if [ -z "$BRANCH" ]; then
+      echo "Error: not on a branch. Use --unpin first."
+      exit 1
+    fi
+    if [ "$BRANCH" != "main" ]; then
+      echo "Error: on branch '$BRANCH', not main."
+      echo "Switch to main first or use --unpin."
+      exit 1
+    fi
+
+    OLD_VERSION=$(current_version)
+    git pull --quiet
+    NEW_VERSION=$(current_version)
+
+    if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+      echo "heinzel $(current_version) — already up to date."
+    else
+      echo "heinzel updated: $OLD_VERSION -> $NEW_VERSION"
+      show_changelog_section "$NEW_VERSION"
+    fi
+    ;;
+
+  *)
+    echo "Unknown option: $1"
+    echo "Run 'heinzel-update --help' for usage."
+    exit 1
+    ;;
+esac

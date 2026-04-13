@@ -361,6 +361,36 @@ the AI still backs up configs, tests before applying,
 and follows least privilege. The flag only removes
 *your* approval step, not the built-in guardrails.
 
+## Updates & Versioning
+
+Heinzel uses [semantic versioning](https://semver.org).
+The current version is in the `VERSION` file; changes
+are listed in `CHANGELOG.md`.
+
+**Auto-update (Claude Code):** On every session start,
+a hook runs `git pull` and reports version changes.
+No action needed.
+
+**Manual update (OpenCode / any tool):**
+
+```bash
+bin/heinzel-update           # pull latest
+bin/heinzel-update --check   # check without pulling
+```
+
+**Pin to a stable version** (skip auto-updates):
+
+```bash
+bin/heinzel-update --pin v1.0.0   # pin
+bin/heinzel-update --unpin        # back to main
+```
+
+**Opt out of auto-update** without pinning:
+
+```bash
+export HEINZEL_NO_UPDATE=1
+```
+
 ## Safety & Guardrails
 
 Heinzel's safety rules are not optional — they're
@@ -627,11 +657,15 @@ when both touch the same section.
 ## Project Structure
 
 ```
+VERSION                — Current version number (semver)
+CHANGELOG.md           — Release history
 CLAUDE.md              — Main instructions (read by Claude Code
                          and OpenCode)
 opencode.json.example  — OpenCode config template (copy to
                          opencode.json)
 opencode.json          — Your local OpenCode config (gitignored)
+bin/
+  heinzel-update       — Update, pin, or check heinzel version
 .claude/               — Claude Code only
   settings.json        — Project-level Claude Code settings
   hooks/
