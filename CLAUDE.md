@@ -226,6 +226,16 @@ When removing a service, offer to close ports that
 were only needed for it. Always use the distro's
 firewall tool and log changes.
 
+## Best Practices Review
+
+Before executing user-requested actions that
+install software, create services, change
+permissions, or modify network exposure, check
+for common anti-patterns. Read
+`rules/best-practices.md`. Suggest improvements
+but respect the user's final choice — never
+refuse to proceed after an informed override.
+
 ## Port Conflict Check
 
 Before starting or deploying any application that

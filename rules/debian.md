@@ -10,6 +10,121 @@ Rules for Debian, Ubuntu, and derivatives.
 - Dry-run before upgrading: `apt-get --dry-run upgrade`
 - Non-interactive install: `apt-get install -y <package>`
 
+## Stable Branch Only
+
+**Always install packages from the stable branch.**
+Never add `testing`, `unstable`, `sid`, or
+`experimental` sources unless there is absolutely
+no other option and the user explicitly requests it.
+
+### Why This Matters
+
+Mixing releases breaks dependency chains. A single
+package from `testing` can pull in dozens of
+dependencies that replace stable libraries, leading
+to a partially upgraded system that is difficult to
+maintain and may break on the next `apt-get upgrade`.
+
+### Preferred Alternatives (in order)
+
+Before reaching for `testing` or `unstable`:
+
+1. **Stable backports.** Check if the package is in
+   `<codename>-backports`. Backports are rebuilt from
+   testing for the stable release and receive security
+   support.
+   ```
+   apt-get -t <codename>-backports install <package>
+   ```
+2. **Upstream project repository.** Many projects
+   provide their own Debian repos with current
+   packages built for stable (e.g. PostgreSQL,
+   Docker, Node.js, nginx). These are purpose-built
+   and do not pull in unrelated testing dependencies.
+3. **Flatpak or AppImage.** For desktop applications
+   on workstations (not servers), sandboxed formats
+   avoid polluting the system.
+4. **Build from source or use a static binary.** For
+   CLI tools or services, install to `/usr/local/` or
+   `/opt/` to keep the package manager untouched.
+5. **mise.** For language runtimes, use mise instead
+   of any Debian package. See `rules/mise.md`.
+
+### Last Resort: Pinned Single Package
+
+If none of the above work and the user explicitly
+confirms, install a **single pinned package** from
+testing — never add testing as a general source.
+
+**Step 1 — Add testing as a secondary source with
+low priority:**
+
+```
+echo "deb http://deb.debian.org/debian testing main" \
+  > /etc/apt/sources.list.d/testing.list
+
+cat > /etc/apt/preferences.d/99-testing-low << 'EOF'
+Package: *
+Pin: release a=testing
+Pin-Priority: 100
+EOF
+```
+
+Priority 100 means testing packages are never
+installed automatically — only when explicitly
+requested with `-t testing`.
+
+**Step 2 — Install the specific package:**
+
+```
+apt-get update
+apt-get -t testing install <package>
+```
+
+**Step 3 — Verify no collateral upgrades:**
+
+```
+apt list --installed 2>/dev/null | grep testing
+```
+
+If more than the intended package was pulled from
+testing, flag this to the user immediately.
+
+**Step 4 — Document in server memory:**
+
+```markdown
+- apt-pinning: <package> from testing (reason:
+  <why stable/backports was insufficient>)
+```
+
+**Step 5 — Log the override:**
+
+```bash
+logger -t heinzel \
+  "Installed <package> from testing (pinned, \
+user override: stable had no option)"
+```
+
+### What to Check on Existing Servers
+
+During housekeeping, verify the sources list:
+
+```
+grep -r "testing\|unstable\|sid\|experimental" \
+  /etc/apt/sources.list /etc/apt/sources.list.d/
+```
+
+If non-stable sources are found without pinning,
+flag as **WARN** in the housekeeping report.
+
+### Ubuntu Equivalent
+
+On Ubuntu, the same principle applies: use the
+release the server was installed with. Do not mix
+in packages from a newer Ubuntu release. Prefer
+PPAs from the upstream project over random
+third-party PPAs.
+
 ## Version Detection
 
 - `/etc/debian_version` — Debian version number
