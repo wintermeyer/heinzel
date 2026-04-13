@@ -42,10 +42,9 @@ changes — no changes until you say go.
    ```
    git clone https://github.com/wintermeyer/heinzel.git
    cd heinzel
+   claude
    ```
-   Then launch your preferred AI coding assistant
-   from inside the directory (e.g. `claude` for
-   Claude Code, `opencode` for OpenCode).
+   Or use `opencode` to launch OpenCode.
 2. **Describe what you need in plain English**
    ```
    ❯ Install and configure nginx on web1.example.com
