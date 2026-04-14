@@ -12,7 +12,24 @@ The file has two parts:
 **If `memory/user.md` does not exist:** ask the
 user which username to use as the default. Detect
 the current OS user with `whoami` (or `$USER`) and
-present a three-option interview:
+present a **three-option interview — no
+improvisation, no bundling extra questions into
+the prompt**.
+
+**Preferred (Claude Code):** use the
+`AskUserQuestion` tool so the user gets a real
+selectable picker. Question:
+*"Which SSH username should heinzel use by
+default?"* with options:
+
+1. `<current-os-user>` — "you, the user running heinzel"
+2. `root` — "connect as root directly"
+3. `Other…` — "type a different name" (user fills
+   in via the Other field)
+
+**Fallback (OpenCode or any tool without
+AskUserQuestion):** print the ASCII form and wait
+for `1`, `2`, or `3`:
 
 ```
 Which SSH username should heinzel use by default?
@@ -29,7 +46,9 @@ Save the chosen name as the `Default:` in
 
 **On first connection to a new server:** ask which
 SSH username to use, again as a three-option
-interview:
+interview. Same tool preference as above —
+`AskUserQuestion` in Claude Code, ASCII fallback
+elsewhere. ASCII form:
 
 ```
 Which SSH username should heinzel use for <hostname>?

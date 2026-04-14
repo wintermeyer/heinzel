@@ -202,6 +202,15 @@ Missing files are normal on a fresh install.
 Don't treat "No such file" as an error; just move
 on.
 
+**Do not improvise setup questions.** If
+`memory/user.md` is missing, follow the three-
+option interview in `rules/ssh-user.md` exactly
+— prefer the `AskUserQuestion` picker in Claude
+Code, ASCII `[1/2/3]` fallback elsewhere. Do not
+bundle other setup questions ("where should I
+save it?", etc.) into the same prompt; the rule
+file prescribes one question at a time.
+
 ## Privilege Escalation
 
 Read `rules/privilege-escalation.md`. Probe sudo

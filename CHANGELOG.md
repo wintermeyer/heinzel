@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.0.9 — 2026-04-14
+
+- First-time SSH-user interview now uses the
+  `AskUserQuestion` picker in Claude Code (real
+  selectable options, the "checkbox UI"), falling
+  back to the ASCII `[1/2/3]` prompt in OpenCode
+  and other tools that lack the picker. Same for
+  the per-server first-connection prompt.
+- CLAUDE.md's Session Start Preflight section now
+  explicitly forbids improvising setup questions
+  or bundling multiple questions into one prompt
+  — Claude must hand off to `rules/ssh-user.md`'s
+  interview format verbatim.
+
+Why: on a fresh install the first interaction
+was a freeform numbered list ("1. SSH username
+to use… 2. Where should I save it?") instead of
+the prescribed three-option picker. New users
+lost the nicest part of the onboarding flow.
+
 ## 2.0.8 — 2026-04-14
 
 - New "Session Start Preflight" section in
