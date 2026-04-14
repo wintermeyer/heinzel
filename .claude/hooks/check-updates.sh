@@ -4,7 +4,9 @@
 # migrates user state from the 1.x layout to the
 # 2.0 layout when needed.
 
-cd "$CLAUDE_PROJECT_DIR" || exit 0
+if [ -n "$CLAUDE_PROJECT_DIR" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
+  cd "$CLAUDE_PROJECT_DIR" || exit 0
+fi
 
 # Never hang the SessionStart hook on a credential
 # prompt (HTTPS remote with expired token, etc.).

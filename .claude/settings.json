@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-updates.sh\"",
+            "command": "bash .claude/hooks/check-updates.sh",
             "timeout": 15
           }
         ]

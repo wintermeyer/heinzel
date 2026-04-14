@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.0.11 — 2026-04-14
+
+- Fix SessionStart hook on Windows. The previous
+  command `sh "$CLAUDE_PROJECT_DIR/.claude/hooks/check-updates.sh"`
+  failed on Windows with `/usr/bin/sh: cannot
+  execute binary file` because cmd.exe does not
+  expand `$CLAUDE_PROJECT_DIR` and the quoted path
+  was handed to `sh` as a broken argument.
+- Hook now uses a relative path and `bash` instead
+  of `sh` — Git for Windows ships `bash.exe`
+  reliably, and Claude Code runs hooks with the
+  project directory as the working directory.
+- `check-updates.sh` only `cd`s into
+  `$CLAUDE_PROJECT_DIR` when that variable is set
+  and points to an existing directory, so the hook
+  no longer exits silently if the variable is
+  missing or mangled.
+
 ## 2.0.10 — 2026-04-14
 
 - Fresh-install onboarding no longer asks the SSH
