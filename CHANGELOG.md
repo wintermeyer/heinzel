@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.1 — 2026-04-14
+
+- `bin/heinzel-backup` now uses `mktemp
+  "${TMPDIR:-/tmp}/heinzel-backup.XXXXXX"` instead
+  of `mktemp -t`, which differs between BSD (macOS)
+  and GNU (Linux) — the old form worked by
+  accident on macOS but produced an awkward file
+  name on Linux
+- README Project Structure tree now lists
+  `rules/activity-check.md` and
+  `rules/best-practices.md`, which were inventoried
+  missing during the 2.0 audit
+
 ## 2.0.0 — 2026-04-14
 
 **BREAKING:** All user state is now consolidated

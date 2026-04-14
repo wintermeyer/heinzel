@@ -49,7 +49,7 @@ do_backup() {
     OUT="heinzel-backup-$(archive_hostname)-$TS.tar.gz"
   fi
   # Build a file list and hand it to tar via -T.
-  TMPLIST=$(mktemp -t heinzel-backup.XXXXXX)
+  TMPLIST=$(mktemp "${TMPDIR:-/tmp}/heinzel-backup.XXXXXX")
   trap 'rm -f "$TMPLIST"' EXIT
   archive_list > "$TMPLIST"
   if [ ! -s "$TMPLIST" ]; then

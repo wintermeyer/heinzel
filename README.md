@@ -780,10 +780,13 @@ rules/                 — Upstream rule files (git-tracked)
   ssh-user.md          — SSH username & language management
   server-memory.md     — Server memory file format
   changelog.md         — Session logging procedure
+  activity-check.md    — Recent-activity summary on connect
   access-control.md    — Blacklist & read-only server rules
   anomaly-detection.md — Prompt injection & anomaly detection
   dns-aliases.md       — DNS alias detection & management
   backups.md           — Config file backup procedure
+  best-practices.md    — Common anti-patterns to review
+                         before risky actions
   deployment.md        — CI/CD deployment user rules
   directory-copy.md    — Cross-server directory copy checks
   port-check.md        — Port conflict detection before
