@@ -38,6 +38,31 @@ changes — no changes until you say go.
 
 ## How to Install
 
+### Prerequisites
+
+- **An AI coding assistant** that runs in the
+  terminal — e.g.
+  [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+  or [OpenCode](https://opencode.ai).
+- **SSH access** to the target server — either as a
+  normal user or as root. The SSH connection must
+  not prompt for a password or passphrase (use
+  key-based authentication without a passphrase).
+  This is not needed for local administration
+  (localhost / your own machine).
+
+  Quick setup: generate a key with `ssh-keygen`,
+  copy it to the server with `ssh-copy-id user@host`,
+  and test with `ssh user@host`. See the
+  [Arch wiki SSH keys guide](https://wiki.archlinux.org/title/SSH_keys)
+  for details.
+
+- Linux (any distribution), FreeBSD, or macOS on the
+  target machines. All supported systems can also be
+  managed locally without SSH.
+
+### Steps
+
 1. **Clone the repo and start heinzel**
    ```
    git clone https://github.com/wintermeyer/heinzel.git
@@ -55,11 +80,33 @@ changes — no changes until you say go.
    — most commonly which SSH user to log in as. Your
    answers are stored in `memory/user.md` and the
    per-server memory file, so Heinzel won't ask again
-   on future sessions.
+   on future sessions. You can also pre-fill
+   `memory/user.md` by copying `memory/user.md.example`
+   and editing it — this is also where you set a
+   preferred language (e.g. `Language: German`).
 4. **Review and approve each command before it runs**
    Heinzel proposes every SSH command, explains what
    it does and why, and waits for your approval.
    Nothing runs without your say-so.
+
+### Team setup
+
+Heinzel supports team use where multiple people share
+server state via git while keeping SSH usernames
+personal.
+
+1. Each team member copies `memory/user.md.example`
+   to `memory/user.md` and sets their own SSH
+   usernames. This file is always gitignored.
+2. Edit `.gitignore` to track server memory — the
+   comments in the file explain which lines to
+   comment out.
+3. If any team member uses heinzel locally (on their
+   own machine), add their machine's hostname
+   directory to `.gitignore` (e.g.
+   `memory/servers/stefans-mbp/`).
+4. Commit server memory changes after sessions so the
+   team stays in sync.
 
 ## Updates & Versioning
 
@@ -95,20 +142,11 @@ export HEINZEL_NO_UPDATE=1
 
 ## Features
 
-### Auto-detection
+### Auto OS-detection
 
 The first time you point Heinzel at any machine, it
 detects the OS, gathers hardware info, and remembers
-everything for future sessions:
-
-```
- ❯ What OS is installed on app.example.com?
-```
-
-```
- ❯ Install a firewall on app.example.com and
-   configure it to allow SSH and HTTPS traffic.
-```
+everything for future sessions.
 
 ### DNS alias detection
 
@@ -518,77 +556,6 @@ log show \
 Other distributions work too — Heinzel will apply
 general best practices and let you know which OS it
 detected.
-
-## Getting Started
-
-### Prerequisites
-
-- **An AI coding assistant** that runs in the
-  terminal — e.g.
-  [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-  or [OpenCode](https://opencode.ai).
-- **SSH access** to the target server — either as a
-  normal user or as root. The SSH connection must
-  not prompt for a password or passphrase (use
-  key-based authentication without a passphrase).
-  This is not needed for local administration
-  (localhost / your own machine).
-
-  Quick setup: generate a key with `ssh-keygen`,
-  copy it to the server with `ssh-copy-id user@host`,
-  and test with `ssh user@host`. See the
-  [Arch wiki SSH keys guide](https://wiki.archlinux.org/title/SSH_keys)
-  for details.
-
-- Linux (any distribution), FreeBSD, or macOS on the
-  target machines. All supported systems can also be
-  managed locally without SSH.
-
-### Setup
-
-1. Clone this repo and enter the directory:
-   ```
-   git clone https://github.com/wintermeyer/heinzel.git
-   cd heinzel
-   ```
-2. Set up your SSH username:
-   ```
-   cp memory/user.md.example memory/user.md
-   ```
-   Edit `memory/user.md` and set your default SSH
-   username and any per-server overrides. You can
-   also set a preferred language in the
-   `# Preferences` section (e.g. `Language: German`)
-   — heinzel will communicate in that language.
-3. Start your AI tool from within the directory:
-   ```
-   claude        # for Claude Code
-   opencode      # for OpenCode
-   ```
-4. Describe your task, e.g. *"Find out if there is
-   a webserver running on shop.example.com"*
-
-Heinzel will auto-detect the OS on first connection
-and remember it for future sessions.
-
-### Team setup
-
-Heinzel supports team use where multiple people share
-server state via git while keeping SSH usernames
-personal.
-
-1. Each team member copies `memory/user.md.example`
-   to `memory/user.md` and sets their own SSH
-   usernames. This file is always gitignored.
-2. Edit `.gitignore` to track server memory — the
-   comments in the file explain which lines to
-   comment out.
-3. If any team member uses heinzel locally (on their
-   own machine), add their machine's hostname
-   directory to `.gitignore` (e.g.
-   `memory/servers/stefans-mbp/`).
-4. Commit server memory changes after sessions so the
-   team stays in sync.
 
 ## Risks & Responsibilities
 

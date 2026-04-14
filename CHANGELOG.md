@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.5 — 2026-04-14
+
+- Merged the duplicate "Getting Started" section
+  into "How to Install": Prerequisites and Team
+  setup are now subsections of install, removing
+  two parallel install guides
+- Renamed the Features entry "Auto-detection" to
+  "Auto OS-detection" and dropped its example
+  prompt snippets
+
 ## 1.0.4 — 2026-04-14
 
 - README install guide now mentions that Heinzel
