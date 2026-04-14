@@ -173,6 +173,35 @@ Read `rules/ssh-user.md`. Usernames and language
 preference are stored in `memory/user.md` — read at
 session start.
 
+## Session Start Preflight
+
+At the start of every session, quietly load
+`memory/user.md`, `memory/blacklist.md`,
+`memory/readonly.md`, and
+`memory/custom-rules/all.md` (if present), and
+glance at `memory/servers/` and
+`memory/custom-rules/` to see what's there.
+
+**How:** use the Read tool for each individual
+file and a plain `ls` for directory listings. Do
+**not** use a shell `for`-loop with `cat` — it
+triggers a permission prompt for no good reason
+and looks alarming to new users.
+
+**What to say:** announce the preflight in one
+short, friendly line before any reads, so the
+user understands what's happening:
+
+- Fresh install (nothing in memory yet):
+  *"Fresh heinzel install detected — nothing in
+  memory yet. Ready when you are."*
+- Returning user: *"Session start — loading your
+  preferences and access lists."*
+
+Missing files are normal on a fresh install.
+Don't treat "No such file" as an error; just move
+on.
+
 ## Privilege Escalation
 
 Read `rules/privilege-escalation.md`. Probe sudo

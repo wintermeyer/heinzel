@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.0.8 — 2026-04-14
+
+- New "Session Start Preflight" section in
+  CLAUDE.md tells Claude to load the initial memory
+  files (`user.md`, `blacklist.md`, `readonly.md`,
+  `custom-rules/all.md`) via the Read tool instead
+  of a shell `for`-loop with `cat`, and to
+  announce the preflight in one friendly line
+  first. Fresh-install users previously saw a
+  cryptic Bash permission prompt before anything
+  else happened; now they see a short human
+  sentence and no prompt at all in the common
+  case.
+
 ## 2.0.7 — 2026-04-14
 
 - CLAUDE.md now tells the workstation AI not to
