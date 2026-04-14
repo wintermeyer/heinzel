@@ -564,33 +564,31 @@ detected.
 > — as root, with sudo, or in unprivileged mode.
 > Always review every command before approving it.
 
-This is a tool for **experienced sysadmins and
-power users**.
+Heinzel is for anyone willing to stay in the
+driver's seat and review every command — from
+newcomers learning Linux to veterans running fleets.
+In fact, Heinzel can be an especially good teacher:
+each proposed command comes with an explanation of
+*what* it does and *why*, so you learn the real
+sysadmin reasoning instead of copy-pasting Stack
+Overflow answers.
 
-The risks are real — an LLM can hallucinate,
-misunderstand your intent, or produce a command with
-unintended side effects. A single bad command as root
-can be unrecoverable! 😱
+We built Heinzel to be a help for everybody. By
+design, it follows the safety checklist every single
+time: it always backs up before editing, always
+dry-runs when it can, always checks the OS before
+assuming commands. A disciplined AI makes far fewer
+mistakes than a tired human at 2 AM during an
+outage. But we can't guarantee it won't ever make
+one — LLMs can hallucinate, misread intent, or
+produce a command with unintended side effects.
 
-But consider: human sysadmins make mistakes too —
-especially when tired, rushed, or managing dozens of
-servers at 2 AM during an outage. They forget
-backups, skip dry-runs, and apply firewall rules that
-lock themselves out. Every experienced sysadmin has a
-horror story.
-
-A well-configured AI doesn't get tired or flustered.
-It **always** backs up before editing, **always**
-dry-runs first, and **always** checks the OS before
-assuming which commands to use. It follows the safety
-checklist every single time — not just when it
-remembers to.
-
-The question isn't whether heinzel is risk-free — it
-isn't. The question is whether a disciplined AI that
-follows every safety rule every time, with a human
-reviewing every command, produces fewer disasters than
-a human working alone under real-world conditions.
+The question isn't whether Heinzel is risk-free —
+it isn't. The question is whether a disciplined AI
+that follows every safety rule every time, with a
+human reviewing every command, produces fewer
+disasters than a human working alone under
+real-world conditions.
 
 Stay in the driver's seat. Review every command. Do
 not blindly approve.

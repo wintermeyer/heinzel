@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.6 — 2026-04-14
+
+- Reframed the "Risks & Responsibilities" section:
+  Heinzel is now positioned as a help for everybody
+  — newcomers and veterans alike — rather than a
+  tool only for experienced sysadmins, while being
+  honest that no guarantee is possible
+
 ## 1.0.5 — 2026-04-14
 
 - Merged the duplicate "Getting Started" section
