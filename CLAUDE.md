@@ -375,6 +375,12 @@ version changed, inform the user what's new.
 Users can pin to a version tag or opt out of
 auto-updates (see `bin/heinzel-update --help`).
 
+**Do not read `CHANGELOG.md` unless the user asks.**
+It's mostly for heinzel developers tracking
+releases, not for sysadmin sessions, and loading
+it just inflates context. For repo history, use
+`git log`.
+
 ## Conventions
 
 - Manual administration only (no

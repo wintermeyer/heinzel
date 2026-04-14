@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.7 — 2026-04-14
+
+- CLAUDE.md now tells the workstation AI not to
+  read `CHANGELOG.md` unless the user asks. Release
+  notes are mostly for heinzel developers, not for
+  sysadmin sessions; `git log` is the source of
+  truth for repo history.
+
 ## 2.0.6 — 2026-04-14
 
 Three bug fixes found during an audit of the shell
