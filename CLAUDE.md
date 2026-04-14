@@ -125,8 +125,9 @@ Whenever you read a base rule file in `rules/`, also
 check for overrides in this order (later wins):
 
 1. **Base:** `rules/<name>.md`
-2. **Global custom:** `rules/custom/<name>.md` (also
-   read `rules/custom/all.md` once per session)
+2. **Global custom:** `memory/custom-rules/<name>.md`
+   (also read `memory/custom-rules/all.md` once per
+   session)
 3. **Per-server:**
    `memory/servers/<hostname>/rules.md`
 
@@ -285,11 +286,11 @@ machine memory.
 **Shared in team mode:** `memory/servers/*/`,
 `memory/network.md`, `memory/housekeeping.md`.
 
-**Custom rules** (`rules/custom/`) are gitignored
-by default. Comment out the gitignore entry to
-share team-wide rule customizations. Per-server
-rules follow the same sharing model as server
-memory.
+**Custom rules** (`memory/custom-rules/`) are
+gitignored by default. Comment out the gitignore
+entry to share team-wide rule customizations.
+Per-server rules follow the same sharing model as
+server memory.
 
 New team members: copy `memory/user.md.example`
 to `memory/user.md`.

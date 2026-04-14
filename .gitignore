@@ -1,45 +1,45 @@
-# Personal SSH usernames (always gitignored)
-memory/user.md
+# All user state lives under memory/.
+# Solo mode by default; team mode is opt-in below.
 
-# Server blacklist — gitignored for solo use.
-# For team use, comment out to share.
-memory/blacklist.md
+# Start by ignoring everything in memory/, then
+# explicitly allow the tracked templates and keep
+# markers.
+memory/*
+!memory/MEMORY.md
+!memory/user.md.example
+!memory/opencode.json.example
 
-# Read-only server list — gitignored for solo use.
-# For team use, comment out to share.
-memory/readonly.md
-
-# Local machine memory — always gitignored (each
-# team member has a different local machine).
-# Local mode uses localhost, 127.0.0.1, or the
-# machine's own hostname as directory name.
-memory/servers/localhost/
-memory/servers/127.0.0.1/
-
-# Server memory — gitignored for solo use.
-# For team use, comment out the next 3 lines to
-# share server state via git.
+# Server memory directory — keep the folder in git
+# but ignore its contents (solo mode). For team
+# mode, un-ignore the contents by uncommenting the
+# `!memory/servers/**` line below.
+!memory/servers/
 memory/servers/*
 !memory/servers/.gitkeep
-memory/network.md
 
-# Custom housekeeping checks — gitignored for solo
-# use. For team use, comment out to share.
-memory/housekeeping.md
+# Custom rule overrides — keep the folder in git
+# but ignore its contents (solo mode). For team
+# mode, un-ignore *.md by uncommenting the
+# `!memory/custom-rules/*.md` line below.
+!memory/custom-rules/
+memory/custom-rules/*
+!memory/custom-rules/.gitkeep
 
-# Custom rule overrides — gitignored for solo use.
-# For team use, comment out the next 2 lines to
-# share custom rules via git.
-rules/custom/*
-!rules/custom/.gitkeep
+# ---- Team mode (opt-in) --------------------------
+# Uncomment the lines you want to share via git.
+# memory/user.md and memory/opencode.json are
+# always personal and must NEVER be shared.
+# !memory/blacklist.md
+# !memory/readonly.md
+# !memory/housekeeping.md
+# !memory/network.md
+# !memory/servers/**
+# memory/servers/localhost/
+# memory/servers/127.0.0.1/
+# !memory/custom-rules/*.md
 
-# OpenCode config — gitignored so local edits
-# (e.g. baseURL) don't conflict on git pull.
-# Copy opencode.json.example to opencode.json.
-opencode.json
-
-# Project history (auto-maintained by Claude Code)
+# Project history (auto-maintained by Claude Code).
 HISTORY.md
 
-# macOS
+# macOS noise.
 .DS_Store

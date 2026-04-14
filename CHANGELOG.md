@@ -1,5 +1,44 @@
 # Changelog
 
+## 2.0.0 — 2026-04-14
+
+**BREAKING:** All user state is now consolidated
+under `memory/`. Backups are a single
+`tar czf backup.tgz memory/` — no more tracking
+three scattered locations.
+
+- `rules/custom/` → `memory/custom-rules/`
+- `opencode.json` → `memory/opencode.json`
+- `opencode.json.example` → `memory/opencode.json.example`
+- `.gitignore` rewritten around the new single
+  user-state root with team-mode opt-in comments
+- New `bin/heinzel-backup` script: dry-run, backup,
+  and restore a `memory/` archive. Restore
+  validates entries live under `memory/` and
+  refuses to overwrite existing state without
+  `--force`
+- Auto-migration: `.claude/hooks/check-updates.sh`
+  now detects the 1.x layout on session start and
+  moves files into place, idempotently
+- README gained a "Backup & Restore" section and a
+  "Upgrading from 1.x to 2.0.0" walkthrough
+
+Why: previously, user state was spread across
+`memory/*`, `rules/custom/`, and the repo-root
+`opencode.json`, which made backups a scripted
+operation rather than a one-liner and required
+multiple `.gitignore` blocks that had drifted
+apart. Pulling everything under `memory/` makes the
+mental model, the gitignore, and the backup story
+all collapse to one directory.
+
+Users on pinned 1.x tags won't be affected until
+they unpin; everyone on `main` gets auto-migrated
+on the next Claude Code session start. OpenCode
+users or anyone bypassing the hook should run
+`bin/heinzel-update` (or follow the manual steps
+in the README's upgrade section).
+
 ## 1.0.6 — 2026-04-14
 
 - Reframed the "Risks & Responsibilities" section:

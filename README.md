@@ -140,6 +140,118 @@ bin/heinzel-update --unpin        # back to main
 export HEINZEL_NO_UPDATE=1
 ```
 
+### Upgrading from 1.x to 2.0.0
+
+2.0.0 consolidates all user state under `memory/`.
+Under 1.x, custom rules lived in `rules/custom/`
+and the OpenCode config lived at the repo root.
+The upgrade moves them automatically — no manual
+work in the common case.
+
+**Automatic (recommended).** Let the Claude Code
+session-start hook run on your next session, or run
+the update manually:
+
+```bash
+bin/heinzel-update
+```
+
+The hook detects the old layout and migrates:
+
+```
+rules/custom/*        →  memory/custom-rules/
+opencode.json         →  memory/opencode.json
+opencode.json.example →  memory/opencode.json.example
+```
+
+You'll see a one-time notice listing what moved.
+Re-running the hook is a no-op.
+
+**Manual** (if you're pinned to a 1.x tag or don't
+use the Claude Code hook). First unpin, then pull:
+
+```bash
+bin/heinzel-update --unpin
+bin/heinzel-update
+```
+
+Or move the files yourself:
+
+```bash
+mkdir -p memory/custom-rules
+[ -d rules/custom ] && \
+  mv rules/custom/* memory/custom-rules/ 2>/dev/null || true
+[ -f opencode.json ] && \
+  mv opencode.json memory/opencode.json
+[ -f opencode.json.example ] && \
+  mv opencode.json.example memory/opencode.json.example
+```
+
+**After upgrading**, review:
+
+- Any personal scripts or cron jobs that reference
+  the old paths.
+- Your `.gitignore` if you edited it for team mode
+  — the new defaults are re-organized around
+  `memory/` (see the comments in the file).
+- Take a fresh backup right after upgrading:
+  `bin/heinzel-backup`.
+
+**Rollback** if something goes wrong: restore your
+pre-upgrade backup, or pin back to the last 1.x
+release with `bin/heinzel-update --pin v1.0.6`.
+
+## Backup & Restore
+
+Heinzel keeps all your personal state under a
+single directory — `memory/` — so backups are one
+`tar` command. The tree is text and typically well
+under a megabyte. No database, no hidden dotfiles,
+no scattered config.
+
+### What lives in `memory/`
+
+- `user.md` — SSH usernames and language
+  preference
+- `blacklist.md`, `readonly.md` — access policies
+- `servers/<hostname>/` — per-server memory,
+  changelog, todo, and per-server rule overrides
+- `custom-rules/` — your global rule overrides
+- `opencode.json` — your OpenCode config
+- `network.md`, `housekeeping.md` — cross-server
+  facts and custom checks
+
+### Back up
+
+```bash
+bin/heinzel-backup
+```
+
+Writes
+`heinzel-backup-<hostname>-<timestamp>.tar.gz` to
+the current directory. Use `--list` for a dry run,
+`-o <path>` to write somewhere specific.
+
+### Restore
+
+```bash
+bin/heinzel-backup --restore <file.tar.gz>
+```
+
+Refuses to overwrite existing `memory/` content
+unless `--force` is passed. The archive is
+validated — all entries must live under `memory/` —
+before any files are written.
+
+### Team mode note
+
+In team mode, `memory/servers/`, `memory/network.md`,
+`memory/housekeeping.md`, and
+`memory/custom-rules/` are shared via git already.
+But `memory/user.md`, `memory/blacklist.md`,
+`memory/readonly.md`, and `memory/opencode.json`
+are always personal and still need this backup.
+
 ## Features
 
 ### Auto OS-detection
@@ -292,14 +404,14 @@ ollama run qwen3.5:9b
 Copy the example config and adjust if needed:
 
 ```bash
-cp opencode.json.example opencode.json
+cp memory/opencode.json.example memory/opencode.json
 ```
 
-Edit `opencode.json` to match your setup — e.g.
-change the `baseURL` if Ollama runs on a different
-host (`http://192.168.0.3:11434/v1`), or change the
-model name. The file is gitignored so local edits
-won't conflict on `git pull`.
+Edit `memory/opencode.json` to match your setup —
+e.g. change the `baseURL` if Ollama runs on a
+different host (`http://192.168.0.3:11434/v1`), or
+change the model name. The file is gitignored so
+local edits won't conflict on `git pull`.
 
 **4. Launch OpenCode**
 
@@ -604,7 +716,8 @@ Three layers, read in order (later wins):
 
 1. **Base** — `rules/<name>.md` (upstream,
    git-tracked)
-2. **Global custom** — `rules/custom/<name>.md`
+2. **Global custom** —
+   `memory/custom-rules/<name>.md`
    (gitignored by default, opt-in team sharing)
 3. **Per-server** —
    `memory/servers/<hostname>/rules.md`
@@ -625,8 +738,8 @@ Skip this base section.
 ```
 
 Sections without a prefix are treated as additions.
-A special `rules/custom/all.md` applies to every
-server. Per-server overrides win over global custom
+A special `memory/custom-rules/all.md` applies to
+every server. Per-server overrides win over global custom
 when both touch the same section.
 
 ## Project Structure
@@ -636,18 +749,17 @@ VERSION                — Current version number (semver)
 CHANGELOG.md           — Release history
 CLAUDE.md              — Main instructions (read by Claude Code
                          and OpenCode)
-opencode.json.example  — OpenCode config template (copy to
-                         opencode.json)
-opencode.json          — Your local OpenCode config (gitignored)
 bin/
   heinzel-update       — Update, pin, or check heinzel version
+  heinzel-backup       — Back up / restore your memory/ tree
+  heinzel-migrate      — One-shot 1.x→2.0 user-state migration
+                         (called automatically on update)
 .claude/               — Claude Code only
   settings.json        — Project-level Claude Code settings
   hooks/
-    check-updates.sh   — Auto-check for repo updates on
-                         session start
-rules/
-  custom/              — User rule overrides (gitignored)
+    check-updates.sh   — Auto-check for repo updates and
+                         auto-migrate on session start
+rules/                 — Upstream rule files (git-tracked)
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky,
                          Alma rules
@@ -678,21 +790,26 @@ rules/
                          starting services
   version-check.md     — Proactive stable version checking
                          and upgrade nudges
-memory/
+memory/                — All your user state (gitignored
+                         by default; single-directory backup)
   MEMORY.md            — Index for server memory
   user.md.example      — SSH username template (copy to
                          user.md)
   user.md              — Your preferences and SSH usernames
-                         (gitignored)
-  blacklist.md         — Blocked servers (gitignored)
-  readonly.md          — Read-only servers (gitignored)
-  housekeeping.md      — User-added custom checks (gitignored)
+  blacklist.md         — Blocked servers
+  readonly.md          — Read-only servers
+  housekeeping.md      — User-added custom checks
   network.md           — Cross-server network facts
-                         (gitignored)
+  opencode.json.example — OpenCode config template (copy to
+                         opencode.json)
+  opencode.json        — Your local OpenCode config
+  custom-rules/        — Your rule overrides that layer on
+                         top of rules/*.md
   servers/<hostname>/
-    memory.md          — Server state snapshot (gitignored)
-    changelog.log      — Local change history (gitignored)
-    todo.md            — Session task list (gitignored)
+    memory.md          — Server state snapshot
+    changelog.log      — Local change history
+    todo.md            — Session task list
+    rules.md           — Per-server rule overrides
 ```
 
 ## Why the Name Heinzel?

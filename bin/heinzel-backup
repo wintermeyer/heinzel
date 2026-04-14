@@ -1,0 +1,136 @@
+#!/bin/sh
+# heinzel-backup — back up or restore your memory/
+# tree. All user state lives under memory/, so the
+# whole backup is a single tar.gz of that one
+# directory.
+#
+# Usage:
+#   heinzel-backup                Create a backup in CWD
+#   heinzel-backup -o <path>      Write to an explicit path
+#   heinzel-backup --list         Dry run: list what would
+#                                 be archived
+#   heinzel-backup --restore <f>  Extract <f> into repo root
+#                                 (refuses to overwrite
+#                                 existing memory/ content
+#                                 unless --force is also set)
+#   heinzel-backup --help         Show this help
+set -e
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+cd "$REPO_DIR"
+
+usage() {
+  awk '/^# heinzel-backup/{in_help=1} in_help{if(/^[^#]/)exit; sub(/^# ?/,""); print}' "$0"
+}
+
+archive_hostname() {
+  hostname -s 2>/dev/null || hostname || echo unknown
+}
+
+# Build the list of files to archive. We exclude
+# transient noise (.DS_Store, *.lock) but keep
+# everything else under memory/.
+archive_list() {
+  if [ ! -d memory ]; then
+    echo "error: memory/ does not exist — nothing to back up" >&2
+    exit 1
+  fi
+  find memory -type f \
+    ! -name '.DS_Store' \
+    ! -name '*.lock' \
+    | LC_ALL=C sort
+}
+
+do_backup() {
+  OUT="$1"
+  if [ -z "$OUT" ]; then
+    TS=$(date -u +%Y%m%d-%H%M%SZ)
+    OUT="heinzel-backup-$(archive_hostname)-$TS.tar.gz"
+  fi
+  # Build a file list and hand it to tar via -T.
+  TMPLIST=$(mktemp -t heinzel-backup.XXXXXX)
+  trap 'rm -f "$TMPLIST"' EXIT
+  archive_list > "$TMPLIST"
+  if [ ! -s "$TMPLIST" ]; then
+    echo "error: nothing to archive under memory/" >&2
+    exit 1
+  fi
+  tar czf "$OUT" -T "$TMPLIST"
+  SIZE=$(wc -c < "$OUT" | tr -d ' ')
+  COUNT=$(wc -l < "$TMPLIST" | tr -d ' ')
+  echo "wrote $OUT ($COUNT files, $SIZE bytes)"
+}
+
+do_list() {
+  archive_list
+}
+
+do_restore() {
+  FILE="$1"
+  FORCE="$2"
+  if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
+    echo "error: archive not found: $FILE" >&2
+    exit 1
+  fi
+
+  # Validate: every entry must be under memory/ and
+  # must not contain .. or absolute paths. This
+  # rejects malicious tarballs.
+  BAD=$(tar tzf "$FILE" | awk '
+    /^\// { print; exit }
+    /(^|\/)\.\.(\/|$)/ { print; exit }
+    !/^memory\// { print; exit }
+  ')
+  if [ -n "$BAD" ]; then
+    echo "error: archive contains entries outside memory/ or with .. — refusing to extract" >&2
+    echo "offending entry: $BAD" >&2
+    exit 1
+  fi
+
+  # Refuse to overwrite existing content unless
+  # --force. An empty memory/ (only .gitkeep
+  # files) counts as empty.
+  if [ -d memory ] && [ "$FORCE" != "--force" ]; then
+    EXISTING=$(find memory -type f \
+      ! -name '.gitkeep' \
+      ! -name '.DS_Store' \
+      | head -n 1)
+    if [ -n "$EXISTING" ]; then
+      echo "error: memory/ already contains user data (e.g. $EXISTING)" >&2
+      echo "re-run with --force to overwrite, or move memory/ aside first" >&2
+      exit 1
+    fi
+  fi
+
+  tar xzf "$FILE"
+  echo "restored $FILE into $REPO_DIR"
+}
+
+# ---- argument parsing ---------------------------
+OUT=""
+case "$1" in
+  ""|"--")
+    do_backup ""
+    ;;
+  -o)
+    shift
+    [ -z "$1" ] && { echo "error: -o requires a path" >&2; exit 2; }
+    do_backup "$1"
+    ;;
+  --list)
+    do_list
+    ;;
+  --restore)
+    shift
+    do_restore "$1" "$2"
+    ;;
+  --help|-h)
+    usage
+    ;;
+  *)
+    echo "error: unknown option: $1" >&2
+    echo "run 'heinzel-backup --help' for usage" >&2
+    exit 2
+    ;;
+esac

@@ -1,8 +1,17 @@
 #!/bin/sh
 # SessionStart hook: auto-pull latest heinzel changes
-# with version awareness and pinning support.
+# with version awareness and pinning support. Also
+# migrates user state from the 1.x layout to the
+# 2.0 layout when needed.
 
 cd "$CLAUDE_PROJECT_DIR" || exit 0
+
+# Migration is implemented in bin/heinzel-migrate so
+# both the Claude Code hook and bin/heinzel-update
+# use the same logic.
+run_migration() {
+  [ -x bin/heinzel-migrate ] && bin/heinzel-migrate
+}
 
 # Opt-out via environment variable.
 if [ "$HEINZEL_NO_UPDATE" = "1" ]; then
@@ -44,6 +53,10 @@ if [ $PULL_STATUS -ne 0 ]; then
   echo "Run 'git status' to inspect local changes."
   exit 0
 fi
+
+# Migrate 1.x → 2.0 layout if needed. Idempotent
+# and silent when there's nothing to do.
+run_migration
 
 # Read new version after pulling.
 NEW_VERSION=""

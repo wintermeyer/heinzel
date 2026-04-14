@@ -1,0 +1,50 @@
+#!/bin/sh
+# heinzel-migrate — migrate user state from the 1.x
+# layout (rules/custom/ + repo-root opencode.json)
+# to the 2.0 layout (everything under memory/).
+# Idempotent: re-running on an already-migrated
+# tree is a silent no-op.
+#
+# Called automatically by
+# .claude/hooks/check-updates.sh and by
+# bin/heinzel-update. Safe to run by hand.
+set -e
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+cd "$REPO_DIR"
+
+MOVED=""
+
+# rules/custom/* → memory/custom-rules/
+if [ -d rules/custom ]; then
+  if find rules/custom -type f \
+      ! -name '.gitkeep' -print -quit 2>/dev/null \
+      | grep -q .; then
+    mkdir -p memory/custom-rules
+    for f in rules/custom/*; do
+      [ -e "$f" ] || continue
+      name=$(basename "$f")
+      [ "$name" = ".gitkeep" ] && continue
+      mv "$f" "memory/custom-rules/$name"
+      MOVED="$MOVED\n  rules/custom/$name → memory/custom-rules/$name"
+    done
+  fi
+fi
+
+# opencode.json[.example] → memory/
+if [ -f opencode.json ] && [ ! -e memory/opencode.json ]; then
+  mv opencode.json memory/opencode.json
+  MOVED="$MOVED\n  opencode.json → memory/opencode.json"
+fi
+if [ -f opencode.json.example ] \
+    && [ ! -e memory/opencode.json.example ]; then
+  mv opencode.json.example memory/opencode.json.example
+  MOVED="$MOVED\n  opencode.json.example → memory/opencode.json.example"
+fi
+
+if [ -n "$MOVED" ]; then
+  printf "heinzel 2.0 migration — moved user state under memory/:%b\n" "$MOVED"
+  echo "Review any personal scripts or cron jobs that"
+  echo "reference the old paths. See CHANGELOG.md 2.0.0."
+fi
