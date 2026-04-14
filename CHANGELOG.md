@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4 — 2026-04-14
+
+- README install guide now mentions that Heinzel
+  asks a few questions on the first connection
+  (e.g. which SSH user) and remembers the answers
+
 ## 1.0.3 — 2026-04-14
 
 - README restructured: renamed "How It Works" to

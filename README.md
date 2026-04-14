@@ -49,7 +49,14 @@ changes — no changes until you say go.
    ```
    ❯ Install postgresql on server1.example.com
    ```
-3. **Review and approve each command before it runs**
+3. **Answer a few questions on the first connection**
+   The first time Heinzel connects to a new server,
+   it may ask for details it can't detect on its own
+   — most commonly which SSH user to log in as. Your
+   answers are stored in `memory/user.md` and the
+   per-server memory file, so Heinzel won't ask again
+   on future sessions.
+4. **Review and approve each command before it runs**
    Heinzel proposes every SSH command, explains what
    it does and why, and waits for your approval.
    Nothing runs without your say-so.
