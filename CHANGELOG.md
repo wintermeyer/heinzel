@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.10 — 2026-04-14
+
+- Fresh-install onboarding no longer asks the SSH
+  user question twice. Previously, when a new user
+  pointed heinzel at a specific server on the very
+  first session, they got two near-identical
+  pickers back-to-back: one for the default, one
+  for the server. The two prompts looked
+  duplicated and were confusing.
+- `rules/ssh-user.md` now distinguishes three
+  cases: (A) fresh install with a server already
+  specified — one combined question whose answer
+  is saved as both the default and the per-server
+  entry; (B) fresh install with no target — ask
+  only for the default; (C) default exists, first
+  connection to a new server — per-server prompt
+  as before.
+- The combined question makes the dual save
+  explicit in the prompt text so the user
+  understands one answer covers both.
+
 ## 2.0.9 — 2026-04-14
 
 - First-time SSH-user interview now uses the
