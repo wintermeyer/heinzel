@@ -53,6 +53,11 @@ heinzel operates in **local mode**:
 confirmation.** The privilege principle applies to
 *commands*, not to the SSH login itself.
 
+**Before any remote command, follow
+`rules/first-connection.md`.** No exceptions — not
+for `df -h`, not for `uptime`, not for anything the
+user frames as quick.
+
 ### SSH Options
 
 Always use these options on every SSH and
@@ -101,6 +106,28 @@ remote connection before any other work.
 - **Stick to stable release tracks.**
 - **Test before applying.** Use dry-run/test modes
   when available.
+
+## No Shortcuts for "Quick" Questions
+
+Every remote connection runs the full onboarding
+pipeline in `rules/first-connection.md` —
+blacklist/read-only check, DNS alias detection, SSH
+user lookup, OS detection, server memory file, and
+activity check — **before** any user-requested
+command, including trivial ones like `df -h`,
+`uptime`, or `uname -a`.
+
+There is no "quick question" exception. Do not skip
+steps because the request seems small, because you
+already know the server, or because the user
+appears to want a fast answer. If the pipeline
+reveals nothing new, the overhead is a few extra
+commands — acceptable. Silently skipping the
+pipeline is a bug, not an optimization.
+
+If following the pipeline will visibly slow the
+answer, say so up front ("first-contact onboarding
+on this host — one moment") rather than skipping.
 
 ## Verify Before Running
 

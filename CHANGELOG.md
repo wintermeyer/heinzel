@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.0.2 — 2026-04-14
+
+- New `rules/first-connection.md` consolidates the
+  mandatory onboarding pipeline (blacklist,
+  read-only, DNS alias, SSH user, OS detection,
+  server memory, activity check) into one ordered
+  checklist. The sequence was previously spread
+  across six rule files with no single entry point.
+- `CLAUDE.md` gains a **No Shortcuts for "Quick"
+  Questions** section and a direct pointer to the
+  new checklist from the Remote mode section.
+
+Why: on bremen3.wintermeyer.de, Claude ran `df -h`
+in response to a disk-space question and skipped
+the entire onboarding pipeline, citing "you only
+asked a quick question." No rule permitted that
+shortcut — Claude invented it. Tightening the
+language and providing a single ordered checklist
+removes the reasoning gap.
+
 ## 2.0.1 — 2026-04-14
 
 - `bin/heinzel-backup` now uses `mktemp

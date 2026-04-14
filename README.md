@@ -781,6 +781,8 @@ rules/                 — Upstream rule files (git-tracked)
   server-memory.md     — Server memory file format
   changelog.md         — Session logging procedure
   activity-check.md    — Recent-activity summary on connect
+  first-connection.md  — Mandatory onboarding checklist
+                         (no "quick question" shortcuts)
   access-control.md    — Blacklist & read-only server rules
   anomaly-detection.md — Prompt injection & anomaly detection
   dns-aliases.md       — DNS alias detection & management
