@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.3 — 2026-04-14
+
+- `rules/ssh-user.md` now specifies a three-option
+  interview for the SSH-user prompt: the current OS
+  user (detected via `whoami`/`$USER`), `root`, or
+  a custom name. Applies to both the initial
+  default setup (when `memory/user.md` is missing)
+  and to first-connection-to-a-new-server prompts.
+
+Why: on a fresh install, heinzel already knows who
+launched it — asking "what's your typical
+username?" as an open question was clumsy. Offering
+the detected OS user as the preselected default,
+with `root` and "other…" one keystroke away, gets
+most installs through setup in a single `1` press.
+
 ## 2.0.2 — 2026-04-14
 
 - New `rules/first-connection.md` consolidates the

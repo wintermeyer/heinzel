@@ -9,18 +9,49 @@ The file has two parts:
 - **Per-server overrides** — `- hostname: username`
   entries.
 
-**If `memory/user.md` does not exist:** ask the user
-their typical username, then save it.
+**If `memory/user.md` does not exist:** ask the
+user which username to use as the default. Detect
+the current OS user with `whoami` (or `$USER`) and
+present a three-option interview:
+
+```
+Which SSH username should heinzel use by default?
+
+  1. <current-os-user>   (you, the user running heinzel)
+  2. root
+  3. other…              (type a different name)
+
+[1/2/3]:
+```
+
+Save the chosen name as the `Default:` in
+`memory/user.md`.
 
 **On first connection to a new server:** ask which
-SSH username to use, suggesting the default. Save as
-a per-server override in `memory/user.md`.
+SSH username to use, again as a three-option
+interview:
+
+```
+Which SSH username should heinzel use for <hostname>?
+
+  1. <memory-default>    (your heinzel default)
+  2. root
+  3. other…              (type a different name)
+
+[1/2/3]:
+```
+
+If the memory default is already `root`, collapse
+options 1 and 2 into a single `root` entry and
+keep `other…` as option 2. Save the choice as a
+per-server override in `memory/user.md`.
 
 **On subsequent connections:** look up the server in
 `memory/user.md`. Do not ask again.
 
-When the user explicitly specifies a username, use
-that and update `memory/user.md`.
+When the user explicitly specifies a username on the
+command line, skip the interview, use that name, and
+update `memory/user.md`.
 
 ## User Language
 
