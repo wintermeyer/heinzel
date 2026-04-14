@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.3 — 2026-04-14
+
+- README restructured: renamed "How It Works" to
+  "How to Install", promoted feature showcases into
+  a dedicated "Features" section, moved
+  "Updates & Versioning" directly after install, and
+  replaced generic "the AI" phrasing with "Heinzel"
+  for a consistent voice
+- Clarified in the README that auto-update is
+  skipped when pinned to a tag, on a non-`main`
+  branch, or when `HEINZEL_NO_UPDATE=1`
+
 ## 1.0.2 — 2026-04-14
 
 - Changelog rule now records the *why* of an action

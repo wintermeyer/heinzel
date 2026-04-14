@@ -10,7 +10,7 @@ and run shell commands. It supports Linux, FreeBSD,
 and macOS — remote servers over SSH and the local
 machine alike.
 
-Describe what you need in plain English, and the AI
+Describe what you need in plain English, and Heinzel
 figures out the right commands for your OS, proposes
 each one with an explanation, and waits for your
 approval before running anything. It backs up configs,
@@ -21,9 +21,9 @@ report when it's finished.
 Using it feels like pair-programming with a colleague
 who always checks the docs first and never skips a
 step because he's in a hurry. The bigger the network,
-the more it pays off — the AI remembers every server's
+the more it pays off — Heinzel remembers every server's
 OS, services, and quirks so you don't have to. Not
-sure yet? Ask the AI to plan first before making
+sure yet? Ask Heinzel to plan first before making
 changes — no changes until you say go.
 
 ## Screencast: Debug and fix some webserver problems
@@ -36,9 +36,9 @@ changes — no changes until you say go.
 - [Install the latest stable Ruby and Ruby on Rails](https://www.youtube.com/watch?v=QVvm29eABKY) (1 min)
 - [Install a firewall, upgrade the Linux distribution and setup automatic daily security updates](https://www.youtube.com/watch?v=ve_TFyJy_uU) (2 min)
 
-## How It Works
+## How to Install
 
-1. **Clone the repo and start your AI tool**
+1. **Clone the repo and start heinzel**
    ```
    git clone https://github.com/wintermeyer/heinzel.git
    cd heinzel
@@ -47,18 +47,52 @@ changes — no changes until you say go.
    Or use `opencode` to launch OpenCode.
 2. **Describe what you need in plain English**
    ```
-   ❯ Install and configure nginx on web1.example.com
+   ❯ Install postgresql on server1.example.com
    ```
 3. **Review and approve each command before it runs**
-   The AI proposes every SSH command, explains what
+   Heinzel proposes every SSH command, explains what
    it does and why, and waits for your approval.
    Nothing runs without your say-so.
 
+## Updates & Versioning
+
+Heinzel uses [semantic versioning](https://semver.org).
+The current version is in the `VERSION` file; changes
+are listed in `CHANGELOG.md`.
+
+**Auto-update (Claude Code):** On every session start,
+a hook runs `git pull` and reports version changes.
+No action needed. Auto-update is skipped when pinned
+to a tag (see below), when on a non-`main` branch, or
+when `HEINZEL_NO_UPDATE=1` is set.
+
+**Manual update (OpenCode / any tool):**
+
+```bash
+bin/heinzel-update           # pull latest
+bin/heinzel-update --check   # check without pulling
+```
+
+**Pin to a stable version** (skip auto-updates):
+
+```bash
+bin/heinzel-update --pin v1.0.0   # pin
+bin/heinzel-update --unpin        # back to main
+```
+
+**Opt out of auto-update** without pinning:
+
+```bash
+export HEINZEL_NO_UPDATE=1
+```
+
+## Features
+
 ### Auto-detection
 
-The first time you point Heinzel at any machine, the
-AI detects the OS, gathers hardware info, and
-remembers everything for future sessions:
+The first time you point Heinzel at any machine, it
+detects the OS, gathers hardware info, and remembers
+everything for future sessions:
 
 ```
  ❯ What OS is installed on app.example.com?
@@ -79,7 +113,7 @@ same memory. Each alias can have its own SSH user.
 
 ### Memory across sessions
 
-After working on a machine, the AI remembers it.
+After working on a machine, Heinzel remembers it.
 Next week you start a new session and type:
 
 ```
@@ -135,14 +169,14 @@ before touching anything:
    PostgreSQL on db.example.com
 ```
 
-The AI explores the server, checks what's running,
+Heinzel explores the server, checks what's running,
 reads configs, and drafts a step-by-step plan — but
 makes no changes. You discuss the approach, adjust
 it, and only when you approve does execution begin.
 
 > **Note:** The `/plan` command is a Claude Code
 > feature. OpenCode does not have an equivalent —
-> simply ask the AI to plan before acting.
+> simply ask Heinzel to plan before acting.
 
 ### Local administration
 
@@ -356,44 +390,14 @@ prompts during an unattended upgrade.
   step by step
 
 Without the flag, Heinzel's safety rules still apply —
-the AI still backs up configs, tests before applying,
+Heinzel still backs up configs, tests before applying,
 and follows least privilege. The flag only removes
 *your* approval step, not the built-in guardrails.
-
-## Updates & Versioning
-
-Heinzel uses [semantic versioning](https://semver.org).
-The current version is in the `VERSION` file; changes
-are listed in `CHANGELOG.md`.
-
-**Auto-update (Claude Code):** On every session start,
-a hook runs `git pull` and reports version changes.
-No action needed.
-
-**Manual update (OpenCode / any tool):**
-
-```bash
-bin/heinzel-update           # pull latest
-bin/heinzel-update --check   # check without pulling
-```
-
-**Pin to a stable version** (skip auto-updates):
-
-```bash
-bin/heinzel-update --pin v1.0.0   # pin
-bin/heinzel-update --unpin        # back to main
-```
-
-**Opt out of auto-update** without pinning:
-
-```bash
-export HEINZEL_NO_UPDATE=1
-```
 
 ## Safety & Guardrails
 
 Heinzel's safety rules are not optional — they're
-baked into every session. The AI follows them
+baked into every session. Heinzel follows them
 consistently, even when a human might skip steps
 under pressure.
 
@@ -504,7 +508,7 @@ log show \
 | macOS   | macOS (Apple Silicon & Intel)     | `rules/macos.md`   |
 | FreeBSD | FreeBSD (all versions)            | `rules/freebsd.md` |
 
-Other distributions work too — the AI will apply
+Other distributions work too — Heinzel will apply
 general best practices and let you know which OS it
 detected.
 
@@ -557,7 +561,7 @@ detected.
 4. Describe your task, e.g. *"Find out if there is
    a webserver running on shop.example.com"*
 
-The AI will auto-detect the OS on first connection
+Heinzel will auto-detect the OS on first connection
 and remember it for future sessions.
 
 ### Team setup
