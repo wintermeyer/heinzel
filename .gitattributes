@@ -1,0 +1,7 @@
+# Shell scripts must stay LF even when checked out
+# on Windows with core.autocrlf=true. CRLF in a
+# shebang line (#!/bin/sh\r) silently breaks the
+# interpreter.
+*.sh             text eol=lf
+bin/heinzel-*    text eol=lf
+.claude/hooks/*  text eol=lf

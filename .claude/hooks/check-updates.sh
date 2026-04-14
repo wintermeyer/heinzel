@@ -10,7 +10,7 @@ cd "$CLAUDE_PROJECT_DIR" || exit 0
 # both the Claude Code hook and bin/heinzel-update
 # use the same logic.
 run_migration() {
-  [ -x bin/heinzel-migrate ] && bin/heinzel-migrate
+  [ -f bin/heinzel-migrate ] && sh bin/heinzel-migrate
 }
 
 # Opt-out via environment variable.

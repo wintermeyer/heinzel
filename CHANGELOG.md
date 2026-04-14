@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.0.5 — 2026-04-14
+
+- Native Windows (Git Bash) now works as a
+  workstation. The SessionStart hook is invoked via
+  `sh …` explicitly instead of relying on the file
+  exec bit, `bin/heinzel-migrate` is called the
+  same way, and a new `.gitattributes` forces LF
+  line endings on all shell scripts so
+  `core.autocrlf=true` on Windows can't corrupt the
+  shebang.
+- README Prerequisites spells out the Windows
+  options: WSL (recommended) or Git for Windows
+  (Git Bash). PowerShell and `cmd.exe` are
+  explicitly unsupported as the launch shell.
+
+Why: the previous README claimed Windows support
+"natively or via WSL," but the auto-update hook
+and helper scripts weren't actually portable to a
+non-WSL Windows environment. These changes close
+the gap for Git Bash users without adding
+PowerShell duplicates.
+
 ## 2.0.4 — 2026-04-14
 
 - README clarifies that Heinzel manages Linux,

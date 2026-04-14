@@ -62,12 +62,18 @@ changes — no changes until you say go.
 - Linux (any distribution), FreeBSD, or macOS on the
   target machines. All supported systems can also be
   managed locally without SSH.
-- **Workstation:** Heinzel itself runs wherever your
-  AI tool runs — Linux, macOS, FreeBSD, or Windows. On Windows, install via
+- **Workstation:** Heinzel itself runs wherever
+  your AI tool runs — Linux, macOS, FreeBSD, or
+  Windows. On Windows, the recommended path is
   [WSL](https://learn.microsoft.com/windows/wsl/)
-  or run Claude Code / OpenCode natively; the repo
-  is plain files and shell scripts, with no
-  platform-specific install.
+  (full Linux environment). You can also run
+  natively via
+  [Git for Windows](https://gitforwindows.org/) —
+  launch Claude Code or OpenCode from the bundled
+  Git Bash terminal so the SessionStart
+  auto-update hook and `bin/heinzel-*` scripts can
+  execute. PowerShell and `cmd.exe` are not
+  supported as the launch shell.
 
 ### Steps
 
