@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.4 — 2026-04-14
+
+- README clarifies that Heinzel manages Linux,
+  FreeBSD, and macOS *targets* but runs on any
+  workstation where the AI tool runs — including
+  Windows (via WSL or natively).
+
+Why: users have asked whether they need a
+Linux/macOS workstation to use Heinzel. They don't
+— the repo is plain files and shell scripts, and
+the only platform constraints are on the managed
+targets, not the workstation.
+
 ## 2.0.3 — 2026-04-14
 
 - `rules/ssh-user.md` now specifies a three-option

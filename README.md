@@ -6,9 +6,11 @@ works with
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code),
 [OpenCode](https://opencode.ai), or any other
 terminal-based AI tool that can read project files
-and run shell commands. It supports Linux, FreeBSD,
-and macOS — remote servers over SSH and the local
-machine alike.
+and run shell commands. It manages Linux, FreeBSD,
+and macOS targets — remote servers over SSH and the
+local machine alike — and runs on any workstation
+where your AI tool runs, including Windows (via WSL
+or natively).
 
 Describe what you need in plain English, and Heinzel
 figures out the right commands for your OS, proposes
@@ -60,6 +62,12 @@ changes — no changes until you say go.
 - Linux (any distribution), FreeBSD, or macOS on the
   target machines. All supported systems can also be
   managed locally without SSH.
+- **Workstation:** Heinzel itself runs wherever your
+  AI tool runs — Linux, macOS, FreeBSD, or Windows. On Windows, install via
+  [WSL](https://learn.microsoft.com/windows/wsl/)
+  or run Claude Code / OpenCode natively; the repo
+  is plain files and shell scripts, with no
+  platform-specific install.
 
 ### Steps
 
