@@ -6,6 +6,13 @@
 
 cd "$CLAUDE_PROJECT_DIR" || exit 0
 
+# Never hang the SessionStart hook on a credential
+# prompt (HTTPS remote with expired token, etc.).
+# Fail fast instead and let the user fix it.
+export GIT_TERMINAL_PROMPT=0
+GIT_ASKPASS=${GIT_ASKPASS:-true}
+export GIT_ASKPASS
+
 # Migration is implemented in bin/heinzel-migrate so
 # both the Claude Code hook and bin/heinzel-update
 # use the same logic.

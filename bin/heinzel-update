@@ -62,7 +62,11 @@ case "${1:-}" in
     ;;
 
   --pin)
-    VER="${2:?Usage: heinzel-update --pin VERSION (e.g. v0.1.0)}"
+    VER="${2:?Usage: heinzel-update --pin VERSION (e.g. v2.0.0)}"
+    # Fresh/shallow clones may not have tags yet.
+    # Fetch them before checking so --pin can reach
+    # remote-only tags.
+    git fetch --tags --quiet 2>/dev/null || true
     if ! git rev-parse "$VER" >/dev/null 2>&1; then
       echo "Error: tag '$VER' not found."
       echo "Available tags:"

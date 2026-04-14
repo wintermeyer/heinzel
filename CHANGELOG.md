@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.0.6 — 2026-04-14
+
+Three bug fixes found during an audit of the shell
+scripts:
+
+- `bin/heinzel-backup --help` failed with "awk:
+  can't open file" when invoked with a path that
+  didn't resolve from the repo root (e.g.
+  `sh ./heinzel-backup --help` from inside `bin/`).
+  The script `cd`s to the repo root before
+  `usage()` runs, so the relative `$0` was broken.
+  Now computes an absolute path to self and passes
+  that to `awk`.
+- `.claude/hooks/check-updates.sh` could hang on
+  `git pull` if the remote required credentials
+  (HTTPS with expired token). The SessionStart
+  hook's 15s timeout would kill it mid-operation.
+  Now sets `GIT_TERMINAL_PROMPT=0` and a no-op
+  `GIT_ASKPASS` so git fails fast instead.
+- `bin/heinzel-update --pin <tag>` rejected valid
+  remote tags on fresh or shallow clones because
+  `git rev-parse` only looks at local refs. Now
+  runs `git fetch --tags --quiet` first so
+  remote-only tags resolve.
+
 ## 2.0.5 — 2026-04-14
 
 - Native Windows (Git Bash) now works as a

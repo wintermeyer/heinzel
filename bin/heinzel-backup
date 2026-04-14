@@ -18,10 +18,11 @@ set -e
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+SELF="$SCRIPT_DIR/$(basename "$0")"
 cd "$REPO_DIR"
 
 usage() {
-  awk '/^# heinzel-backup/{in_help=1} in_help{if(/^[^#]/)exit; sub(/^# ?/,""); print}' "$0"
+  awk '/^# heinzel-backup/{in_help=1} in_help{if(/^[^#]/)exit; sub(/^# ?/,""); print}' "$SELF"
 }
 
 archive_hostname() {
