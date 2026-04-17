@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.1.1 — 2026-04-17
+
+- Add `.github/workflows/tag-release.yml`: auto-creates and
+  pushes the matching `vX.Y.Z` tag whenever a push to `main`
+  changes `VERSION`. Idempotent — no-ops if the tag already
+  exists.
+- Why: tag creation was a manual step that was easy to forget
+  (v2.1.0 shipped today without its tag until noticed). Users
+  who pin via `bin/heinzel-update --pin` depend on tags
+  existing, so missing tags are a real regression. Automating
+  the step removes the failure mode entirely.
+- This bump to 2.1.1 is also the first live test of the new
+  workflow.
+
 ## 2.1.0 — 2026-04-17
 
 - Migrate `rules/housekeeping.md` and `rules/security.md`
