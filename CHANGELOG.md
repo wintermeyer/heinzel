@@ -1,5 +1,55 @@
 # Changelog
 
+## 2.1.0 — 2026-04-17
+
+- Migrate `rules/housekeeping.md` and `rules/security.md`
+  to native Skills at `.claude/skills/heinzel-housekeeping/`
+  and `.claude/skills/heinzel-security/`. Each skill has a
+  lean `SKILL.md` (workflow + invocation rules) plus a
+  `references/` subdirectory that splits baseline checks,
+  OS-specific probes, service-specific probes, and report
+  format into separately-loadable files.
+- Why: `CLAUDE.md` and the prose "read `rules/X.md`"
+  pattern load every rule into every session, even when
+  the user only wants a quick `df -h`. Housekeeping
+  (581 lines) and security (604 lines) are the two biggest
+  rule files and are both on-demand workflows — textbook
+  progressive-disclosure candidates. Moving them into
+  skills means their descriptions (a few hundred
+  characters) load at session start; the full bodies load
+  only when the user asks for a housekeeping or security
+  run. Roughly 1,100 lines of rules prose stops being
+  always-loaded.
+- Cross-tool compatibility: both Claude Code and OpenCode
+  read `.claude/skills/*/SKILL.md` natively and use the
+  same two-stage progressive disclosure (description at
+  startup, full body on invoke). Heinzel's `CLAUDE.md`
+  stays authoritative for both tools (OpenCode reads it
+  as the fallback to `AGENTS.md`). If `OPENCODE_DISABLE_\
+  CLAUDE_CODE=1` is set by the user, both `CLAUDE.md` and
+  `.claude/skills/` go dark — that's a user opt-out, not
+  a heinzel regression.
+- Override chain preserved and normalized: each skill
+  reads its own global override file whose name matches
+  the skill — `memory/custom-rules/heinzel-\
+  housekeeping.md` for the housekeeping skill and
+  `memory/custom-rules/heinzel-security.md` for the
+  security skill — followed by `memory/housekeeping.md`
+  (free-form cross-server checks), the server's
+  `memory.md`, and finally `memory/servers/<host>/\
+  rules.md` (per-server `## Add:` / `## Replace:` /
+  `## Remove:` overrides).
+- Guardrails untouched: `first-connection.md`,
+  `access-control.md`, `ssh-user.md`,
+  `privilege-escalation.md`, `os-detection.md`,
+  `activity-check.md`, `anomaly-detection.md` stay as
+  always-loaded rule files. Skills have no always-load
+  semantics, so mandatory preflight steps must not move.
+- Deferred for a later release: `rules/version-check.md`
+  (hybrid usage — proactive nudges during housekeeping
+  plus on-demand checks — needs decoupling first) and
+  path-scoped OS rules.
+
 ## 2.0.11 — 2026-04-14
 
 - Fix SessionStart hook on Windows. The previous

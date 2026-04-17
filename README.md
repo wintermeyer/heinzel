@@ -373,10 +373,20 @@ This works on both Linux and macOS:
 
 ## Supported AI Tools
 
-Heinzel is tool-agnostic. Any terminal-based AI
-coding assistant that reads project files and runs
-shell commands will pick up the rules in `CLAUDE.md`
-and the `rules/` directory.
+Heinzel works with Claude Code and OpenCode out of the
+box. Both read `CLAUDE.md` (OpenCode via its
+Claude-Code-compat fallback) and both auto-discover
+skills at `.claude/skills/*/SKILL.md`. The `rules/`
+directory is picked up via prose references in
+`CLAUDE.md`, so any other terminal AI tool that reads
+project files and runs shell commands will also handle
+the rule layer — only the on-demand skills (currently
+housekeeping and security) need Skills-aware tooling.
+
+OpenCode note: if you've set
+`OPENCODE_DISABLE_CLAUDE_CODE=1`, OpenCode stops
+reading both `CLAUDE.md` and `.claude/skills/`. Leave
+that variable unset (the default) for heinzel to work.
 
 ### Claude Code
 
@@ -772,11 +782,16 @@ bin/
   heinzel-backup       — Back up / restore your memory/ tree
   heinzel-migrate      — One-shot 1.x→2.0 user-state migration
                          (called automatically on update)
-.claude/               — Claude Code only
+.claude/               — Shared by Claude Code and OpenCode
   settings.json        — Project-level Claude Code settings
   hooks/
     check-updates.sh   — Auto-check for repo updates and
                          auto-migrate on session start
+  skills/              — On-demand skills (progressive disclosure)
+    heinzel-housekeeping/  — Routine server inspection workflow
+                         (SKILL.md + references/)
+    heinzel-security/  — Security audit workflow
+                         (SKILL.md + references/)
 rules/                 — Upstream rule files (git-tracked)
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky,
@@ -790,8 +805,6 @@ rules/                 — Upstream rule files (git-tracked)
   os-replacement.md    — OS wipe-and-replace workflow
   partition-staging.md — Swap reclaim & hot-migrate for
                          repartitioning
-  housekeeping.md      — Routine server inspection checklist
-  security.md          — Security audit checks
   mise.md              — Language runtime manager (mise)
   privilege-escalation.md — Sudo, root SSH, unprivileged mode
   os-detection.md      — OS detection procedure

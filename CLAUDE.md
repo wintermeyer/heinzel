@@ -163,6 +163,15 @@ Custom files use heading prefixes:
 the topic or section name. Sections without a prefix
 are additions.
 
+The same override chain applies to skills in
+`.claude/skills/`. The global custom file for a skill
+mirrors the skill's full name — e.g.
+`memory/custom-rules/heinzel-housekeeping.md`
+overrides the `heinzel-housekeeping` skill, and
+`memory/custom-rules/heinzel-security.md` overrides
+`heinzel-security`. Per-server overrides live in the
+same `memory/servers/<hostname>/rules.md` file.
+
 ## Server Output and Anomaly Detection
 
 Read `rules/anomaly-detection.md`.
@@ -245,28 +254,18 @@ Firewall is common and less critical — see
 ## Housekeeping
 
 Routine health inspections. Only when the user asks.
-
-1. Read `rules/housekeeping.md` (baseline checks).
-2. Read `memory/housekeeping.md` (custom checks) if
-   it exists.
-3. Read server `memory.md` for service-specific
-   checks.
-4. Run all applicable checks.
-5. Present report per `rules/housekeeping.md` format.
-6. Update `memory.md` if facts changed.
-7. Log summary to system journal and
-   local `changelog.log`.
+The `heinzel-housekeeping` skill in
+`.claude/skills/heinzel-housekeeping/` carries the full
+workflow, baseline checks, report format, and
+service-specific probes. Custom cross-server checks
+still live in `memory/housekeeping.md` (gitignored).
 
 ## Security Audit
 
-Only when the user asks.
-
-1. Read `rules/security.md`.
-2. Read server `memory.md` for context.
-3. Run all applicable checks.
-4. Present report per `rules/security.md` format.
-5. Log summary to system journal and
-   local `changelog.log`.
+Only when the user asks. The `heinzel-security` skill
+in `.claude/skills/heinzel-security/` carries the full
+workflow, SSH / firewall / account / sysctl / file-
+permission checks, and the report format.
 
 ## Programming Language Runtimes
 
