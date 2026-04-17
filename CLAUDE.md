@@ -412,6 +412,11 @@ version changed, inform the user what's new.
 Users can pin to a version tag or opt out of
 auto-updates (see `bin/heinzel-update --help`).
 
+Tags are created automatically by
+`.github/workflows/tag-release.yml` when a `VERSION`
+bump lands on `main`. Do not create tags manually;
+just commit the bump and push.
+
 **Do not read `CHANGELOG.md` unless the user asks.**
 It's mostly for heinzel developers tracking
 releases, not for sysadmin sessions, and loading
