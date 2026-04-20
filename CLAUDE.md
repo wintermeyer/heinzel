@@ -81,8 +81,13 @@ remote connection before any other work.
 - **You are working on live production servers.**
 - **Always detect the OS first** before doing any
   work.
-- **Ask before:** reboots, firewall changes, network
-  service restarts, any destructive command.
+- **Ask before:** reboots, firewall changes, service
+  restarts, any destructive command. **Reloads**
+  (`systemctl reload`) auto-proceed by default when
+  a config test passes — see
+  `rules/service-reload.md` for the full policy and
+  the opt-out / opt-in config in
+  `memory/service-policy.md`.
 - **Absolute taboos (never run without explicit user
   request):** any command that modifies the partition
   table. Read-only partition inspection (e.g.
@@ -186,8 +191,8 @@ session start.
 
 At the start of every session, quietly load
 `memory/user.md`, `memory/blacklist.md`,
-`memory/readonly.md`, and
-`memory/custom-rules/all.md` (if present), and
+`memory/readonly.md`, `memory/service-policy.md`,
+and `memory/custom-rules/all.md` (if present), and
 glance at `memory/servers/` and
 `memory/custom-rules/` to see what's there.
 
@@ -273,6 +278,18 @@ Use [mise](https://mise.jdx.dev) — see
 `rules/mise.md`. Do not install runtimes from
 distro repos or use other version managers unless
 the user requests it.
+
+## Service Reload & Restart
+
+Read `rules/service-reload.md`. Reloads auto-proceed
+when the service's config test passes; restarts ask
+by default. Users can opt specific services in or
+out via `memory/service-policy.md` (three lists:
+`reload-always-ask`, `restart-auto`,
+`restart-never`). When asking about a restart,
+offer four options: once, always, no, never — the
+"always" and "never" answers write the service into
+the policy file so heinzel stops asking about it.
 
 ## Firewall Awareness for Service Changes
 

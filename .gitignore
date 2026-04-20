@@ -8,6 +8,7 @@ memory/*
 !memory/MEMORY.md
 !memory/user.md.example
 !memory/opencode.json.example
+!memory/service-policy.md.example
 
 # Server memory directory — keep the folder in git
 # but ignore its contents (solo mode). For team
@@ -31,6 +32,7 @@ memory/custom-rules/*
 # always personal and must NEVER be shared.
 # !memory/blacklist.md
 # !memory/readonly.md
+# !memory/service-policy.md
 # !memory/housekeeping.md
 # !memory/network.md
 # !memory/servers/**

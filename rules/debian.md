@@ -181,7 +181,9 @@ third-party PPAs.
   use and its output format is unstable.
 - `systemctl restart` vs `systemctl reload` — prefer
   `reload` when the service supports it (e.g. nginx)
-  to avoid downtime.
+  to avoid downtime. See `rules/service-reload.md`
+  for the auto-proceed policy and the
+  `memory/service-policy.md` opt-out / opt-in lists.
 - **Before enabling `ufw`**, always allow SSH first:
   `ufw allow OpenSSH` (or `ufw allow 22/tcp`). Running
   `ufw enable` without an SSH rule locks you out of

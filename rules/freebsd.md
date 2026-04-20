@@ -66,10 +66,15 @@ Rules for FreeBSD (all versions).
 - **Service control:**
   - Start: `service <name> start`
   - Stop: `service <name> stop`
+  - Reload (when supported): `service <name> reload`
   - Restart: `service <name> restart`
   - Status: `service <name> status`
   - One-shot start (without enabling):
     `service <name> onestart`
+  - Reload vs restart: see `rules/service-reload.md`
+    for the auto-proceed policy and
+    `memory/service-policy.md` opt-out / opt-in
+    lists.
 - **Enable/disable services:**
   - `sysrc <name>_enable="YES"` (preferred)
   - Or manually in `/etc/rc.conf`

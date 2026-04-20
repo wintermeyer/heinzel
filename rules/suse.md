@@ -46,6 +46,11 @@ Enterprise Server (SLES).
 - `systemctl` (systemd)
 - Check service: `systemctl status <service>`
 - Logs: `journalctl -u <service>`
+- Reload vs restart: prefer `systemctl reload` when
+  the service supports it. See
+  `rules/service-reload.md` for the auto-proceed
+  policy and `memory/service-policy.md` opt-out /
+  opt-in lists.
 
 ## YaST
 

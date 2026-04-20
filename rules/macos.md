@@ -84,6 +84,10 @@ Rules for macOS (Apple Silicon and Intel).
   - Start: `brew services start <service>`
   - Stop: `brew services stop <service>`
   - Restart: `brew services restart <service>`
+  - Reload vs restart: see `rules/service-reload.md`
+    for the auto-proceed policy and
+    `memory/service-policy.md` opt-out / opt-in
+    lists.
 - For non-Homebrew services:
   - Load: `sudo launchctl load <plist>`
   - Unload: `sudo launchctl unload <plist>`

@@ -232,6 +232,8 @@ no scattered config.
 - `user.md` — SSH usernames and language
   preference
 - `blacklist.md`, `readonly.md` — access policies
+- `service-policy.md` — per-service opt-out /
+  opt-in for auto-reload and auto-restart
 - `servers/<hostname>/` — per-server memory,
   changelog, todo, and per-server rule overrides
 - `custom-rules/` — your global rule overrides
@@ -587,8 +589,13 @@ consistently, even when a human might skip steps
 under pressure.
 
 - **Asks before acting** — destructive commands,
-  firewall changes, reboots, and network restarts
-  all require your explicit approval.
+  firewall changes, reboots, and service restarts
+  all require your explicit approval. Config reloads
+  (`systemctl reload`) auto-proceed when the
+  service's config test passes — see
+  `rules/service-reload.md` and the
+  `memory/service-policy.md` opt-out / opt-in
+  config.
 - **Backs up config files** — copies to
   `/var/backups/heinzel/` before editing
   (auto-cleaned after 30 days).
@@ -824,6 +831,8 @@ rules/                 — Upstream rule files (git-tracked)
   directory-copy.md    — Cross-server directory copy checks
   port-check.md        — Port conflict detection before
                          starting services
+  service-reload.md    — Service reload/restart policy
+                         (auto-proceed rules + opt-out)
   version-check.md     — Proactive stable version checking
                          and upgrade nudges
 memory/                — All your user state (gitignored
@@ -834,6 +843,11 @@ memory/                — All your user state (gitignored
   user.md              — Your preferences and SSH usernames
   blacklist.md         — Blocked servers
   readonly.md          — Read-only servers
+  service-policy.md.example — Service reload/restart
+                         policy template (copy to
+                         service-policy.md)
+  service-policy.md    — Your per-service opt-out /
+                         opt-in for reload/restart
   housekeeping.md      — User-added custom checks
   network.md           — Cross-server network facts
   opencode.json.example — OpenCode config template (copy to

@@ -1,5 +1,38 @@
 # Changelog
 
+## 2.2.0 — 2026-04-20
+
+- Add `rules/service-reload.md`: service reload/restart
+  policy. `systemctl reload` now auto-proceeds by
+  default once the service's config test passes
+  (`nginx -t`, `named-checkconf`, `apachectl configtest`,
+  etc.). `systemctl restart` still asks, and the ask
+  now uses a four-option picker (once / always / no /
+  never) so answers can be remembered instead of asked
+  again next time.
+- Add `memory/service-policy.md` (optional, gitignored,
+  with a committed `.example` template). Three lists:
+  `reload-always-ask` (force reload to ask),
+  `restart-auto` (let restart run silently),
+  `restart-never` (refuse restart outright, no prompt).
+  The four-option picker writes to the matching list
+  so the policy grows by use, not by manual editing.
+- Session Start Preflight now also quietly loads
+  `memory/service-policy.md` so the policy is in
+  context before the first reload/restart request.
+- Update `rules/debian.md`, `rules/rhel.md`,
+  `rules/suse.md`, `rules/freebsd.md`, `rules/macos.md`:
+  cross-reference the new reload policy from their
+  Service Manager sections.
+- Why: `systemctl reload nginx` after an approved
+  nginx config edit was always a tax — the user had
+  already approved the real change, but had to approve
+  the no-op reload on top of it. Treating reload as
+  auto-proceed (with config-test guard) removes the
+  noise; the policy file keeps the user in control of
+  the services that are actually risky to reload, and
+  of every restart.
+
 ## 2.1.1 — 2026-04-17
 
 - Add `.github/workflows/tag-release.yml`: auto-creates and
