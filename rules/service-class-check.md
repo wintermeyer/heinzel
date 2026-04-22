@@ -36,11 +36,24 @@ and fight for the same role.
 
 ## Service Classes
 
-| Class      | Members                                     |
-|------------|---------------------------------------------|
-| Web server | apache2, httpd, nginx, caddy, lighttpd      |
-| Database   | postgresql, mariadb-server, mysql-server    |
-| MTA        | postfix, exim4, sendmail, opensmtpd         |
+- **Web server:** apache2, httpd, nginx, caddy,
+  lighttpd
+- **Database:** postgresql, mariadb-server,
+  mysql-server
+- **MTA:** postfix, exim4, sendmail, opensmtpd
+- **Time sync:** chrony, ntp (provides ntpd),
+  openntpd, systemd-timesyncd
+- **DNS resolver:** unbound, bind9 (RPM: `bind`),
+  dnsmasq, pdns-recursor, knot-resolver,
+  systemd-resolved
+- **Firewall manager:** ufw, firewalld. This class
+  covers *frontends* only. Raw `nftables` and
+  `iptables` are backends that ufw and firewalld
+  sit on top of — do not list them as class
+  members. FreeBSD's pf and ipfw are in base, no
+  frontend packages compete.
+- **Container runtime:** docker.io, docker-ce,
+  moby-engine, podman, containerd.io
 
 Extensions live in
 `memory/custom-rules/service-class-check.md` using
@@ -67,6 +80,11 @@ dpkg-query -W \
   apache2 nginx caddy lighttpd httpd \
   postgresql mariadb-server mysql-server \
   postfix exim4 sendmail opensmtpd \
+  chrony ntp openntpd \
+  unbound bind9 dnsmasq pdns-recursor \
+  knot-resolver \
+  ufw firewalld \
+  docker.io docker-ce podman containerd.io \
   2>/dev/null | awk '$1=="installed"{print $2}'
 ```
 
@@ -76,6 +94,11 @@ dpkg-query -W \
 rpm -q httpd nginx caddy lighttpd \
        postgresql-server mariadb-server \
        postfix exim sendmail opensmtpd \
+       chrony ntp openntpd \
+       unbound bind dnsmasq pdns-recursor \
+       knot-resolver \
+       firewalld \
+       docker-ce podman moby-engine containerd.io \
        2>/dev/null | grep -v 'is not installed'
 ```
 
@@ -86,19 +109,56 @@ pkg info -E 'apache*' 'nginx*' 'caddy*' \
             'postgresql*-server' 'mariadb*-server' \
             'mysql*-server' \
             'postfix*' 'exim*' 'sendmail*' \
-            'opensmtpd*' 2>/dev/null
+            'opensmtpd*' \
+            'chrony*' 'openntpd*' \
+            'unbound*' 'bind9*' 'dnsmasq*' \
+            'knot-resolver*' \
+            'podman*' 'containerd*' \
+            2>/dev/null
 ```
+
+Note: on FreeBSD, `ntpd` and `local_unbound` ship in
+base, not as packages — check
+`service -e | grep -E 'ntpd|local_unbound'` as well.
 
 **macOS (Homebrew, best-effort)**
 
 ```bash
-brew list --formula | grep -Ex \
-  'httpd|nginx|caddy|lighttpd|postgresql|mariadb|mysql|postfix|exim|opensmtpd'
+members=(httpd nginx caddy lighttpd
+         postgresql mariadb mysql
+         postfix exim opensmtpd
+         chrony unbound bind dnsmasq
+         podman containerd)
+brew list --formula \
+  | grep -Fxf <(printf '%s\n' "${members[@]}")
 ```
 
 macOS installs are user-scoped rather than
 system-wide, so this phase is advisory on macOS.
 Still run it; still warn.
+
+### Systemd-provided members
+
+Two class members ship inside systemd itself and are
+not visible to the package DB:
+
+- `systemd-timesyncd` (time sync)
+- `systemd-resolved` (DNS resolver)
+
+On most Debian/Ubuntu hosts they are present but
+only count as a real conflict when the unit is
+actually running. Probe the unit state:
+
+```bash
+systemctl is-active systemd-timesyncd 2>/dev/null
+systemctl is-active systemd-resolved 2>/dev/null
+```
+
+Treat the member as "installed" only when the
+output is `active`. A unit that is `inactive`,
+`masked`, or absent is not a conflict — the user
+already disabled it (often when they installed
+chrony or unbound the first time).
 
 ### Phase 2 — Pending-install dry-run
 
@@ -177,6 +237,22 @@ transitive dependency, so this is best-effort.
    confirmation — name the option the user is
    picking.
 
+**Option (c) does not apply to every class.** For
+classes where only one member can reasonably own
+the role on a host, "run both side by side" is not
+a real option and must be refused:
+
+- **Time sync** — only one daemon can own the
+  system clock. Two running at once either race
+  or one silently wins.
+- **Firewall manager** — two frontends stomp each
+  other's rules and can cut off SSH. Listed in
+  CLAUDE.md's "Firewall & network" warning for
+  exactly this reason.
+
+For those two classes, present only options (a),
+(b), and (d).
+
 Log the outcome per `rules/changelog.md`:
 
 ```bash
@@ -208,6 +284,10 @@ class member in
 - Web server: nginx
 - Database: postgresql
 - MTA: postfix
+- Time sync: chrony
+- DNS resolver: unbound
+- Firewall manager: ufw
+- Container runtime: podman
 ```
 
 If an entry already exists for the class, leave

@@ -1,5 +1,41 @@
 # Changelog
 
+## 2.4.1 — 2026-04-22
+
+- Extend `rules/service-class-check.md` with four
+  additional service classes:
+  - **Time sync** — chrony, ntp (ntpd), openntpd,
+    systemd-timesyncd
+  - **DNS resolver** — unbound, bind9, dnsmasq,
+    pdns-recursor, knot-resolver, systemd-resolved
+  - **Firewall manager** — ufw, firewalld (frontends
+    only; raw nftables/iptables are backends and not
+    class members)
+  - **Container runtime** — docker.io, docker-ce,
+    moby-engine, podman, containerd.io
+- Add a "systemd-provided members" subsection that
+  distinguishes `systemd-timesyncd` and
+  `systemd-resolved` from package-installed members.
+  Those two ship inside systemd and are only a
+  conflict when their unit is `is-active`, not just
+  because the files exist.
+- Flag option (c) ("run both side by side") as
+  incoherent for two of the classes: time sync (only
+  one daemon can own the clock) and firewall manager
+  (two frontends stomp each other's rules and can
+  cut off SSH). For those classes, present only
+  options (a), (b), and (d).
+- Add a FreeBSD note that `ntpd` and `local_unbound`
+  ship in base rather than as packages, so the
+  pkg-info probe has to be paired with a
+  `service -e` check for them.
+- Why: after 2.4.0 shipped with three classes
+  (web/DB/MTA), these four cover the next tier where
+  silent conflicts are common — systemd-timesyncd
+  overridden by an installed chrony, docker.io
+  pulled in on a podman host, ufw installed
+  alongside firewalld, etc.
+
 ## 2.4.0 — 2026-04-22
 
 - Add `rules/service-class-check.md`: a new mandatory
