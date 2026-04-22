@@ -1,5 +1,45 @@
 # Changelog
 
+## 2.4.0 — 2026-04-22
+
+- Add `rules/service-class-check.md`: a new mandatory
+  pre-install guardrail that halts when a planned
+  package install would add a second member of a
+  service class already present on the host. v1 covers
+  three classes: web servers (apache2, httpd, nginx,
+  caddy, lighttpd), relational databases (postgresql,
+  mariadb-server, mysql-server), and mail MTAs
+  (postfix, exim4, sendmail, opensmtpd).
+- Detection runs in two phases per OS (Debian/Ubuntu,
+  RHEL/Fedora, SUSE, FreeBSD, macOS best-effort): an
+  already-installed probe of the package DB, plus a
+  package-manager dry-run (`apt-get --simulate`,
+  `dnf --assumeno`, `zypper --dry-run`, `pkg -n`,
+  `brew deps`) to catch *transitive* pulls before
+  anything lands on disk.
+- On conflict, heinzel stops and presents four
+  options: keep the existing service and look for a
+  compatible install variant; remove the existing
+  service first (as a separate destructive action);
+  run both side by side and hand off to
+  `rules/port-check.md` for a non-default port or
+  Unix socket; or abort. No silent "go ahead"
+  overrides — the user must name the option.
+- `CLAUDE.md` gets a short pointer section between
+  "Port Conflict Check" and "CI/CD Deployment".
+  The rule inherits the standard override chain via
+  `memory/custom-rules/service-class-check.md` and
+  `memory/servers/<hostname>/rules.md`, so users can
+  add DNS resolvers, caches, or other classes
+  without patching the base rule.
+- Why: a user asked heinzel to install a package that
+  transitively pulled in Apache on a host where
+  Nginx was already serving. Heinzel proceeded
+  anyway, leaving the host with two web servers
+  fighting for ports 80/443. `rules/port-check.md`
+  catches *runtime* collisions; this rule catches the
+  *install-time* case that precedes them.
+
 ## 2.3.0 — 2026-04-22
 
 - Add `.claude/skills/heinzel-email/`: a new on-demand

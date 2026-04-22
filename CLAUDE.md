@@ -340,6 +340,17 @@ ports when the app is behind a reverse proxy. Read
 `rules/port-check.md`. **Never start a service on
 an occupied port without user approval.**
 
+## Service Class Conflict Check
+
+Before installing any package, check whether a
+service of the same class is already on the host
+(web server, database, MTA). Covers direct installs
+*and* transitive pulls (e.g. a webmail suite that
+would drag in Apache on a host where Nginx already
+serves). Read `rules/service-class-check.md`.
+**Never add a second member of the same class
+without explicit user approval.**
+
 ## CI/CD Deployment
 
 Read `rules/deployment.md`. Never use root or
