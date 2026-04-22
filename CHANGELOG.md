@@ -1,5 +1,44 @@
 # Changelog
 
+## 2.3.0 — 2026-04-22
+
+- Add `.claude/skills/heinzel-email/`: a new on-demand
+  skill to send ad-hoc text and file attachments by email
+  about a managed server. The first email per host asks
+  where to send from (local workstation vs the server
+  itself) via a four-option picker; "always for this host"
+  persists the choice into per-server `memory.md`. On the
+  remote path, prefers an existing MTA (postfix, sendmail,
+  msmtp, mail/mailx) and asks before installing one. Two
+  further consent gates ("use existing MTA" and "install a
+  new MTA") use the same once / always / never picker.
+- Sends as a non-root user via `runuser`/`su -` whenever
+  the SSH session is root, dropping to the username from
+  `memory/user.md` after verifying the account exists and
+  can invoke the chosen transport. The install step is the
+  only root-privileged operation in the workflow.
+- Attachments check the sender UID can read the file
+  (offers skip / copy-via-root-to-readable-temp / send-as-
+  root-with-WARN), gate on size (10 MB threshold, gzip
+  offered for text logs), and show a `head -5` preview
+  before sending. Cap of 5 attachments per message in v1.
+- Falls back to a hand-built MIME multipart message piped
+  to `msmtp -t` when only msmtp is available. macOS
+  `/usr/bin/mail` doesn't support attachments and is
+  refused cleanly with a `brew install mutt` suggestion
+  rather than auto-installing on the workstation.
+- Per-server config (recipient, source, transport, sender
+  identity, policies) lives in
+  `memory/servers/<host>/memory.md`, extending the existing
+  `Mail:` / `Alert email:` lines bremen3 already
+  demonstrates. No new memory subsystem.
+- Why: heinzel reports lived only in the conversation;
+  there was no way to ship a log snippet, a housekeeping
+  summary, or a list of failed services to an inbox.
+  Adding email keeps heinzel's "ask before installing,
+  least privilege, prefer existing tooling" posture
+  end-to-end.
+
 ## 2.2.0 — 2026-04-20
 
 - Add `rules/service-reload.md`: service reload/restart

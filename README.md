@@ -336,6 +336,23 @@ Check security configuration on any server:
 Heinzel checks SSH password authentication settings,
 firewall status, and reports issues by severity.
 
+### Email reports
+
+Send ad-hoc text or files by email about a managed server:
+
+```
+ ❯ Email me the output of "df -h" from bremen1
+ ❯ Mail /var/log/auth.log to ops@example.com
+```
+
+The first email per host asks once where to send from
+(local workstation or the server itself) and remembers the
+answer. On the remote path Heinzel prefers an existing MTA
+(postfix, sendmail, msmtp, mail/mailx) and asks before
+installing one. Sends as a non-root user when possible.
+Attachments check sender readability, file size, and offer
+a content preview before sending.
+
 ### Plan mode (Claude Code)
 
 For complex or unfamiliar tasks, switch to plan mode
@@ -799,6 +816,8 @@ bin/
                          (SKILL.md + references/)
     heinzel-security/  — Security audit workflow
                          (SKILL.md + references/)
+    heinzel-email/     — Send ad-hoc text or files by email
+                         from a server (SKILL.md)
 rules/                 — Upstream rule files (git-tracked)
   debian.md            — Debian & Ubuntu rules
   rhel.md              — RHEL, CentOS, Fedora, Rocky,

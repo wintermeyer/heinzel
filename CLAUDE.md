@@ -272,6 +272,19 @@ in `.claude/skills/heinzel-security/` carries the full
 workflow, SSH / firewall / account / sysctl / file-
 permission checks, and the report format.
 
+## Email Reports
+
+Only when the user asks. The `heinzel-email` skill in
+`.claude/skills/heinzel-email/` carries the full workflow:
+recipient resolution, sender-side choice (local vs remote),
+remote MTA detection, install fallback, least-privilege send
+(drops from root via `runuser`/`su -` when SSH'd as root),
+attachment handling (readability + size + preview gates),
+verify, and memory update. Per-server config (recipient,
+source, transport, sender identity, policies) lives in
+`memory/servers/<hostname>/memory.md`, extending the
+`Mail:` / `Alert email:` lines bremen3 already demonstrates.
+
 ## Programming Language Runtimes
 
 Use [mise](https://mise.jdx.dev) — see
