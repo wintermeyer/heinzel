@@ -1,5 +1,42 @@
 # Changelog
 
+## 2.4.2 — 2026-04-22
+
+- Extend the MTA class in
+  `rules/service-class-check.md` with three
+  lightweight members that were missing from the
+  v1 list: `msmtp-mta`, `nullmailer`, and `dma`
+  (DragonFly Mail Agent). All three claim
+  `/usr/sbin/sendmail` via Debian's alternatives
+  system and play the same host-level role as
+  postfix / exim4 / sendmail / opensmtpd. Without
+  this, heinzel would silently install msmtp-mta
+  next to an existing postfix.
+- Probe updates per OS:
+  - Debian/Ubuntu dpkg probe: add `msmtp-mta`,
+    `nullmailer`, `dma`.
+  - RHEL/Fedora/SUSE rpm probe: add `msmtp`
+    (upstream RPM name, includes the sendmail
+    shim) and `nullmailer`. `dma` is not commonly
+    RPM-packaged, skipped.
+  - FreeBSD pkg probe: add `msmtp*`, `nullmailer*`,
+    `dma*`.
+  - macOS brew probe: add `msmtp` to the members
+    array.
+- Option (c) ("run both side by side") remains
+  available for the MTA class — two MTAs on
+  different routes (e.g. postfix on port 25 plus
+  msmtp-mta as an egress-only relay) is a
+  legitimate configuration, unlike the time-sync
+  and firewall classes.
+- Why: found during 2.3.0 (heinzel-email) end-to-
+  end validation on a fresh Debian 13 VM. The
+  skill's 5R install path ran `apt-get install
+  msmtp-mta bsd-mailx`, which 2.4.1's probe
+  failed to catch because msmtp-mta wasn't a
+  known class member. This release closes the
+  loop.
+
 ## 2.4.1 — 2026-04-22
 
 - Extend `rules/service-class-check.md` with four

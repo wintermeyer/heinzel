@@ -40,7 +40,11 @@ and fight for the same role.
   lighttpd
 - **Database:** postgresql, mariadb-server,
   mysql-server
-- **MTA:** postfix, exim4, sendmail, opensmtpd
+- **MTA:** postfix, exim4, sendmail, opensmtpd,
+  msmtp-mta, nullmailer, dma. The last three are
+  lightweight MTAs that claim `/usr/sbin/sendmail`
+  via Debian's alternatives system and play the
+  same role as the full servers above.
 - **Time sync:** chrony, ntp (provides ntpd),
   openntpd, systemd-timesyncd
 - **DNS resolver:** unbound, bind9 (RPM: `bind`),
@@ -80,6 +84,7 @@ dpkg-query -W \
   apache2 nginx caddy lighttpd httpd \
   postgresql mariadb-server mysql-server \
   postfix exim4 sendmail opensmtpd \
+  msmtp-mta nullmailer dma \
   chrony ntp openntpd \
   unbound bind9 dnsmasq pdns-recursor \
   knot-resolver \
@@ -94,6 +99,7 @@ dpkg-query -W \
 rpm -q httpd nginx caddy lighttpd \
        postgresql-server mariadb-server \
        postfix exim sendmail opensmtpd \
+       msmtp nullmailer \
        chrony ntp openntpd \
        unbound bind dnsmasq pdns-recursor \
        knot-resolver \
@@ -110,6 +116,7 @@ pkg info -E 'apache*' 'nginx*' 'caddy*' \
             'mysql*-server' \
             'postfix*' 'exim*' 'sendmail*' \
             'opensmtpd*' \
+            'msmtp*' 'nullmailer*' 'dma*' \
             'chrony*' 'openntpd*' \
             'unbound*' 'bind9*' 'dnsmasq*' \
             'knot-resolver*' \
@@ -126,7 +133,7 @@ base, not as packages — check
 ```bash
 members=(httpd nginx caddy lighttpd
          postgresql mariadb mysql
-         postfix exim opensmtpd
+         postfix exim opensmtpd msmtp
          chrony unbound bind dnsmasq
          podman containerd)
 brew list --formula \
