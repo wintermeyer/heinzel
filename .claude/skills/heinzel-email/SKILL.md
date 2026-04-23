@@ -198,9 +198,11 @@ the only root-privileged operation in the workflow.
    - Default subject: `[heinzel/<short-hostname>] <topic>` —
      even on the local-side path, the subject names the
      server the report is *about*.
-   - Body: plain text. Verbatim user content. If the user
-     asks to send command output, run the command and embed
-     stdout/stderr inline in a fenced block.
+   - Body: plain text. Verbatim user content, followed by
+     the Heinzel closing (see **Greeting** and **Signature**
+     below). If the user asks to send command output, run the
+     command and embed stdout/stderr inline in a fenced block
+     above the closing.
 
    **Attachments** (e.g. "email me /var/log/auth.log"):
 
@@ -230,33 +232,159 @@ the only root-privileged operation in the workflow.
       5 attachments per message in v1; refuse the 6th and
       suggest splitting the mail.
 
-7. **Send.** Choose the command shape based on attachments
-   and the available tool.
+   **Greeting.** Before the signature, every outgoing
+   message carries a fixed two-line human close, separated
+   from the body above by one blank line and from the
+   signature below by another blank line:
 
-   **No attachments**, any tool: pipe body via heredoc to
-   `mail -s "<subject>" <recipient>` (or `msmtp -t` with
-   explicit `From:`/`To:`/`Subject:` headers when only
-   msmtp is present).
+   ```
+   Viele Grüße
+   Heinzel
+   ```
 
-   **With attachments**, in preference order:
-   - `mutt -s "<subject>" -a <f1> [-a <f2> …] -- <recipient>`
-     — cleanest, supported on Linux + macOS via brew.
-   - `mail -s "<subject>" -a <f1> [-a <f2> …] <recipient>`
-     where `mail` is bsd-mailx (Debian) or s-nail (Fedora).
-     Verify with `mail --help 2>&1 | grep -- -a` before
-     relying on it on this specific host.
-   - **msmtp-only fallback**: build a MIME multipart message
-     by hand — `text/plain` body plus parts that are
-     `text/plain` for `text/*` MIME types (detected via
-     `file --mime-type`) and base64-encoded
-     `application/octet-stream` otherwise. Heinzel
-     constructs the headers and boundary itself, then pipes
-     into `msmtp -t`.
-   - **macOS `/usr/bin/mail` does NOT support attachments.**
-     If the chosen local transport is BSD `mail` and the
-     user wants attachments, refuse cleanly and suggest
-     `brew install mutt`. Do not auto-install on the
-     workstation (same rule as 5L.2).
+   Heinzel is the author of the closing — not the operator.
+   The operator attribution lives in the signature block
+   below. Keep the greeting fixed across languages; the
+   subject and body may be English, the "Viele Grüße /
+   Heinzel" close stays the tool's voice. Users who want a
+   different wording can set a `Greeting:` line in
+   `memory/user.md` (global) or
+   `memory/servers/<host>/memory.md` (per-host); if present,
+   it replaces both lines verbatim (multi-line allowed).
+   Per-send instructions ("use 'Mit freundlichen Grüßen'
+   this time") always win over memory.
+
+   **Signature.** Every outgoing message ends with a fixed
+   three-line signature block, separated from the greeting
+   above by one blank line and opened by the RFC 3676
+   delimiter `"-- "` (two hyphens, one space, then newline
+   — most MUAs collapse the sig visually only when the
+   delimiter is exact):
+
+   ```
+   -- 
+   Sent by Heinzel on behalf of <Operator name>
+   https://github.com/wintermeyer/heinzel
+   ```
+
+   Keep it to these three lines. No timestamp, no hostname,
+   no extra attribution — the subject already names the
+   host. Plain text only; no HTML.
+
+   **Resolve `<Operator name>`** in this order, stop at the
+   first hit. Never fabricate a name from a short handle
+   like `root` or `admin`:
+
+   1. `Operator name:` line in
+      `memory/servers/<host>/memory.md` (per-host override,
+      rare).
+   2. `Operator name:` line in `memory/user.md` (global,
+      canonical).
+   3. Claude Code auto-memory — the `user_profile.md` file
+      referenced from `MEMORY.md`. Take the human name from
+      its front-matter `name:` field (strip any suffix like
+      ` — user profile`). This is the same auto-memory
+      channel step 3 uses for the default email.
+   4. `git config --global user.name` on the workstation.
+   5. GECOS full name:
+      `getent passwd "$USER" | cut -d: -f5 | cut -d, -f1`
+      on Linux, `id -F` on macOS/BSD.
+   6. `$USER` as a last resort.
+   7. If even `$USER` is empty, ask once via the picker and
+      persist the answer.
+
+   **Persist on first resolution via 3/4/5/6** — write
+   `Operator name: <name>` into `memory/user.md` under the
+   existing `# Preferences` section so the next run skips
+   the probes and the user can edit the canonical value.
+   Do not overwrite an `Operator name:` line that already
+   exists; user edits win.
+
+   **Anti-auto-reply headers.** Every Heinzel email is an
+   automated status message about a managed server. It
+   should never fan out out-of-office or vacation replies
+   back at the operator. To that end, every outgoing
+   message carries this fixed header triple, regardless of
+   path or attachments:
+
+   ```
+   Auto-Submitted: auto-generated
+   Precedence: bulk
+   X-Auto-Response-Suppress: OOF, AutoReply
+   ```
+
+   - `Auto-Submitted: auto-generated` is the RFC 3834
+     signal. Standards-compliant auto-responders
+     (vacation(1), Sieve `vacation`, recent postfix,
+     well-behaved providers) MUST NOT reply to a message
+     that carries it.
+   - `Precedence: bulk` is the older sendmail convention,
+     still honoured by many legacy responders.
+   - `X-Auto-Response-Suppress: OOF, AutoReply` is the
+     Microsoft Exchange / Outlook-specific knob that
+     suppresses OOF replies and "I'm out of the office"
+     auto-responses when the recipient uses Exchange.
+
+   Together the three cover RFC-compliant systems, legacy
+   Unix responders, and the Exchange-flavoured world.
+   Do not make them per-host configurable; there is no
+   realistic Heinzel message that should be treated as
+   a normal human email by an auto-responder.
+
+7. **Send.** Because Heinzel always injects custom headers
+   (the anti-auto-reply triple above, plus MIME headers
+   when attaching), the canonical send path builds the
+   full RFC 822 message and pipes it to a sendmail-style
+   agent that reads headers from stdin (`-t` mode). This
+   is uniform across Postfix, msmtp-mta, exim, opensmtpd,
+   and macOS Postfix — they all expose `/usr/sbin/sendmail`
+   with compatible `-t` semantics.
+
+   The composed message always has this shape (headers,
+   blank line, body + greeting + signature):
+
+   ```
+   From: <sender>@<hostname>
+   To: <recipient>
+   Subject: <subject>
+   Auto-Submitted: auto-generated
+   Precedence: bulk
+   X-Auto-Response-Suppress: OOF, AutoReply
+   MIME-Version: 1.0
+   Content-Type: text/plain; charset=utf-8
+
+   <body>
+
+   <greeting>
+
+   -- 
+   <signature>
+   ```
+
+   **No attachments.** Pipe the message to
+   `sendmail -t -oi` (`-oi` prevents a lone `.` on a line
+   from ending input). Prefer the MTA-provided
+   `/usr/sbin/sendmail`; fall back to `msmtp -t` when only
+   msmtp is present.
+
+   **With attachments**, build a MIME multipart message by
+   hand — `text/plain` body plus parts that are
+   `text/plain` for `text/*` MIME types (detected via
+   `file --mime-type`) and base64-encoded
+   `application/octet-stream` otherwise. Heinzel
+   constructs the headers (including the anti-auto-reply
+   triple) and the boundary itself, then pipes into
+   `sendmail -t -oi` (or `msmtp -t` when only msmtp is
+   present). This replaces the earlier tool-specific
+   shell-outs to `mutt` and `mail -a`: a single code path
+   means headers are guaranteed to survive every send.
+
+   **macOS local path.** `/usr/bin/sendmail` on macOS is a
+   Postfix compatibility shim and accepts the same `-t`
+   invocation, so the same composed message pipes through
+   without change. `/usr/bin/mail` is not used for the
+   send itself anymore; we only consulted it during the
+   5L.1 probe to confirm a working local MTA exists.
 
    Remote path: run under the user chosen in 5R.4, via
    `runuser -u <user> -- sh -c '…'` or
@@ -286,10 +414,15 @@ the only root-privileged operation in the workflow.
 
 9. **Update `memory.md`** if anything new was learned (source
    chosen, transport discovered or installed, recipient
-   added, policy set, sender identity confirmed). Use the
-   shape under "Per-server memory" below. Only write
-   `…always` or `…never` lines when the user explicitly
-   picked them; absence means "ask next time".
+   added, policy set, sender identity confirmed, per-host
+   operator override requested). Use the shape under
+   "Per-server memory" below. Only write `…always` or
+   `…never` lines when the user explicitly picked them;
+   absence means "ask next time". The global `Operator name`
+   is persisted to `memory/user.md`, not to per-server
+   memory — write a per-host `Operator name:` line only when
+   the user asks for a different signer on that specific
+   host.
 
 10. **Log to changelog** per `rules/changelog.md`:
 
@@ -316,6 +449,11 @@ once the user picks **Always** or **Never**; absence means
 - Email sender: <username>           # remote path only — non-root user
 - Email send policy: always | never  # gate A — use existing remote MTA
 - MTA install policy: always | never # gate B — install a new remote MTA
+- Operator name: <full name>         # per-host override for signature
+                                     # (global default in memory/user.md)
+- Greeting: <closing text>           # per-host override for the greeting
+                                     # (global default in memory/user.md;
+                                     # absent = "Viele Grüße / Heinzel")
 ```
 
 The two policy lines are deliberately separate: a user may

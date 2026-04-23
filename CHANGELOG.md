@@ -1,5 +1,70 @@
 # Changelog
 
+## 2.5.0 — 2026-04-23
+
+- `heinzel-email` now stamps every outgoing message with a
+  fixed anti-auto-reply header triple so out-of-office and
+  vacation responders leave Heinzel mail alone:
+
+      Auto-Submitted: auto-generated
+      Precedence: bulk
+      X-Auto-Response-Suppress: OOF, AutoReply
+
+  `Auto-Submitted` is RFC 3834 and is honoured by
+  standards-compliant responders. `Precedence: bulk` covers
+  legacy Unix vacation(1) / Sieve setups.
+  `X-Auto-Response-Suppress` silences Microsoft Exchange /
+  Outlook OOFs. Together the three cover the realistic
+  responder population.
+- The canonical send path is now `sendmail -t -oi` with a
+  fully composed RFC 822 message (headers + blank line +
+  body + greeting + signature), so custom headers survive
+  every MTA uniformly. `mutt` and `mail -a` shell-outs are
+  retired; `msmtp -t` remains the fallback when only msmtp
+  is on the host. macOS uses its Postfix `/usr/sbin/sendmail`
+  shim via the same invocation.
+- `heinzel-email` now gives every outgoing message a human
+  close. Between the body and the signature block Heinzel
+  inserts a fixed two-line greeting:
+
+      Viele Grüße
+      Heinzel
+
+  Heinzel is the author of the greeting; the operator
+  attribution stays one block lower in the signature. A
+  `Greeting:` line in `memory/user.md` (global) or
+  `memory/servers/<host>/memory.md` (per-host) replaces the
+  default wording verbatim, and a per-send instruction
+  always wins over memory.
+- `heinzel-email` now appends a fixed signature block to
+  every outgoing message. The block uses the RFC 3676
+  delimiter (`"-- "`) so MUAs like Gmail, Thunderbird and
+  Apple Mail collapse it visually, and contains exactly
+  three lines: "Sent by Heinzel on behalf of &lt;Operator
+  name&gt;", and the project URL
+  `https://github.com/wintermeyer/heinzel`.
+- Operator name resolution follows a clear order: per-host
+  `Operator name:` in `memory/servers/<host>/memory.md`,
+  global `Operator name:` in `memory/user.md`, then Claude
+  Code auto-memory (`user_profile.md` front-matter `name:`),
+  `git config --global user.name`, GECOS full name, and
+  finally `$USER`. First resolution via the derived sources
+  is persisted to `memory/user.md` so future sessions are
+  stable and the user can edit the canonical value.
+- Per-server memory template extended with optional
+  `Operator name:` and `Greeting:` overrides for hosts that
+  should sign or close differently than the global default.
+- `memory/user.md.example` grew commented
+  `# Operator name: Your Full Name` and
+  `# Greeting: <closing text>` hints so new installs
+  discover both knobs during onboarding.
+- Why: recipients of Heinzel emails had no indication that
+  the message was sent automatically, no link to the
+  project, and no record of which person asked Heinzel to
+  send it — and the tail of the mail read abruptly.
+  A two-line greeting plus a short signature covers all
+  four without bloating the message.
+
 ## 2.4.2 — 2026-04-22
 
 - Extend the MTA class in

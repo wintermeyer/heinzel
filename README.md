@@ -353,6 +353,23 @@ installing one. Sends as a non-root user when possible.
 Attachments check sender readability, file size, and offer
 a content preview before sending.
 
+Every message closes with a two-line greeting from Heinzel
+(`Viele Grüße / Heinzel`) followed by a short signature
+naming Heinzel, the project URL, and the operator who
+requested the send. The operator name comes from
+`Operator name:` in `memory/user.md` (with a sensible
+fallback chain to git config and the system full name).
+Set it once; edit it any time. Both lines are
+overridable: a `Greeting:` line in `memory/user.md` or
+`memory/servers/<host>/memory.md` replaces the default
+wording.
+
+Every Heinzel email also carries the RFC 3834
+`Auto-Submitted: auto-generated` header plus
+`Precedence: bulk` and `X-Auto-Response-Suppress: OOF,
+AutoReply`, so out-of-office and vacation auto-replies
+do not fan back at the operator.
+
 ### Plan mode (Claude Code)
 
 For complex or unfamiliar tasks, switch to plan mode
