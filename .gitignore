@@ -45,3 +45,8 @@ HISTORY.md
 
 # macOS noise.
 .DS_Store
+
+# Claude Code harness runtime artifacts (session/task locks).
+# Not shipped with heinzel; created by /loop, /schedule, and
+# the scheduler machinery in the Claude Code CLI.
+.claude/*.lock
