@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.6.0 — 2026-04-27
+
+- `heinzel-email` now sets `From: noreply@<sending-host-fqdn>`
+  on every outgoing message and adds a `Reply-To:` header
+  pointing at the human operator. Recipients see at a glance
+  that the From mailbox is unread, but a one-click "Reply"
+  still lands in a real inbox. The `noreply@…` mailbox does
+  not need to exist on the host: real bounces follow the
+  envelope sender (the submitter UID picked in 5R.4, or the
+  current shell user on the local path), which is always a
+  real account that can receive MAILER-DAEMON notices.
+- Reply-To resolution mirrors the Operator-name chain:
+  per-host `Reply-To:` in `memory/servers/<host>/memory.md`,
+  global `Reply-To:` in `memory/user.md`, Claude Code
+  auto-memory ("Default email" entry referenced from
+  `MEMORY.md`), then `git config --global user.email`. First
+  resolution from auto-memory or git config is persisted to
+  `memory/user.md` under `# Preferences`, so the next run
+  skips the probe and the user can edit the canonical value.
+- Hosts can pin a non-default From mailbox by adding a `From:`
+  line to their `memory.md`, e.g. `alerts@<host>` for hosts
+  where a department-style identity is preferred.
+- The verify step now treats the postfix `from=<…>` envelope
+  vs. the visible `From:` header as deliberately decoupled,
+  and no longer flags the mismatch as an anomaly.
+
 ## 2.5.0 — 2026-04-23
 
 - `heinzel-email` now stamps every outgoing message with a

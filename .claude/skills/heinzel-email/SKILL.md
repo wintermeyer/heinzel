@@ -300,6 +300,60 @@ the only root-privileged operation in the workflow.
    Do not overwrite an `Operator name:` line that already
    exists; user edits win.
 
+   **From header.** Heinzel mail is machine-generated. Set
+   `From: noreply@<sending-host-fqdn>` so recipients see at
+   a glance that the mailbox is not monitored:
+
+   - Remote path: `<sending-host-fqdn>` is the per-server
+     hostname (the directory name under
+     `memory/servers/<host>/`).
+   - Local path: `<sending-host-fqdn>` is the workstation's
+     FQDN (`hostname -f`, fall back to `hostname`).
+
+   The `noreply@…` mailbox does **not** need to exist on the
+   host. Real bounces follow the *envelope* sender (the
+   submitter UID picked in 5R.4, or the current shell user
+   on the local path) — that is always a real account that
+   can receive MAILER-DAEMON notices. The From header is
+   purely visual, for the recipient's MUA.
+
+   A host can pin a different From mailbox by adding a
+   `From:` line to its `memory.md` (rare — only useful when
+   a host needs a non-`noreply@` identity such as
+   `alerts@<host>`).
+
+   **Reply-To header.** Because the From mailbox is unread,
+   every Heinzel message MUST carry a `Reply-To:` pointing
+   at the human operator, so recipients hitting "Reply"
+   land in a real inbox.
+
+   **Resolve `<operator email>`** in this order, stop at
+   the first hit. Never fabricate an email from a short
+   handle like `root` or `admin`:
+
+   1. `Reply-To:` line in
+      `memory/servers/<host>/memory.md` (per-host
+      override, rare — e.g. a different person fields
+      replies for one specific host).
+   2. `Reply-To:` line in `memory/user.md` (global,
+      canonical).
+   3. Claude Code auto-memory — the "Default email"
+      entry under User in `MEMORY.md`. Load the linked
+      file and use the address. Same channel step 3 of
+      "Resolve recipient" uses.
+   4. `git config --global user.email` on the
+      workstation.
+   5. If still nothing, omit the Reply-To header, tag
+      the report **WARN** with the reason, and tell the
+      user before sending — don't ship a Heinzel mail
+      with no working reply path silently.
+
+   **Persist on first resolution via 3/4** — write
+   `Reply-To: <addr>` into `memory/user.md` under the
+   `# Preferences` section so the next run skips the
+   probes and the user can edit the canonical value.
+   Do not overwrite an existing `Reply-To:` line.
+
    **Anti-auto-reply headers.** Every Heinzel email is an
    automated status message about a managed server. It
    should never fan out out-of-office or vacation replies
@@ -344,7 +398,8 @@ the only root-privileged operation in the workflow.
    blank line, body + greeting + signature):
 
    ```
-   From: <sender>@<hostname>
+   From: noreply@<sending-host-fqdn>
+   Reply-To: <operator email>
    To: <recipient>
    Subject: <subject>
    Auto-Submitted: auto-generated
@@ -360,6 +415,10 @@ the only root-privileged operation in the workflow.
    -- 
    <signature>
    ```
+
+   `From:` and `Reply-To:` are resolved per the rules
+   above. If `Reply-To:` could not be resolved (case 5),
+   omit the line entirely after warning the user.
 
    **No attachments.** Pipe the message to
    `sendmail -t -oi` (`-oi` prevents a lone `.` on a line
@@ -410,7 +469,10 @@ the only root-privileged operation in the workflow.
 
    On the remote path, confirm the log line's `from=<…>`
    matches the chosen sender user (not root, unless 5R.4
-   fell to case 3).
+   fell to case 3). This is the *envelope* sender (the
+   Return-Path), which always reflects the submitter UID;
+   the visible `From:` header is `noreply@…` and is
+   independent — do not flag the mismatch as a problem.
 
 9. **Update `memory.md`** if anything new was learned (source
    chosen, transport discovered or installed, recipient
@@ -454,6 +516,10 @@ once the user picks **Always** or **Never**; absence means
 - Greeting: <closing text>           # per-host override for the greeting
                                      # (global default in memory/user.md;
                                      # absent = "Viele Grüße / Heinzel")
+- From: <mailbox>                    # per-host From override
+                                     # (default: noreply@<host>)
+- Reply-To: <addr>                   # per-host Reply-To override
+                                     # (global default in memory/user.md)
 ```
 
 The two policy lines are deliberately separate: a user may
