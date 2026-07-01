@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.13.0 — 2026-07-01
+
+- **Verify cross-backups at the receiver.**
+  `rules/backups.md` gains a section on confirming a
+  pull-based cross-backup (host A's dumps copied to
+  host B) actually landed: check the dump files on the
+  receiver, match the newest against the source, and
+  run an integrity check, because a running job or a
+  present cron line proves nothing. Documents a
+  silent-failure gotcha: when the source exposes dumps
+  through a symlink whose target sits outside the
+  `rrsync -ro` jail, a plain `rsync -a` copies the link
+  verbatim and transfers zero data with no error or
+  warning email; the pull must pass
+  `--copy-unsafe-links` so the sender follows the link.
+  Also notes that dry-runs need `rsync -n -v`, since a
+  bare `rsync -n` lists nothing and reads as "0 files".
+
 ## 2.12.0 — 2026-07-01
 
 - **Never pass secrets on the command line.**

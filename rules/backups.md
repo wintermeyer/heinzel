@@ -52,3 +52,35 @@ If a session uncovers an existing in-place backup in
 one of those directories, move it to
 `/var/backups/heinzel/` rather than leaving it where
 it is.
+
+## Verify cross-backups at the receiver, not the source
+
+A cross-backup (host A's dumps copied to host B) is only
+real when the dump **files** exist and are intact **on
+the receiver**. A running pull job, a present cron line,
+or a directory that looks populated prove nothing. When
+asked whether a host holds a copy, go look on that host:
+list the actual `*.sql.gz` (or equivalent), confirm the
+newest matches the source's newest, and run an integrity
+check (`gzip -t`, or the tool's own verify). "The job is
+scheduled" is not "the data is there."
+
+**Silent-failure gotcha — out-of-jail symlinks.** A
+common pattern exposes dumps for pulling via a symlink in
+the puller's reach, e.g. `outbox/dbbackup ->
+/var/lib/dbbackup`, where the target is **outside** an
+`rrsync -ro <dir>` jail. A plain `rsync -a` pull copies
+that symlink **verbatim**: on the receiver it becomes a
+dangling (or misleading) symlink and **zero data
+transfers — with no error and no warning email**. The
+pull must pass `--copy-unsafe-links` so the *sender*
+follows the link and ships the real files. If one source
+in a mesh works and another doesn't, diff their pull
+commands for this flag first.
+
+**Dry-run must be verbose.** To preview what a pull would
+transfer, use `rsync -n -v`. A bare `rsync -n` lists
+nothing and reads as "0 files would transfer", which
+will mislead you into the wrong conclusion. Confirm by
+grepping the `-nv` output for the specific files you
+expect (e.g. the database name).
