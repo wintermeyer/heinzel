@@ -79,6 +79,106 @@ openssl pkey -pubout -in example.key | sha256sum
   do **not** repeat the value — report *that* it
   leaked, where, and recommend rotating it.
 
+## Never Pass Secrets on the Command Line
+
+A secret handed to a command as an argument
+(`-p hunter2`, `--password=…`, `-u user:pass`,
+`--token …`) is not private. `argv` is
+world-readable through `ps aux` and
+`/proc/<pid>/cmdline`, it is written to the shell
+history file, and any tool or wrapper that logs
+its own invocation copies the value into the
+systemd journal or syslog. Run the command in a
+loop and every one of those copies multiplies.
+Cleartext credentials then sit in those logs long
+after the task, readable by anyone who can read
+the journal, and scrubbing them all afterwards is
+not feasible.
+
+So before running a command, check whether it
+takes a secret as an argument. When it does, feed
+the secret in a way that keeps it out of `argv`,
+preferring, in order:
+
+1. **A credentials file the tool reads natively.**
+   The value never touches the command line.
+2. **An environment variable the tool reads.** The
+   value goes into the child's environment, not
+   its `argv`; `/proc/<pid>/environ` is readable
+   only by the owner and root, unlike the
+   world-readable `cmdline`. Load it from a file
+   (`VAR=$(cat /path/creds) cmd …`) so the literal
+   never reaches shell history either.
+3. **An interactive prompt or stdin.** Omit the
+   flag and let the tool ask, or pipe the secret
+   in.
+4. **An inline argument (last resort only).** If a
+   tool offers no other channel, tell the user the
+   value will leak and treat it as a credential to
+   rotate afterwards.
+
+Common tools, and the channel to use instead of an
+inline password:
+
+- `psql` / `pg_dump` / `pg_restore`: a `~/.pgpass`
+  line (mode 600), or `PGPASSWORD` in the
+  environment.
+- `cypher-shell` (Neo4j): `NEO4J_USERNAME` and
+  `NEO4J_PASSWORD` in the environment, or omit
+  `-p` and answer the prompt.
+- `mysql` / `mariadb`: a `~/.my.cnf` `[client]`
+  section (mode 600) or a `mysql_config_editor`
+  login-path, never `-pSECRET`.
+- `redis-cli`: `REDISCLI_AUTH` instead of `-a`.
+- `curl` / `wget`: `~/.netrc` (with `--netrc`) or
+  a `--config` file, not `-u user:pass`.
+- `restic` / `borg`: a `*_PASSWORD_FILE` variable
+  pointing at a mode-600 file, not a password on
+  the line.
+
+When a tool is unfamiliar, check its `--help` for
+a credentials-file or environment-variable option
+before falling back to an inline flag.
+
+### When a Secret Has Already Leaked
+
+Sometimes the value is already in the journal,
+shell history, or a live process list: heinzel's
+own earlier commands, or an operator who ran, say,
+`cypher-shell -p …` in a loop. Then:
+
+- Do not repeat the value anywhere. Report *that*
+  it leaked, where, and roughly how widely (one
+  journal entry versus hundreds).
+- **Rotation is the remedy, not deletion.** Treat
+  the old value as compromised: reliably scrubbing
+  every journal, syslog, and shell-history copy is
+  not feasible, so the fix is to replace the
+  secret, not to try to erase it.
+- **Never rotate on your own.** A rotation is a
+  change the user must approve first. Explain the
+  leak, recommend rotating, and get an explicit OK
+  before touching the credential.
+- **Rotation has side effects; keep them minimal.**
+  Every consumer still using the old value breaks
+  the moment it changes: app configs and `.env`
+  files, connection strings, other services, cron
+  jobs, backup and monitoring scripts, and clients
+  on other hosts. Before rotating, map that blast
+  radius so the impact is known. Present a plan
+  that updates the secret and every consumer
+  together, note which services need a reload or
+  restart, and spell out the risk in plain
+  language. Proceed only once the user agrees.
+- **Verify afterwards.** Confirm the services and
+  clients that use the credential still
+  authenticate, and record the change with the
+  redaction rules above (its location and mode,
+  never its value).
+- Switch the workflow to a non-leaking channel
+  above so the replacement does not leak the same
+  way.
+
 ## Redaction in Heinzel Artifacts
 
 Changelog entries (`logger -t heinzel`),

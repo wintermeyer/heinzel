@@ -753,8 +753,11 @@ under pressure.
   keys, password files, and `.env` contents are
   inspected via metadata and fingerprints, never
   printed into the conversation, reports, memory,
-  changelogs, or emails. Likely-secret files are
-  refused as email attachments by default.
+  changelogs, or emails. Secrets are never passed
+  as command-line arguments, where `ps`, the
+  journal, and shell history would capture them.
+  Likely-secret files are refused as email
+  attachments by default.
 
 ## How Heinzel Fights LLM Hallucinations
 

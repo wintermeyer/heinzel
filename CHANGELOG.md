@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.12.0 — 2026-07-01
+
+- **Never pass secrets on the command line.**
+  `rules/secrets.md` gains a section keeping
+  credentials out of `argv`, which is world-readable
+  via `ps` and `/proc/<pid>/cmdline` and gets copied
+  into shell history and the systemd journal by any
+  tool that logs its own invocation; a looped command
+  multiplies every copy. Heinzel now prefers a native
+  credentials file, an environment variable, or an
+  interactive prompt, and uses an inline flag only as
+  a last resort (flagging the leak when it must). Adds
+  per-tool guidance (`psql`/`.pgpass`,
+  `cypher-shell`/`NEO4J_PASSWORD`, `mysql`/`.my.cnf`,
+  `redis-cli`, `curl`/`.netrc`, restic/borg) and a
+  procedure for when a credential has already leaked:
+  do not repeat it, rotate it only with the user's
+  approval after mapping and minimizing the blast
+  radius (reliably scrubbing every log copy is not
+  feasible), and switch to a non-leaking channel. Prompted by a Neo4j password
+  found in a host's journal in cleartext after
+  repeated inline `cypher-shell -p` runs. Updated the
+  CLAUDE.md Secrets Hygiene summary and README.
+
 ## 2.11.0 — 2026-06-11
 
 - **Human-readable journal entries.** Journal entries

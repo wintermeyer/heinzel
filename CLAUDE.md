@@ -82,7 +82,8 @@ remote connection before any other work.
 - **Always detect the OS first** before doing any
   work.
 - **Ask before:** reboots, firewall changes, service
-  restarts, any destructive command. **Reloads**
+  restarts, credential or password rotations, any
+  destructive command. **Reloads**
   (`systemctl reload`) auto-proceed by default when
   a config test passes — see
   `rules/service-reload.md` for the full policy and
@@ -195,6 +196,11 @@ Read `rules/secrets.md`. Never print private keys,
 password files, or `.env` contents into the
 conversation, reports, memory, changelogs, or
 emails. Inspect metadata and fingerprints instead.
+Never pass a secret as a command-line argument
+(`-p<pass>`, `--token …`): `argv` leaks into `ps`,
+the journal, and shell history. Prefer a
+credentials file, an environment variable, or a
+prompt.
 
 ## SSH User & Language
 
