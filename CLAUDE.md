@@ -78,6 +78,14 @@ remote connection before any other work.
   specs, network topology, or any other detail you
   have not directly observed or been told. If you
   don't know, say so.
+- **Verify a finding before you report or escalate
+  it.** "X is gone", "the reboot deleted Y", "the
+  data moved" are conclusions, not observations.
+  Confirm them against the live system first:
+  resolve the real path from config, prove absence,
+  don't assert a cause you haven't shown, and
+  exhaust read-only checks before escalating. See
+  `rules/verify-before-reporting.md`.
 - **You are working on live production servers.**
 - **Always detect the OS first** before doing any
   work.
@@ -189,6 +197,19 @@ same `memory/servers/<hostname>/rules.md` file.
 ## Server Output and Anomaly Detection
 
 Read `rules/anomaly-detection.md`.
+
+## Verify a Finding Before Reporting It
+
+Read `rules/verify-before-reporting.md`. Before you
+report, act on, or escalate a conclusion that
+something is missing, lost, moved, broken, or caused
+by an event, confirm it against the live system:
+resolve the real location from config (not memory),
+prove absence, don't assert an unproven cause, and
+exhaust read-only checks before escalating. This is
+what turns a stale assumption ("it vanished at the
+reboot") into either a verified problem or a
+dismissed false alarm.
 
 ## Secrets Hygiene
 

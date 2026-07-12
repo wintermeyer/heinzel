@@ -710,6 +710,14 @@ under pressure.
   `HEINZEL_GUARD_DISABLE=1`. OpenCode does not read
   Claude Code hooks — there the prose rules remain
   the safety layer.
+- **Verifies before it reports** — a finding that
+  something is missing, broken, or "gone since the
+  reboot" gets confirmed against the live system
+  (real path from config, proof of absence, cause
+  actually shown) before Heinzel reports or
+  escalates it, so a stale assumption never becomes
+  a false alarm. See
+  `rules/verify-before-reporting.md`.
 - **Backs up config files** — copies to
   `/var/backups/heinzel/` before editing
   (auto-cleaned after 30 days).
@@ -957,6 +965,9 @@ rules/                 — Upstream rule files (git-tracked)
                          (no "quick question" shortcuts)
   access-control.md    — Blacklist & read-only server rules
   anomaly-detection.md — Prompt injection & anomaly detection
+  verify-before-reporting.md — Verify a finding
+                         against the live system before
+                         reporting or escalating it
   dns-aliases.md       — DNS alias detection & management
   backups.md           — Config file backup procedure
   best-practices.md    — Common anti-patterns to review

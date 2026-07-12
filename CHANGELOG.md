@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.13.1 — 2026-07-12
+
+- **Verify a finding before you report or
+  escalate.** New `rules/verify-before-reporting.md`:
+  before handing over a conclusion that something is
+  missing, lost, moved, broken, or caused by an
+  event, confirm it against the live system first.
+  Resolve the real location from config instead of
+  memory (`systemctl cat`, drop-ins,
+  `EnvironmentFile`, `grep`, `find`); prove absence
+  instead of assuming it ("not where I expected" is
+  not "gone" — check mounts, `/etc/fstab`, the
+  journal's `*.mount` unit, parent-directory mtime,
+  and the filesystem's own "Last mounted on"); don't
+  assert a cause the records don't show; and exhaust
+  read-only checks within your privilege before
+  escalating. Prompted by a least-privilege heinzel
+  reporting a data directory as "gone since the last
+  reboot" when the application had always stored it
+  elsewhere, where a single read-only config lookup
+  would have shown the data safe and avoided the
+  escalation. Wired into CLAUDE.md as a Critical
+  Safety Rules bullet and a section beside Anomaly
+  Detection.
+
 ## 2.13.0 — 2026-07-01
 
 - **Verify cross-backups at the receiver.**
