@@ -97,7 +97,37 @@ than acting: a verified, narrow request costs the
 operator one grant; an unverified scare costs a
 whole investigation.
 
-## When the finding survives all four
+### 5. Never pre-bake the verdict into the check
+
+A verification command must *derive* its verdict from
+what the system returned, never announce one that was
+written before the output existed. Hardcoding a
+conclusion next to the probe —
+
+    LC_ALL=C needrestart -b | grep NEEDRESTART-SVC
+    echo "(nothing above = all clear)"
+
+— prints "all clear" verbatim whether or not the grep
+matched, and the reassuring sentence sits right where
+a reader looks for the answer. Compute it instead:
+
+    OUT=$(LC_ALL=C needrestart -b 2>/dev/null \
+      | grep NEEDRESTART-SVC || true)
+    if [ -z "$OUT" ]; then echo "CLEAN"
+    else echo "$OUT"; fi
+
+The same trap: `echo "restarted OK"` after a restart
+without testing `$?` or `is-active`, and `echo
+"backup verified"` after a copy nothing re-read. If a
+line of output asserts a state, the command that
+produced it must have *tested* that state — otherwise
+delete the line and let the raw output speak.
+
+This bites hardest when a check is expected to pass:
+the canned verdict confirms the expectation, and a
+genuine regression ships as "verified".
+
+## When the finding survives all five
 
 Then it is real. Report it plainly, with the
 evidence that makes it real, and act or escalate.

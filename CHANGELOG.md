@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.13.2 — 2026-07-23
+
+- **Never pre-bake the verdict into the check.**
+  `rules/verify-before-reporting.md` gains a fifth
+  check: a verification command must derive its
+  verdict from what the system returned, never print
+  one written before the output existed. Hardcoding
+  `echo "(nothing above = all clear)"` next to a
+  `grep` emits the reassurance whether or not the
+  grep matched, and it lands exactly where a reader
+  looks for the answer. The rule shows the computed
+  form (capture the output, test it, branch on it)
+  and names the same trap in `echo "restarted OK"`
+  after a restart whose exit status was never
+  checked, and `echo "backup verified"` after a copy
+  nothing re-read. Prompted by a session that
+  reported "no services left to restart" from a
+  canned line while the probe had in fact flagged
+  two, because the stale processes holding those
+  units to old libraries lived in a unit's cgroup and
+  survived the restart. Worst when the check is
+  expected to pass: the canned verdict confirms the
+  expectation, and a genuine regression ships as
+  "verified".
+
 ## 2.13.1 — 2026-07-12
 
 - **Verify a finding before you report or
