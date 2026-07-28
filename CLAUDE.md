@@ -114,6 +114,12 @@ remote connection before any other work.
   SSH keys, and that includes moving, truncating or
   re-permissioning them. Never halt or power off a
   server.
+  Inspect `sshd_config`, SSH keys and disk devices
+  with `cat`, `grep`, `stat`, `ls` or `sshd -T` —
+  never through a language runtime (`python3 -c`,
+  `node -e`, `perl -e`, `awk`). Such a command line
+  cannot be shown to be read-only, so it counts as a
+  write and is blocked.
   A mechanical guard (`.claude/hooks/guard-taboos.sh`,
   a PreToolUse hook) backs these taboos in every
   permission mode. Being blocked by it is expected:

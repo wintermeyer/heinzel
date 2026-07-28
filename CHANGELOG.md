@@ -1,5 +1,42 @@
 # Changelog
 
+## 2.15.0 — 2026-07-28
+
+- **Taboo guard: a write is a write, whatever
+  language spells it.** The rules protecting a path
+  only fired when a known shell idiom appeared next
+  to it: a redirect, `tee`, `sed -i`, an editor,
+  `rm`/`mv`/`chmod`/`truncate`. A language runtime
+  spells none of those, so
+  `python3 -c "open('/etc/ssh/sshd_config','a').write(…)"`
+  was not a write to sshd_config,
+  `node -e "…unlinkSync('…/authorized_keys')"` was
+  not a deletion of an SSH key, and, worst of the
+  three and missing from the report,
+  `python3 -c "open('/dev/sda','wb').write(…)"` was
+  not a write onto a raw device. Any of
+  `python`, `perl`, `ruby`, `node`, `deno`, `bun`,
+  `php`, `lua`, `tclsh`, `osascript`, `Rscript`,
+  `julia`, `elixir`, `erl` or `awk` carrying an SSH
+  key path, `sshd_config` or a disk device is now
+  treated as a write, because such a command line
+  cannot be shown to be read-only and an unprovable
+  exemption must not apply. Reading those targets
+  goes through `cat`, `grep`, `stat` or `sshd -T`,
+  which is what the rule files already do. Reported
+  in issue #6 by @DanMitrea, found with an automated
+  audit and verified by hand.
+- **The enumeration is of runtimes, not of write
+  syntaxes.** That is the point of the change and
+  also its limit. Ways to write a file grow with
+  every language feature and cannot be listed;
+  interpreters met on a server are few and change
+  slowly. It remains a list, so the hook stays a
+  backstop against the everyday mistake rather than
+  a sandbox: a target string built at runtime
+  defeats any string matcher. Isolation is the
+  operator's job.
+
 ## 2.14.0 — 2026-07-28
 
 - **Taboo guard: the taboos are effects now, not a

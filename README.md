@@ -703,7 +703,8 @@ under pressure.
   SSH keys, writes to `sshd_config` — in **every**
   permission mode, even
   `--dangerously-skip-permissions`, and even when the
-  command hides inside an `ssh host "…"` wrapper.
+  command hides inside an `ssh host "…"` wrapper or
+  behind a language runtime (`python3 -c "open(…)"`).
   Read-only forms (`fdisk -l`, `gpart show`, …) stay
   allowed. For legitimate exceptions (OS
   replacement), launch the session with

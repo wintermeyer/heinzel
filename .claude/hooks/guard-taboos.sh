@@ -17,13 +17,20 @@
 #     id_*) by any means: rm/shred/truncate/mv/chmod/
 #     chown, a truncating redirect, or ssh-keygen -f
 #   - writes to /etc/ssh/sshd_config(.d/)
+#   - any of the last three reached through a language
+#     runtime (python/perl/ruby/node/awk ...), whose file
+#     I/O looks nothing like a shell write
 #
 # The taboos are EFFECTS, not a list of binaries. When a new
 # tool reaches one of the effects above, it belongs in here,
 # and the test matrix gets a line for it. Issue #5 came from
 # the reverse: the rules named tools, so cfdisk, diskutil
 # eraseDisk, gpt destroy, blkdiscard and a truncating
-# redirect over authorized_keys all walked through.
+# redirect over authorized_keys all walked through. Issue #6
+# was the same mistake one level in: the rules protecting a
+# PATH named the ways a shell spells a write, so
+# python3 -c "open('/etc/ssh/sshd_config','a').write(...)"
+# was not a write to any of them.
 #
 # The hook scans the ENTIRE command string, so taboos hidden
 # inside wrappers like  ssh root@host "mkfs.ext4 /dev/sda1"
@@ -114,6 +121,11 @@ DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 # the private half does not.
 KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh/id_)'
 KEYPRIV='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)([^.[:alnum:]]|$)'
+
+# A general-purpose language runtime. See the interpreter section
+# at the bottom for why this list, and not a list of the ways
+# those runtimes spell a write.
+INTERP='(^|[^[:alnum:]_.-])(python[0-9.]*|perl|ruby|node|nodejs|deno|bun|php[0-9.]*|lua[0-9.]*|tclsh|osascript|Rscript|julia|elixir|escript|erl|[gmn]?awk)([^[:alnum:]_.-]|$)'
 
 # True when command $1 occurs somewhere WITHOUT its read-only
 # exemption $2 applying to that occurrence. Two conditions make
@@ -348,6 +360,60 @@ if hit '/etc/ssh/sshd_config'; then
   then
     deny "modifying /etc/ssh/sshd_config is never allowed \
 (reading it is fine: cat, grep, sshd -T)"
+  fi
+fi
+
+# --- Effects reached through an interpreter -------------------
+# Every rule above recognizes a write by the way it is spelled: a
+# redirect, tee, sed -i, an editor, rm/mv/chmod/truncate. A
+# language runtime spells none of those and reaches the same
+# effects through plain file I/O:
+#
+#   python3 -c "open('/etc/ssh/sshd_config','a').write(...)"
+#   node -e "require('fs').unlinkSync('...authorized_keys')"
+#   python3 -c "open('/dev/sda','wb').write(...)"
+#
+# Its command line is opaque to a pattern matcher -- read and
+# write look alike from outside -- so the read-only exemption
+# cannot be proven, and an unprovable exemption must not apply.
+# A runtime carrying a protected path or a raw device is
+# therefore a write. Issue #6.
+#
+# This enumerates RUNTIMES, not write syntaxes, on purpose. The
+# set of ways to write a file grows with every language feature
+# and can never be closed; the set of interpreters heinzel might
+# meet on a server is small and moves slowly. It still is a list,
+# so this rule is a backstop against the everyday mistake, not a
+# sandbox: an interpreter that builds its target string at
+# runtime, or downloads it, defeats any string matcher. Real
+# isolation is the operator's job, not this hook's.
+#
+# Interpreters that shell out (os.system, %x, child_process) need
+# no rule of their own: every check above scans the whole command
+# string, so the taboo word inside is caught where it stands.
+#
+# Accepted false positive: any command that merely mentions an
+# interpreter alongside one of these targets is blocked too, even
+# when it only reads -- awk '/^Port/' /etc/ssh/sshd_config, or a
+# cat of the file chained to an unrelated python call. Read with
+# cat, grep, jq, stat or sshd -T instead, which is what the rule
+# files use anyway.
+if hit "$INTERP"; then
+  if hit "$KEY"; then
+    deny "an interpreter with an SSH key path on its command \
+line can overwrite or delete the key, and a pattern matcher \
+cannot tell that from a read - read keys with cat, stat or \
+ssh-keygen -lf instead"
+  fi
+  if hit '/etc/ssh/sshd_config'; then
+    deny "an interpreter with sshd_config on its command line \
+can rewrite it, and a pattern matcher cannot tell that from a \
+read - read it with cat, grep or sshd -T instead"
+  fi
+  if hit "$DEV"; then
+    deny "an interpreter with a raw disk device on its command \
+line can overwrite the device, which destroys everything the \
+partition table points at"
   fi
 fi
 

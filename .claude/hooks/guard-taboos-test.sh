@@ -152,6 +152,27 @@ check deny 'chmod 000 /root/.ssh/authorized_keys'
 check deny 'chown nobody /etc/ssh/ssh_host_rsa_key'
 check deny 'ssh-keygen -q -N "" -f /etc/ssh/ssh_host_rsa_key'
 
+# --- same effect through an interpreter (issue #6) -------------
+# The path rules recognized a write by the way it was spelled
+# (redirect, tee, sed -i, an editor, rm/mv/chmod). An interpreter
+# spells none of those and writes through plain file I/O.
+check deny "python3 -c \"open('/etc/ssh/sshd_config','a').write('PermitRootLogin yes')\""
+check deny "python3.11 -c \"open('/etc/ssh/sshd_config','w')\""
+check deny "node -e \"require('fs').appendFileSync('/etc/ssh/sshd_config','X')\""
+check deny "perl -e 'open(F,\">\",\"/etc/ssh/sshd_config\")'"
+check deny "ruby -e \"File.write('/etc/ssh/sshd_config','')\""
+check deny "awk 'BEGIN{printf \"\" > f}' f=/etc/ssh/sshd_config"
+check deny "python3 -c \"import os; os.remove('/root/.ssh/authorized_keys')\""
+check deny "node -e \"require('fs').unlinkSync('/root/.ssh/authorized_keys')\""
+check deny "python3 -c \"open('/etc/ssh/ssh_host_ed25519_key','w').write('')\""
+check deny "ruby -e \"File.unlink('/root/.ssh/id_ed25519')\""
+check deny "ssh -o BatchMode=yes root@h \"python3 -c \\\"open('/etc/ssh/sshd_config','a')\\\"\""
+# Raw devices are the same hole with worse consequences, and the
+# original report did not cover them.
+check deny "python3 -c \"open('/dev/sda','wb').write(b'0'*4096)\""
+check deny "perl -e 'open(D,\">\",\"/dev/nvme0n1\"); print D chr(0)'"
+check deny "node -e \"require('fs').writeFileSync('/dev/vda','')\""
+
 # --- must pass -------------------------------------------------
 check pass 'fdisk -l'
 check pass 'sfdisk -l /dev/sda'
@@ -200,6 +221,20 @@ check pass 'cp /etc/ssh/ssh_host_rsa_key.pub /tmp/'
 check pass 'echo done > /dev/null'
 check pass 'ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub'
 check pass 'growpart --dry-run /dev/sda 1'
+
+# --- interpreters away from a protected target (issue #6) ------
+# Only the combination is a taboo. An interpreter on its own,
+# even writing files, is ordinary work and must stay usable.
+check pass 'python3 --version'
+check pass 'python3 -c "import json,sys; print(json.load(sys.stdin))"'
+check pass "python3 -c \"open('/tmp/report.txt','w').write('x')\""
+check pass 'node -e "console.log(process.version)"'
+check pass 'python3 -m json.tool /etc/myapp/config.json'
+check pass 'awk "/^worker_processes/ {print \$2}" /etc/nginx/nginx.conf'
+check pass 'perl -pe "s/foo/bar/" /tmp/notes.txt'
+check pass 'mix deps.get'
+check pass 'ls -l /root/.ssh/'
+check pass 'stat -c %a /root/.ssh/authorized_keys'
 
 # --- fallback path: malformed (non-JSON) stdin -----------------
 OUT=$(printf '%s' 'mkfs.ext4 /dev/sda1' \
