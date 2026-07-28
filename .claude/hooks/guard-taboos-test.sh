@@ -71,6 +71,28 @@ check deny 'vi /etc/ssh/sshd_config'
 check deny 'HEINZEL_GUARD_DISABLE=1 mkfs.ext4 /dev/sda1'
 check deny 'export HEINZEL_GUARD_DISABLE=1; fdisk /dev/sda'
 
+# --- exemption must belong to the taboo invocation (issue #4) ---
+# A -l / -r / -c anywhere in the string used to disarm the rule,
+# so an ordinary read-only probe in front of a write command
+# waved the write command through.
+check deny 'ssh -l root host "fdisk /dev/sda"'
+check deny 'ssh -l root host "gdisk /dev/sda"'
+check deny 'ssh -c aes256-gcm@openssh.com root@host "shutdown -h now"'
+check deny 'ls -l /dev && fdisk /dev/sda'
+check deny 'grep -r ERROR /var/log/syslog; shutdown -h now'
+check deny 'fdisk /dev/sda && ls -l /tmp'
+check deny 'cp -l a b; sfdisk --delete /dev/sda'
+check deny 'ssh -o BatchMode=yes root@h "lsblk -l && fdisk /dev/sdb"'
+check deny 'ssh -o BatchMode=yes root@h "ls -l /dev/disk/by-id; fdisk /dev/sdb"'
+check deny 'ssh -o BatchMode=yes root@h "gdisk -l /dev/sda; gdisk /dev/sdb"'
+check deny 'ssh -o BatchMode=yes root@h "sfdisk -l /dev/sda && sfdisk /dev/sdb < pt"'
+# No quote or separator to split on: the exemption is only
+# recognized when it FOLLOWS the taboo command in its segment.
+check deny 'ssh -l root host fdisk /dev/sda'
+check deny 'ssh -luser host fdisk /dev/sda'
+check deny 'ssh -c aes256-gcm@openssh.com root@host shutdown -h now'
+check deny 'sudo -l root fdisk /dev/sda'
+
 # --- must pass -------------------------------------------------
 check pass 'fdisk -l'
 check pass 'sfdisk -l /dev/sda'
@@ -116,6 +138,38 @@ if [ -z "$OUT" ]; then
 else
   FAIL=$((FAIL + 1))
   echo "FAIL: HEINZEL_GUARD_DISABLE=1 env did not disable guard"
+fi
+
+# --- degraded awk must fail CLOSED -----------------------------
+# hit_without() decides the read-only exemptions via awk. If awk
+# is missing or cannot evaluate POSIX classes, the exemption
+# cannot be proven, and an unprovable exemption must block, not
+# pass. Simulated with an awk shim that only fails.
+SHIM=$(mktemp -d)
+printf '#!/bin/sh\nexit 2\n' > "$SHIM/awk"
+chmod +x "$SHIM/awk"
+OUT=$(json_for 'fdisk -l /dev/sda' \
+  | env -u HEINZEL_GUARD_DISABLE PATH="$SHIM:$PATH" sh "$HOOK")
+if printf '%s' "$OUT" \
+  | grep -q '"permissionDecision":"deny"'; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL: broken awk failed OPEN (read-only fdisk was allowed)"
+fi
+rm -rf "$SHIM"
+
+# --- no negated hit() may remain -------------------------------
+# A rule of the form  hit X && ! hit Y  evaluates Y against the
+# whole command string, so any unrelated flag disarms it (issue
+# #4). Exemptions belong in hit_without(), which scopes them to
+# the invocation. Without this check the shape creeps back in.
+if grep -q '! *hit ' "$HOOK"; then
+  FAIL=$((FAIL + 1))
+  echo "FAIL: guard still uses a negated whole-string hit;" \
+    "use hit_without() so the exemption stays scoped"
+else
+  PASS=$((PASS + 1))
 fi
 
 # --- hook registration: no relative script paths ---------------

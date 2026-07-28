@@ -16,6 +16,15 @@
 # are caught regardless of quoting. A PreToolUse deny blocks
 # in every permission mode, including bypassPermissions.
 #
+# Rules that exempt a read-only form (fdisk -l, sfdisk -d,
+# shutdown -r) evaluate that exemption per invocation, not
+# against the whole string: it must sit in the same segment as
+# the taboo command and follow it. This is stricter than a plain
+# whole-string scan, so a taboo word inside quoted prose --
+# documentation, commit messages, ticket notes -- is matched
+# more often now. The way out is the documented one: rephrase,
+# or write such text to a file with a non-Bash tool.
+#
 # Known, accepted false positives (the patterns are deliberately
 # coarse — this guard protects production disks, not grep
 # pipelines): e.g. `grep poweroff /var/log/syslog` or
@@ -59,8 +68,52 @@ if command -v jq >/dev/null 2>&1; then
 fi
 [ -n "$CMD" ] || CMD="$INPUT"
 
+# The command string, plus one line per invocation it contains.
+# Separators are ; & | quotes and newlines. Quotes count on
+# purpose: to the shell, ssh -l root host "fdisk /dev/sda" is
+# ONE invocation, but it carries a second command inside, and
+# only splitting there puts fdisk in a segment that no longer
+# holds ssh's -l. The FULL string stays in the list, so this can
+# only ever block more, never less.
+segments() {
+  printf '%s\n' "$CMD"
+  printf '%s' "$CMD" | tr ';&|"'"'"'\n' '\n'
+}
+
 hit() {
-  printf '%s' "$CMD" | grep -Eq "$1"
+  segments | grep -Eq "$1"
+}
+
+# True when command $1 occurs somewhere WITHOUT its read-only
+# exemption $2 applying to that occurrence. Two conditions make
+# an exemption count: it must sit in the same segment as the
+# command, and it must FOLLOW it. Otherwise a flag belonging to
+# a wrapper disarms the taboo, which is what issue #4 reported:
+# ssh -l root host "fdisk /dev/sda" and lsblk -l && fdisk /dev/sdb
+# were both waved through because a bare -l existed anywhere.
+hit_without() {
+  segments | grep -Eq "$1" || return 1
+  # The command IS present. From here on the only question is
+  # whether the exemption belongs to it, so every failure path
+  # below must deny. If this awk cannot evaluate POSIX classes,
+  # we cannot prove the exemption applies: block.
+  printf 'x' | awk '{ exit(($0 ~ /[[:alnum:]]/) ? 0 : 1) }' \
+    2>/dev/null || return 0
+  segments | awk -v cmd="$1" -v exempt="$2" '
+    {
+      line = $0
+      while (match(line, cmd)) {
+        if (RLENGTH <= 0) break
+        if (substr(line, RSTART) !~ exempt) { bare = 1; exit }
+        line = substr(line, RSTART + RLENGTH)
+      }
+    }
+    END { exit(bare ? 0 : 1) }' 2>/dev/null
+  GUARD_AWK_STATUS=$?
+  # Only a clean "every occurrence is exempt" (exit 1) allows.
+  # Any other status is an awk failure, and that must not pass.
+  [ "$GUARD_AWK_STATUS" -eq 1 ] && return 1
+  return 0
 }
 
 deny() {
@@ -94,8 +147,8 @@ fi
 if hit '(^|[^[:alnum:]_])init[[:space:]]+0([^0-9]|$)'; then
   deny "init 0 powers off the server"
 fi
-if hit '(^|[^[:alnum:]_-])shutdown([^[:alnum:]_-]|$)' \
-  && ! hit '(^|[[:space:]])-(r|c)([[:space:]]|$)'; then
+if hit_without '(^|[^[:alnum:]_-])shutdown([^[:alnum:]_-]|$)' \
+  '(^|[[:space:]])-(r|c)([[:space:]]|$)'; then
   deny "shutdown without -r powers off the server (reboots \
 use shutdown -r; -c cancels)"
 fi
@@ -117,16 +170,16 @@ fi
 # Read-only inspection stays allowed: fdisk -l, sfdisk -l/-d,
 # gdisk -l, sgdisk -p, parted -l/print, gpart show/status/list,
 # lsblk, diskutil list.
-if hit '(^|[^[:alnum:]_.-])fdisk([^[:alnum:]_.-]|$)' \
-  && ! hit '(^|[[:space:]])-l'; then
+if hit_without '(^|[^[:alnum:]_.-])fdisk([^[:alnum:]_.-]|$)' \
+  '(^|[[:space:]])-l'; then
   deny "fdisk without -l opens the partition table for writing"
 fi
-if hit '(^|[^[:alnum:]_.-])sfdisk([^[:alnum:]_.-]|$)' \
-  && ! hit '(^|[[:space:]])(-l|--list|-d|--dump|-V|--verify)'; then
+if hit_without '(^|[^[:alnum:]_.-])sfdisk([^[:alnum:]_.-]|$)' \
+  '(^|[[:space:]])(-l|--list|-d|--dump|-V|--verify)'; then
   deny "sfdisk in write mode modifies the partition table"
 fi
-if hit '(^|[^[:alnum:]_.-])c?gdisk([^[:alnum:]_.-]|$)' \
-  && ! hit '(^|[[:space:]])-l'; then
+if hit_without '(^|[^[:alnum:]_.-])c?gdisk([^[:alnum:]_.-]|$)' \
+  '(^|[[:space:]])-l'; then
   deny "gdisk without -l opens the partition table for writing"
 fi
 if hit '(^|[^[:alnum:]_.-])sgdisk([^[:alnum:]_.-]|$)' \

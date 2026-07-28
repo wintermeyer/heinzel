@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.13.3 — 2026-07-28
+
+- **Taboo guard: a read-only exemption now only
+  exempts the command it belongs to.** The rules
+  that allow an inspection form (`fdisk -l`,
+  `sfdisk -d`, `shutdown -r`) tested that flag
+  against the whole command string, so any unrelated
+  flag anywhere disarmed the taboo. `lsblk -l &&
+  fdisk /dev/sdb` was waved through, and so was
+  `ssh -l root host "fdisk /dev/sda"`, because a
+  bare `-l` existed somewhere. That is the ordinary
+  look-then-write sequence of disk work, and the
+  guard dropped silently: nothing logged, the
+  command simply proceeded. An exemption is now
+  recognized only when it sits in the same
+  invocation as the taboo command and follows it,
+  which also covers the unquoted wrapper form that
+  has no separator to split on. If the local `awk`
+  cannot evaluate the patterns, the exemption cannot
+  be proven and the guard blocks instead of passing.
+  Reported in issue #4 with a reproduction script,
+  and the fix goes past the proposed patch, which
+  still let the unquoted case through. Consequence
+  worth knowing: the guard is stricter than before,
+  so a taboo word inside quoted prose is matched
+  more often. Rephrase, or write such text to a file
+  with a non-Bash tool.
+
 ## 2.13.2 — 2026-07-23
 
 - **Never pre-bake the verdict into the check.**
