@@ -93,6 +93,65 @@ check deny 'ssh -luser host fdisk /dev/sda'
 check deny 'ssh -c aes256-gcm@openssh.com root@host shutdown -h now'
 check deny 'sudo -l root fdisk /dev/sda'
 
+# --- same taboo, tool the rules did not name (issue #5) --------
+# The taboos are effects, not a list of binaries. Every command
+# below reaches a forbidden effect through a tool the original
+# rules never mentioned.
+check deny 'cfdisk /dev/sda'
+check deny 'gpt destroy /dev/da0'
+check deny 'gpt create -f /dev/disk2'
+check deny 'diskutil eraseDisk JHFS+ Foo disk2'
+check deny 'diskutil partitionDisk disk2 GPT JHFS+ Foo 100%'
+check deny 'diskutil apfs deleteContainer disk2'
+check deny 'diskutil secureErase 0 disk2'
+check deny 'diskutil zeroDisk disk2'
+# parted and sgdisk take several actions per invocation, so a
+# read-only flag can always ride along with a write one. Their
+# write sets are closed and enumerated in full instead.
+check deny 'parted /dev/sda toggle 1 boot'
+check deny 'parted /dev/sda name 1 data'
+check deny 'parted /dev/sda move 1 100 200'
+check deny 'parted /dev/sda mkpartfs primary ext2 1 100'
+check deny 'sgdisk -U R /dev/sda'
+check deny 'sgdisk -e /dev/sda'
+check deny 'sgdisk -s /dev/sda'
+check deny 'sgdisk -G /dev/sda'
+check deny 'sgdisk --replicate=/dev/sdb /dev/sda'
+check deny 'sgdisk -b backup.gpt -Z /dev/sda'
+check deny 'growpart /dev/sda 1'
+
+# --- disk wiped without touching the partition table -----------
+check deny 'blkdiscard /dev/sda'
+check deny 'blkdiscard --secure /dev/nvme0n1'
+check deny 'nvme format /dev/nvme0n1'
+check deny 'nvme sanitize /dev/nvme0n1'
+check deny 'nvme delete-ns /dev/nvme0'
+check deny 'nvme write-zeroes /dev/nvme0n1'
+check deny 'hdparm --security-erase p /dev/sda'
+check deny 'hdparm --make-bad-sector 1024 /dev/sda'
+check deny 'badblocks -w /dev/sda'
+check deny 'badblocks -sw /dev/sdb'
+check deny 'shred /dev/sda'
+check deny 'mke2fs -t ext4 /dev/sda1'
+check deny 'newfs_msdos /dev/da0s1'
+check deny 'cat disk.img > /dev/sda'
+check deny 'tee /dev/sda < disk.img'
+check deny 'dd if=disk.img > /dev/nvme0n1'
+check deny 'ssh root@h "xzcat img.xz > /dev/vda"'
+
+# --- power off under another name ------------------------------
+check deny 'telinit 0'
+check deny 'echo o > /proc/sysrq-trigger'
+
+# --- SSH keys destroyed without rm/shred/unlink ----------------
+check deny 'echo "" > /root/.ssh/authorized_keys'
+check deny ': > /etc/ssh/ssh_host_ed25519_key'
+check deny 'truncate -s 0 /root/.ssh/authorized_keys'
+check deny 'mv /root/.ssh/authorized_keys /tmp/'
+check deny 'chmod 000 /root/.ssh/authorized_keys'
+check deny 'chown nobody /etc/ssh/ssh_host_rsa_key'
+check deny 'ssh-keygen -q -N "" -f /etc/ssh/ssh_host_rsa_key'
+
 # --- must pass -------------------------------------------------
 check pass 'fdisk -l'
 check pass 'sfdisk -l /dev/sda'
@@ -118,6 +177,29 @@ check pass 'echo halting services'
 check pass 'dd if=/dev/sda of=/root/disk-backup.img'
 check pass 'uname -a'
 check pass 'echo see HEINZEL_GUARD_DISABLE in the docs'
+
+# --- read-only forms of the newly covered tools (issue #5) -----
+check pass 'diskutil info disk0'
+check pass 'diskutil apfs list'
+check pass 'gpt show /dev/da0'
+check pass 'parted /dev/sda print'
+check pass 'parted /dev/sda unit MiB print'
+check pass 'parted -m -l'
+check pass 'sgdisk -p /dev/sda'
+check pass 'sgdisk -i 1 /dev/sda'
+check pass 'sgdisk -v /dev/sda'
+check pass 'nvme list'
+check pass 'nvme id-ctrl /dev/nvme0'
+check pass 'nvme smart-log /dev/nvme0'
+check pass 'badblocks -sv /dev/sda'
+check pass 'hdparm -I /dev/sda'
+check pass 'blockdev --getsize64 /dev/sda'
+check pass 'shred -u /tmp/leftover.txt'
+check pass 'wc -l /root/.ssh/authorized_keys'
+check pass 'cp /etc/ssh/ssh_host_rsa_key.pub /tmp/'
+check pass 'echo done > /dev/null'
+check pass 'ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub'
+check pass 'growpart --dry-run /dev/sda 1'
 
 # --- fallback path: malformed (non-JSON) stdin -----------------
 OUT=$(printf '%s' 'mkfs.ext4 /dev/sda1' \

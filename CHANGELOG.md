@@ -1,5 +1,53 @@
 # Changelog
 
+## 2.14.0 — 2026-07-28
+
+- **Taboo guard: the taboos are effects now, not a
+  list of binaries.** Every rule matched one named
+  tool, so anything reaching the same forbidden
+  effect through a different tool was not seen.
+  Measured by putting 50 destructive command strings
+  through the hook: `cfdisk`, `gpt destroy`,
+  `diskutil eraseDisk`, `diskutil partitionDisk`,
+  `diskutil apfs deleteContainer` and `growpart` all
+  modified a partition table unchallenged, and on
+  two of the three supported platforms those were
+  the tools people actually use, since FreeBSD has
+  scheduled `fdisk` for removal in 16.0 and macOS
+  partitions through `diskutil` and `gpt`. Newly
+  covered as well: the wipers that leave the
+  partition table alone and destroy everything it
+  points at (`blkdiscard`, `nvme format`/`sanitize`,
+  `hdparm` secure-erase, `badblocks -w`, `shred` on
+  a device, plus a redirect or `tee` onto one, which
+  the `dd` rule missed because it insisted on
+  `of=`); `mke2fs` and `newfs_msdos`, which the
+  filesystem rules skipped on a word boundary;
+  `telinit 0` and `/proc/sysrq-trigger`; and losing
+  an SSH key by any means other than deletion, so
+  `truncate`, `mv`, `chmod`, `chown`, a truncating
+  redirect and `ssh-keygen -f` onto an existing key.
+- **Complete write sets for `sgdisk` and `parted`.**
+  Both took a positive list of write flags, and such
+  a list is unclosable: `sgdisk -U`, `-e`, `-s`,
+  `-G`, `--replicate` and `parted toggle`, `name`,
+  `move`, `mkpartfs` were all missing. Inverting the
+  test does not work for either tool, because both
+  accept several actions per invocation and a
+  read-only flag can ride along with a write one
+  (`sgdisk -b backup.gpt -Z /dev/sda`). Their write
+  sets are closed and documented, so they are now
+  enumerated in full from the manual pages.
+- Test matrix grows from 74 to 140 cases, including
+  a read-only control group so the added strictness
+  cannot quietly swallow `nvme list`, `hdparm -I`,
+  `parted print`, `sgdisk -p`, `badblocks -sv`,
+  `diskutil info` or reading a `.pub` key.
+- ZFS, LVM, mdadm and cryptsetup destroyers still
+  pass. The data loss is just as final, but
+  promoting them to absolute taboos is a policy
+  decision rather than a gap in an existing rule.
+
 ## 2.13.3 — 2026-07-28
 
 - **Taboo guard: a read-only exemption now only

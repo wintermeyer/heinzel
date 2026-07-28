@@ -4,12 +4,26 @@
 # Mechanically enforces heinzel's absolute taboos from
 # CLAUDE.md → Critical Safety Rules, below the model layer:
 #
-#   - halt / poweroff / shutdown without -r
-#   - mkfs / newfs / wipefs (write forms)
-#   - partition-table writers (fdisk/sfdisk/gdisk/sgdisk/
-#     parted/gpart write forms; dd onto a raw disk device)
-#   - rm/shred of SSH keys (host keys, authorized_keys, id_*)
+#   - halt / poweroff / shutdown without -r / init 0 /
+#     telinit 0 / sysrq-trigger
+#   - mkfs / mke2fs / newfs* / wipefs (write forms)
+#   - partition-table writers (fdisk/cfdisk/sfdisk/gdisk/
+#     sgdisk/parted/gpart/gpt/diskutil write forms)
+#   - raw-device wipers that leave the partition table
+#     alone (blkdiscard, nvme format/sanitize, hdparm
+#     secure-erase, badblocks -w, shred, dd/redirect/tee
+#     onto a disk device)
+#   - destroying SSH keys (host keys, authorized_keys,
+#     id_*) by any means: rm/shred/truncate/mv/chmod/
+#     chown, a truncating redirect, or ssh-keygen -f
 #   - writes to /etc/ssh/sshd_config(.d/)
+#
+# The taboos are EFFECTS, not a list of binaries. When a new
+# tool reaches one of the effects above, it belongs in here,
+# and the test matrix gets a line for it. Issue #5 came from
+# the reverse: the rules named tools, so cfdisk, diskutil
+# eraseDisk, gpt destroy, blkdiscard and a truncating
+# redirect over authorized_keys all walked through.
 #
 # The hook scans the ENTIRE command string, so taboos hidden
 # inside wrappers like  ssh root@host "mkfs.ext4 /dev/sda1"
@@ -84,6 +98,23 @@ hit() {
   segments | grep -Eq "$1"
 }
 
+# Case-insensitive variant. diskutil accepts its verbs in any
+# case, so eraseDisk and erasedisk are the same command.
+hit_i() {
+  segments | grep -Eiq "$1"
+}
+
+# A raw disk device, as opposed to /dev/null, /dev/stderr,
+# /dev/shm or /dev/disk/by-id (all of which are ordinary and
+# must stay usable).
+DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
+
+# Any SSH key file. KEYPRIV additionally excludes a trailing
+# .pub, so reading or copying a public key stays allowed while
+# the private half does not.
+KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh/id_)'
+KEYPRIV='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)([^.[:alnum:]]|$)'
+
 # True when command $1 occurs somewhere WITHOUT its read-only
 # exemption $2 applying to that occurrence. Two conditions make
 # an exemption count: it must sit in the same segment as the
@@ -144,8 +175,15 @@ fi
 if hit '(^|[^[:alnum:]_-])(halt|poweroff)([^[:alnum:]_-]|$)'; then
   deny "halt/poweroff never runs without explicit user request"
 fi
-if hit '(^|[^[:alnum:]_])init[[:space:]]+0([^0-9]|$)'; then
+if hit '(^|[^[:alnum:]_.-])(tel)?init[[:space:]]+0([^0-9]|$)'; then
   deny "init 0 powers off the server"
+fi
+# echo o > /proc/sysrq-trigger cuts the power instantly, and b
+# resets without syncing. Nothing reads this file, so any
+# mention of it is a write.
+if hit 'sysrq-trigger'; then
+  deny "sysrq-trigger powers off or resets the server without \
+shutting anything down cleanly"
 fi
 if hit_without '(^|[^[:alnum:]_-])shutdown([^[:alnum:]_-]|$)' \
   '(^|[[:space:]])-(r|c)([[:space:]]|$)'; then
@@ -158,8 +196,15 @@ if hit '(^|[^[:alnum:]_.-])mkfs(\.[[:alnum:]]+)?([^[:alnum:]_.-]|$)'
 then
   deny "mkfs destroys the filesystem on its target"
 fi
-if hit '(^|[^[:alnum:]_.-])newfs([^[:alnum:]_.-]|$)'; then
+# newfs_msdos and friends: the suffix must be part of the match,
+# otherwise the trailing word boundary rejects the underscore.
+if hit '(^|[^[:alnum:]_.-])newfs([._][[:alnum:]]+)*([^[:alnum:]_.-]|$)'
+then
   deny "newfs destroys the filesystem on its target"
+fi
+if hit '(^|[^[:alnum:]_.-])(mke2fs|mkntfs|mkdosfs|mkexfatfs|mkudffs|mkfs2?)([^[:alnum:]_.-]|$)'
+then
+  deny "this filesystem creator destroys the data on its target"
 fi
 if hit '(^|[^[:alnum:]_.-])wipefs([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])(-a|--all|-o|--offset)'; then
@@ -174,6 +219,11 @@ if hit_without '(^|[^[:alnum:]_.-])fdisk([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])-l'; then
   deny "fdisk without -l opens the partition table for writing"
 fi
+# cfdisk has no read-only mode at all: it is the curses editor.
+if hit '(^|[^[:alnum:]_.-])cfdisk([^[:alnum:]_.-]|$)'; then
+  deny "cfdisk is an interactive partition editor with no \
+read-only mode"
+fi
 if hit_without '(^|[^[:alnum:]_.-])sfdisk([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])(-l|--list|-d|--dump|-V|--verify)'; then
   deny "sfdisk in write mode modifies the partition table"
@@ -182,15 +232,45 @@ if hit_without '(^|[^[:alnum:]_.-])c?gdisk([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])-l'; then
   deny "gdisk without -l opens the partition table for writing"
 fi
+# sgdisk and parted both take SEVERAL actions per invocation, so
+# "allow when a read-only flag is present" cannot work: the read
+# flag rides along with the write one (sgdisk -b backup.gpt -Z
+# /dev/sda). Their write sets are closed and documented, so they
+# are enumerated in full instead. Short flags below are the
+# complete write set from sgdisk(8); the read-only ones (a D E f
+# F i L O p P V v) are absent on purpose, and so is -b, which
+# writes a backup FILE and not the disk.
 if hit '(^|[^[:alnum:]_.-])sgdisk([^[:alnum:]_.-]|$)' \
-  && hit '(^|[[:space:]])(-n|-d|-t|-c|-Z|-o|-g|-N|--new|--delete|--typecode|--change-name|--zap(-all)?|--clear|--largest-new|--mbrtogpt)'
+  && hit '(^|[[:space:]])(-[BcCdegGhIjklmnNorRstTuUzZ]|--(byte-swap-name|change-name|recompute-chs|delete|move-second-header|mbrtogpt|randomize-guids|hybrid|align-end|move-main-table|move-backup-table|load-backup|gpttombr|new|largest-new|clear|transpose|replicate|sort|typecode|transform-bsd|partition-guid|disk-guid|zap|zap-all))'
 then
   deny "sgdisk write options modify the partition table"
 fi
 if hit '(^|[^[:alnum:]_.-])parted([^[:alnum:]_.-]|$)' \
-  && hit '(mklabel|mkpart|resizepart|rm[[:space:]]+[0-9]|set[[:space:]]+[0-9])'
+  && hit '((mklabel|mktable|mkpartfs|mkpart|rescue|resize)([[:space:]]|$)|(rm|set|toggle|name|move|resizepart)[[:space:]]+[0-9]|disk_(set|toggle)[[:space:]])'
 then
   deny "parted write commands modify the partition table"
+fi
+# growpart rewrites the partition entry to enlarge it. Its dry
+# run is the only read-only form, and the exemption is scoped
+# the same way as every other one here.
+if hit_without '(^|[^[:alnum:]_.-])growpart([^[:alnum:]_.-]|$)' \
+  '(^|[[:space:]])(-N|--dry-run)([[:space:]]|$)'; then
+  deny "growpart rewrites the partition table to resize a \
+partition"
+fi
+# FreeBSD and macOS GUID partition table editor. show is the
+# read-only verb and stays allowed.
+if hit '(^|[^[:alnum:]_.-])gpt[[:space:]]+(create|destroy|add|remove|modify|migrate|recover|resize|restore|boot|label|set|unset)([^[:alnum:]_-]|$)'
+then
+  deny "gpt write verbs modify the partition table"
+fi
+# macOS: the tool people actually partition with. Verbs are
+# case-insensitive, hence hit_i.
+if hit_i '(^|[^[:alnum:]_.-])diskutil([^[:alnum:]_.-]|$)' \
+  && hit_i '(erasedisk|erasevolume|eraseoptical|zerodisk|randomdisk|secureerase|partitiondisk|splitpartition|mergepartitions|resizevolume|reformat|deletecontainer|deletevolume|erasecontainer|destroycontainer|resizecontainer|appleraid[[:space:]]+(delete|create))'
+then
+  deny "diskutil erase and partition verbs destroy data or the \
+partition map"
 fi
 if hit 'gpart[[:space:]]+(create|add|delete|destroy|modify|resize|bootcode|recover|set|undo|commit)'
 then
@@ -202,10 +282,61 @@ if hit '(^|[^[:alnum:]_-])dd([^[:alnum:]_-]|$)' \
 partition table"
 fi
 
+# --- Raw-device wipers ----------------------------------------
+# These leave the partition table intact and destroy everything
+# it points at, which is the same effect by another route.
+if hit '(^|[^[:alnum:]_.-])blkdiscard([^[:alnum:]_.-]|$)'; then
+  deny "blkdiscard discards every block on the device"
+fi
+if hit '(^|[^[:alnum:]_.-])nvme[[:space:]]+(format|sanitize|write|delete-ns|create-ns|attach-ns|detach-ns|security-send|copy|dsm|zns)'
+then
+  deny "this nvme subcommand overwrites or destroys namespace \
+data"
+fi
+if hit '(^|[^[:alnum:]_.-])hdparm([^[:alnum:]_.-]|$)' \
+  && hit '(--security-(erase|erase-enhanced|set-pass|unlock|disable)|--trim-sector-ranges|--make-bad-sector|--write-sector|--dco-(restore|setmax)|--repair-sector)'
+then
+  deny "this hdparm option erases the drive or writes raw \
+sectors"
+fi
+# badblocks -w is the destructive read-write test. -n and -sv
+# are non-destructive and stay allowed.
+if hit '(^|[^[:alnum:]_.-])badblocks([^[:alnum:]_.-]|$)' \
+  && hit '(^|[[:space:]])-[[:alnum:]]*w'; then
+  deny "badblocks -w overwrites the device while testing it"
+fi
+if hit '(^|[^[:alnum:]_.-])shred([^[:alnum:]_.-]|$)' \
+  && hit "$DEV"; then
+  deny "shred on a disk device overwrites the whole device"
+fi
+# A redirect or tee onto a disk device does what dd of= does.
+# /dev/null, /dev/stderr and /dev/disk/by-id are unaffected.
+if hit ">[[:space:]]*[\"']?$DEV" \
+  || hit "(^|[^[:alnum:]_.-])tee([[:space:]]+-a)?[[:space:]]+[\"']?$DEV"
+then
+  deny "redirecting onto a raw disk device overwrites its \
+content and partition table"
+fi
+
 # --- SSH keys and sshd_config ---------------------------------
-if hit '(^|[^[:alnum:]_-])(rm|shred|unlink)([^[:alnum:]_-]|$)' \
-  && hit '(/etc/ssh/ssh_host_|authorized_keys|\.ssh/id_)'; then
-  deny "deleting SSH keys is never allowed"
+# Deleting is only one way to lose a key. Renaming it away,
+# truncating it to zero, or making it unreadable to sshd have
+# the same effect, and the sshd_config rule below already
+# reflected that while this one did not.
+if hit '(^|[^[:alnum:]_-])(rm|shred|unlink|truncate|mv|chmod|chown|install|ln)([^[:alnum:]_-]|$)' \
+  && hit "$KEY"; then
+  deny "deleting, moving or re-permissioning SSH keys is never \
+allowed"
+fi
+# A truncating redirect needs no command at all: : > key.
+if hit ">[[:space:]]*[\"']?[^[:space:];|&]*$KEYPRIV"; then
+  deny "redirecting onto an SSH key file truncates it"
+fi
+# ssh-keygen -f onto an existing private key overwrites it.
+# Reading a .pub (for a fingerprint) stays allowed.
+if hit '(^|[^[:alnum:]_-])ssh-keygen([^[:alnum:]_-]|$)' \
+  && hit "$KEYPRIV"; then
+  deny "ssh-keygen pointed at an existing key overwrites it"
 fi
 if hit '/etc/ssh/sshd_config'; then
   if hit '>>?[[:space:]]*["'\'']?/etc/ssh/sshd_config' \

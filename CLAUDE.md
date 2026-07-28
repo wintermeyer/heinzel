@@ -99,11 +99,21 @@ remote connection before any other work.
   `memory/service-policy.md`.
 - **Absolute taboos (never run without explicit user
   request):** any command that modifies the partition
-  table. Read-only partition inspection (e.g.
-  `lsblk`, `fdisk -l`, `gpart show`,
-  `diskutil list`) is always allowed. Never modify
+  table, whichever tool it uses (`fdisk`, `cfdisk`,
+  `sfdisk`, `gdisk`, `sgdisk`, `parted`, `gpart`,
+  `gpt`, `diskutil`, `growpart`). Also any command
+  that erases a whole disk device while leaving the
+  partition table alone: `blkdiscard`,
+  `nvme format`/`sanitize`, `hdparm` secure-erase,
+  `badblocks -w`, `shred` on a device, and `dd`, a
+  redirect or `tee` onto one. Read-only inspection
+  (e.g. `lsblk`, `fdisk -l`, `gpart show`,
+  `diskutil list`, `nvme list`, `hdparm -I`) is
+  always allowed. Never modify
   `/etc/ssh/sshd_config`. Never delete or overwrite
-  SSH keys. Never halt or power off a server.
+  SSH keys, and that includes moving, truncating or
+  re-permissioning them. Never halt or power off a
+  server.
   A mechanical guard (`.claude/hooks/guard-taboos.sh`,
   a PreToolUse hook) backs these taboos in every
   permission mode. Being blocked by it is expected:
