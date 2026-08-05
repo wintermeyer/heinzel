@@ -1,5 +1,45 @@
 # Changelog
 
+## 2.16.0 — 2026-08-05
+
+- **Taboo guard: a key is reachable through the
+  directory that holds it.** The SSH-key rule
+  matched key *filenames* (`authorized_keys`,
+  `ssh_host_*`, `.ssh/id_*`), so
+  `chmod 600 ~/.ssh/authorized_keys` was denied
+  while `chown -R user:user ~/.ssh`, which does
+  strictly more, walked through. So did
+  `chmod 000 /root/.ssh`, which hides every key in
+  it from sshd, `rm -rf ~/.ssh`,
+  `mv ~/.ssh ~/.ssh.bak`, and the same reach
+  through an interpreter
+  (`shutil.rmtree('/root/.ssh')`). The protected
+  set now covers the `.ssh` directory itself,
+  matched as a whole path component so `.sshrc`
+  and similar names stay ordinary. Read-only
+  inspection is unaffected: `ls`, `stat`, `find`,
+  `test -w` and `getfacl` are not in the
+  destructive-command list and never were. Found
+  in a session that had explicit approval to
+  correct ownership on a new account's `~/.ssh`:
+  the precise command was blocked, the sloppier
+  recursive one would not have been.
+- **The same mistake as #5 and #6, one level up
+  the path.** #5 named tools where it should have
+  named effects; #6 named the shell's spellings of
+  a write where it should have named the write.
+  This one named the filenames a key can have
+  where it should have named the thing being
+  protected. The remaining boundary is left open
+  deliberately and is documented in the hook: a
+  command that destroys an enclosing directory
+  without naming `.ssh` at all (`rm -rf
+  /home/user`) reaches the same effect and is not
+  caught, because closing that would mean treating
+  every home directory as a key store. The hook is
+  a backstop against the everyday mistake, not a
+  sandbox.
+
 ## 2.15.0 — 2026-07-28
 
 - **Taboo guard: a write is a write, whatever

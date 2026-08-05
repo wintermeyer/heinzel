@@ -152,6 +152,25 @@ check deny 'chmod 000 /root/.ssh/authorized_keys'
 check deny 'chown nobody /etc/ssh/ssh_host_rsa_key'
 check deny 'ssh-keygen -q -N "" -f /etc/ssh/ssh_host_rsa_key'
 
+# --- SSH keys reached through their directory (issue #7) -------
+# The protected paths were key FILENAMES, so any operation on the
+# enclosing .ssh directory reached every key in it without naming
+# one. chmod 600 ~/.ssh/authorized_keys was denied while the
+# recursive chown that does strictly more was not.
+check deny 'chown -R alice:alice /home/alice/.ssh'
+check deny 'chmod -R 700 /root/.ssh'
+check deny 'chmod 000 /root/.ssh'
+check deny 'rm -rf /home/alice/.ssh'
+check deny 'mv /root/.ssh /root/.ssh.bak'
+check deny 'install -d -m 700 -o alice -g alice /home/alice/.ssh'
+check deny 'ssh -o BatchMode=yes root@h "chown -R alice:alice /home/alice/.ssh"'
+# The exact shape that exposed this: the spelled-out chmod is
+# denied, so the recursive form must not be the way around it.
+check deny 'chown -R alice:alice /home/alice/.ssh && chmod 700 /home/alice/.ssh'
+# Same reach through an interpreter, which names no key either.
+check deny "python3 -c \"import shutil; shutil.rmtree('/root/.ssh')\""
+check deny "node -e \"require('fs').chmodSync('/home/alice/.ssh', 0)\""
+
 # --- same effect through an interpreter (issue #6) -------------
 # The path rules recognized a write by the way it was spelled
 # (redirect, tee, sed -i, an editor, rm/mv/chmod). An interpreter
@@ -235,6 +254,20 @@ check pass 'perl -pe "s/foo/bar/" /tmp/notes.txt'
 check pass 'mix deps.get'
 check pass 'ls -l /root/.ssh/'
 check pass 'stat -c %a /root/.ssh/authorized_keys'
+
+# --- .ssh as a directory: inspection stays allowed (issue #7) --
+# Widening KEY to the directory must not cost the read-only
+# probes the rule files themselves prescribe.
+check pass 'ls -la /home/alice/.ssh'
+check pass 'stat -c "%A %U:%G %n" /home/alice/.ssh'
+check pass 'find /home/alice/.ssh -maxdepth 1 -type f'
+check pass 'test -w /home/alice/.ssh'
+check pass 'getfacl /home/alice/.ssh'
+# .ssh must match as a path component, not as a prefix, and a
+# destructive command away from it stays ordinary work.
+check pass 'chmod 700 /home/alice/.sshrc'
+check pass 'chown -R alice:alice /home/alice/Documents'
+check pass 'rm -rf /home/alice/.cache'
 
 # --- fallback path: malformed (non-JSON) stdin -----------------
 OUT=$(printf '%s' 'mkfs.ext4 /dev/sda1' \

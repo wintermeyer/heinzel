@@ -14,8 +14,9 @@
 #     secure-erase, badblocks -w, shred, dd/redirect/tee
 #     onto a disk device)
 #   - destroying SSH keys (host keys, authorized_keys,
-#     id_*) by any means: rm/shred/truncate/mv/chmod/
-#     chown, a truncating redirect, or ssh-keygen -f
+#     id_*, or the ~/.ssh directory holding them) by any
+#     means: rm/shred/truncate/mv/chmod/chown/install/ln,
+#     a truncating redirect, or ssh-keygen -f
 #   - writes to /etc/ssh/sshd_config(.d/)
 #   - any of the last three reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
@@ -30,7 +31,12 @@
 # was the same mistake one level in: the rules protecting a
 # PATH named the ways a shell spells a write, so
 # python3 -c "open('/etc/ssh/sshd_config','a').write(...)"
-# was not a write to any of them.
+# was not a write to any of them. Issue #7 was the same
+# mistake one level UP the path: the protected paths were key
+# FILENAMES, so chown -R alice:alice /home/alice/.ssh
+# re-permissioned every key in the directory without naming
+# one, while the spelled-out chmod on authorized_keys was
+# denied.
 #
 # The hook scans the ENTIRE command string, so taboos hidden
 # inside wrappers like  ssh root@host "mkfs.ext4 /dev/sda1"
@@ -116,10 +122,30 @@ hit_i() {
 # must stay usable).
 DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 
-# Any SSH key file. KEYPRIV additionally excludes a trailing
-# .pub, so reading or copying a public key stays allowed while
-# the private half does not.
-KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh/id_)'
+# Any SSH key file, OR the directory that holds them. The
+# directory belongs in here because re-permissioning or removing
+# it reaches every key through the parent without ever naming a
+# key: chown -R alice:alice /home/alice/.ssh hands the whole set
+# to another owner, chmod 000 /root/.ssh hides it from sshd, and
+# rm -rf ~/.ssh deletes it. The old pattern listed key FILENAMES
+# only, so all three walked through while the spelled-out
+# chmod 600 ~/.ssh/authorized_keys was denied. Same mistake as
+# issues #5 and #6, one level up the path: the rule named the
+# spelling of the target instead of the effect on it.
+#
+# Boundary, deliberately left open: a command that destroys an
+# enclosing directory without naming .ssh at all (rm -rf /home/
+# alice, a whole-filesystem operation) reaches the same effect
+# and is NOT caught here. Closing it would mean treating every
+# home directory as a key store. This is a backstop against the
+# everyday mistake, not a sandbox.
+#
+# KEYPRIV additionally excludes a trailing .pub, so reading or
+# copying a public key stays allowed while the private half does
+# not. It stays filename-only on purpose: it guards a truncating
+# redirect and ssh-keygen -f, neither of which is meaningful
+# against a directory.
+KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh(/|[^[:alnum:]_.-]|$))'
 KEYPRIV='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)([^.[:alnum:]]|$)'
 
 # A general-purpose language runtime. See the interpreter section
