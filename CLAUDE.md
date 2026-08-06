@@ -436,6 +436,18 @@ a dedicated deploy user with minimal privileges.
 Read `rules/backups.md`. Back up every config file
 before editing it.
 
+## Renaming, Moving, Retention Changes
+
+Read `rules/file-naming-changes.md` before changing
+how files are named or where they live (log rotation
+schemes, backup suffixes, retention, directory
+moves). Find every consumer that matches those files
+by pattern and fix it in the same change — a cleanup
+script whose glob no longer matches deletes nothing
+and reports success. Dry-run bulk renames with
+collision detection, and verify derived names against
+file content, not just mtime.
+
 ## Copying Directories Between Servers
 
 Read `rules/directory-copy.md`. Always check for
