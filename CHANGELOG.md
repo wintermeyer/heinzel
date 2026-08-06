@@ -1,5 +1,103 @@
 # Changelog
 
+## 2.17.0 — 2026-08-06
+
+- **Testing a credential must not print it.** A new
+  section in `rules/secrets.md`: keeping a password
+  out of `argv` protects the successful run and does
+  nothing about the crash, because a crash prints the
+  arguments of the failing call — and for a database
+  driver those arguments *are* the credentials. A
+  `mix run --no-start -e "Postgrex.start_link(…)"`
+  probe left `:db_connection` unstarted, the
+  supervisor call failed, and the Erlang crash report
+  echoed `password: "…"` in clear text into the
+  session transcript, forcing rotation of a password
+  created two minutes earlier. Python tracebacks with
+  locals, Ruby exception inspection and Node stack
+  traces over an options object all do the same.
+  Prefer a client whose errors are quiet (`psql` says
+  "authentication failed" and no more); reach for the
+  app's own driver only when the driver is what must
+  be proven. When you do, send all of its output to a
+  root-only file and read back a single `PROBE_OK` /
+  `PROBE_FAIL` marker the probe emits itself. Keep
+  that scratch file under `/root`, not `/tmp`, or
+  `fs.protected_regular` (default in Debian 13) makes
+  the check silently not run. No marker back means
+  the check did not run, never that it passed.
+- **Rotate a secret heinzel just minted without
+  asking.** Rotation normally needs approval because
+  it breaks every consumer of the old value. When
+  heinzel created the credential minutes ago and the
+  only copies are files heinzel wrote, that blast
+  radius is zero while the cost of waiting is a live
+  exposed secret: rotate at once, then say so and
+  why. Deliberately does not extend to credentials
+  heinzel did not create this session, or to ones
+  that already have consumers.
+- **The macOS activity check now fails closed.** It
+  piped `log show` through `2>/dev/null`, and the rule
+  treated "fails or returns nothing" as one case. `log`
+  is a common shell alias or function, and a shadowed
+  one errors with something like
+  `(eval):log:1: too many arguments` — swallowed by
+  `/dev/null`, that empty stream read as a clean host,
+  so a concurrent session's work went unreported
+  exactly because the check broke. Now calls
+  `/usr/bin/log` by absolute path, keeps `2>&1`, and
+  states that an empty result only means "no activity"
+  when the command actually ran; anything else is
+  reported as a check that did not run. Predicate
+  narrowed to `process == "logger"`.
+- **Housekeeping ages every backup retention tier
+  separately.** The autopostgresqlbackup check took the
+  newest file anywhere under the backup directory,
+  which stays green as long as the daily tier runs, so
+  a dead weekly or monthly tier hid behind fresh
+  dailies — on one host the monthly tier had been dead
+  for five months. Each tier now has its own
+  thresholds (25h/48h daily, 8d/15d weekly, 32d/62d
+  monthly, empty = critical), and `BACKUPDIR` is read
+  from the config instead of a hardcoded
+  `/var/backups/postgresql`, which was never the
+  default. Note that the script prefers
+  `/etc/default/autopostgresqlbackup` and then ignores
+  `/etc/autopostgresqlbackup.conf`.
+- **Known trap: unpadded `DOMONTHLY` silently kills
+  monthly backups.** autopostgresqlbackup 2.x compares
+  strings, `[ "${DNOM}" = "${DOMONTHLY}" ]`, and
+  `date '+%d'` is zero-padded, so `DOMONTHLY=1` never
+  matches `01`. Values 10-31 match by accident and the
+  weekly gate is unaffected (`date '+%u'` is unpadded),
+  which is why it goes unnoticed: no error, no mail
+  under `REPORT_ERRORS_ONLY="yes"`, daily and weekly
+  keep working. Debian 12→13 carries the tool from 1.1
+  to 2.5 and 1.x tolerated the unpadded value, so
+  upgraded hosts are the likely victims. Housekeeping
+  now flags any unpadded 1-9 value on a 2.x host even
+  when the tier looks current.
+- **New rule: renaming, moving, retention changes**
+  (`rules/file-naming-changes.md`). Rotation schemes,
+  backup suffixes and directory moves change strings
+  that other code matches on. The dangerous case is a
+  deletion that no longer matches: the cleanup command
+  exits 0 having deleted nothing, so the data survives
+  under the longer retention just configured — a script
+  written for numbered rotations
+  (`rm -f "$LOG" "$LOG".*`) stops covering date-stamped
+  ones the moment `dateext` flips a dot to a hyphen.
+  Grep the host for consumers and widen their patterns
+  in the same change; dry-run bulk renames with a
+  collision count and refuse to proceed while any
+  collision remains; derive names from file content,
+  because mtime sits either side of the rotation window
+  on sparsely written files. Also state what the new
+  retention costs — measured volume, file count per
+  directory, and how much longer access logs keep
+  client IP addresses, which is a data protection
+  question, not a disk space one.
+
 ## 2.16.0 — 2026-08-05
 
 - **Taboo guard: a key is reachable through the
