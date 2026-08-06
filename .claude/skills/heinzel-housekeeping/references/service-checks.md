@@ -27,14 +27,61 @@ PostgreSQL backups. (These are *specific* backup checks; the
 generic "any backup at all?" presence check lives in
 `references/backup-presence.md` and always runs.)
 
+**Check every retention tier separately.** These tools write
+`daily/`, `weekly/` and `monthly/` subtrees, each on its own
+schedule. A single "newest file anywhere" check is always green
+as long as the daily tier runs, so a dead weekly or monthly tier
+stays invisible — on one host the monthly tier was dead for five
+months behind fresh dailies. Age out each tier against its own
+cadence.
+
+Resolve `BACKUPDIR` from the config rather than assuming a path
+(`/var/lib/autopostgresqlbackup` is the Debian default;
+`/var/backups/postgresql` is *not*). The config is
+`/etc/autopostgresqlbackup.conf`, or `/etc/default/
+autopostgresqlbackup` — note the script prefers the latter
+"compat" file when it exists and then ignores the former.
+
 ```bash
-# Find the most recent backup file
-ls -lt /var/backups/postgresql/ 2>/dev/null \
-  | head -5
+CONF=/etc/default/autopostgresqlbackup
+[ -f "$CONF" ] || CONF=/etc/autopostgresqlbackup.conf
+DEFAULTDIR=/var/lib/autopostgresqlbackup
+BACKUPDIR=$(. "$CONF" 2>/dev/null && echo "${BACKUPDIR:-$DEFAULTDIR}")
+
+# Newest dump in EACH tier, with its age in days
+for tier in daily weekly monthly; do
+  newest=$(find "$BACKUPDIR/$tier" -type f -name '*.sql*' \
+    -printf '%T@ %TY-%Tm-%Td %p\n' 2>/dev/null \
+    | sort -rn | head -1)
+  echo "$tier: ${newest:-NONE}"
+done
 ```
 
-- **WARN** if latest backup is older than 25 hours
-- **CRITICAL** if no backup found or older than 48 hours
+- **WARN** if the newest `daily/` dump is older than 25 hours;
+  **CRITICAL** past 48 hours or if the tier is empty.
+- **WARN** if the newest `weekly/` dump is older than 8 days;
+  **CRITICAL** past 15 days.
+- **WARN** if the newest `monthly/` dump is older than 32 days;
+  **CRITICAL** past 62 days.
+- A tier that exists but whose newest file predates a distro
+  major upgrade is the classic signature of this bug — check
+  `/var/log/apt/history.log*` for the tool being upgraded around
+  that date.
+
+**Known trap — `DOMONTHLY`/`DOWEEKLY` zero-padding.**
+autopostgresqlbackup 2.x picks the period with a *string*
+compare, `[ "${DNOM}" = "${DOMONTHLY}" ]`, where
+`DNOM=$(date '+%d')` is **zero-padded**. So `DOMONTHLY=1` never
+matches `01` and monthly backups silently never run; only
+`DOMONTHLY="01"` works. Values 10-31 match by accident, and the
+weekly gate is unaffected because `date '+%u'` is unpadded. It
+fails silently: no error, no mail under
+`REPORT_ERRORS_ONLY="yes"`, and daily/weekly keep working. The
+Debian 12→13 upgrade (autopostgresqlbackup 1.1 → 2.5) is a
+common trigger, because 1.x tolerated the unpadded value. When
+this check runs on a v2.x host, read the effective config and
+flag any `DOMONTHLY`/`DOWEEKLY` in 1-9 that is not zero-padded,
+whether or not the tier looks current.
 
 ## Cross-Backup (rsync)
 
