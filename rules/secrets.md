@@ -159,6 +159,18 @@ own earlier commands, or an operator who ran, say,
   change the user must approve first. Explain the
   leak, recommend rotating, and get an explicit OK
   before touching the credential.
+  **One exception: a credential heinzel itself
+  created earlier in the same session, which nothing
+  consumes yet.** The approval rule exists because
+  rotation breaks every consumer of the old value —
+  when heinzel minted the secret minutes ago and the
+  only copies are the files heinzel just wrote, that
+  blast radius is zero and the cost of waiting is a
+  live exposed credential. Rotate it immediately,
+  then tell the user it happened and why. Do not
+  stretch this to any credential heinzel did not
+  create in this session, and do not stretch it to
+  one that already has consumers.
 - **Rotation has side effects; keep them minimal.**
   Every consumer still using the old value breaks
   the moment it changes: app configs and `.env`
@@ -178,6 +190,67 @@ own earlier commands, or an operator who ran, say,
 - Switch the workflow to a non-leaking channel
   above so the replacement does not leak the same
   way.
+
+## Testing a Credential Must Not Print It
+
+Keeping a secret out of `argv` is only half the job.
+The other half is the **failure path**: a connection
+test that goes wrong prints far more than a
+successful one, and what it prints is the call it
+was making — arguments included.
+
+That is how a freshly created PostgreSQL password
+for an application's database user ended up in a
+session transcript on 2026-08-05. The probe was
+`mix run --no-start -e "Postgrex.start_link(…)"`.
+Because `--no-start` left `:db_connection` unstarted,
+the call to its supervisor failed, and the Erlang
+crash report did what crash reports do: it echoed the
+full argument list of the failing call, which for a
+database driver *is* the credentials —
+`password: "…"` in clear text. Postgrex was not at
+fault. Any runtime that prints arguments on error
+behaves this way: Erlang/Elixir crash reports, Python
+tracebacks with locals, Ruby exception inspection,
+Node stack traces over an options object.
+
+So when verifying that a credential works:
+
+- **Prefer a client whose errors are quiet.** `psql`
+  reports "authentication failed" and nothing else.
+  Reach for the application's own driver only when
+  the driver *is* what you need to prove (a specific
+  auth method such as scram-sha-256, a TLS
+  requirement, a library version).
+- **When you do use the driver, redirect everything
+  on the server** into a file only root can read, and
+  read back a single marker line you control:
+
+  ```
+  runuser -l app -c '… probe …' \
+    > /root/heinzel-scratch/probe.log 2>&1 || true
+  grep -E '^PROBE_(OK|FAIL)' \
+    /root/heinzel-scratch/probe.log
+  shred -u /root/heinzel-scratch/probe.log
+  ```
+
+  Have the probe itself catch its own errors and emit
+  only `PROBE_OK` / `PROBE_FAIL` — never the
+  exception, which may embed the value.
+- **Put that scratch log under `/root`, not `/tmp`.**
+  With `fs.protected_regular` set (default on Debian
+  13), root cannot even redirect into a file owned by
+  another user inside a world-writable sticky
+  directory — the write fails with "Permission
+  denied" and the check silently does not run.
+- **A failed probe is not a clean result.** If no
+  marker comes back, say the check did not run.
+  Absent output means "no answer", never "no
+  problem".
+
+If a value does escape anyway, treat it as
+compromised and follow *When a Secret Has Already
+Leaked* above.
 
 ## Redaction in Heinzel Artifacts
 
