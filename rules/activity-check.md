@@ -34,9 +34,28 @@ stay silent.
 **macOS:**
 
 ```
-log show --predicate 'senderImagePath CONTAINS "logger"' \
-  --info --last 7d 2>/dev/null | grep heinzel
+/usr/bin/log show --last 7d \
+  --predicate 'process == "logger"' --info 2>&1 \
+  | grep heinzel
 ```
+
+Two details that are not optional here:
+
+- **Call `/usr/bin/log` by absolute path.** `log` is a
+  common shell alias or function (git log wrappers,
+  oh-my-zsh plugins). A shadowed `log` fails with
+  something like `(eval):log:1: too many arguments`,
+  which looks nothing like a missing-entries result.
+- **Never redirect stderr to `/dev/null`.** With
+  `2>/dev/null` a shadowed or failing `log` produces
+  empty output, and "no activity" is exactly what
+  empty output means below — so a broken check reads
+  as a clean host. Keep `2>&1` and treat any line that
+  is not a log entry as a failed check, not silence.
+
+`senderImagePath CONTAINS "logger"` also works but
+matches more broadly; `process == "logger"` is the
+narrower predicate.
 
 **FreeBSD:**
 
@@ -50,9 +69,17 @@ Note: this shows the last 20 matches, not a strict
 (`messages.0`). Older rotated logs are usually
 compressed; mention the limitation if relevant.
 
-If the command fails or returns nothing — and
-journal visibility is not limited (see above) —
+If the command returns nothing — and it actually ran,
+and journal visibility is not limited (see above) —
 skip silently: no activity to report.
+
+An empty result only means "no activity" when the
+command succeeded. If it errored, was shadowed by a
+shell alias, or you sent its stderr to `/dev/null`,
+you have no result at all — tell the user the check
+did not run, rather than reporting silence. A failed
+check that reads as a clean host is how a concurrent
+session's work goes unnoticed.
 
 ## What to show
 
