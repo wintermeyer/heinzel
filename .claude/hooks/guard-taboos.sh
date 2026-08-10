@@ -22,6 +22,12 @@
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
 #
+# What it deliberately does NOT scan: the body of a heredoc that
+# is written to an ordinary file by cat or tee (issue #8). That
+# is documentation, not code. Every other heredoc — above all
+# `ssh host bash -s <<EOF`, whose body runs remotely — is scanned
+# in full.
+#
 # The taboos are EFFECTS, not a list of binaries. When a new
 # tool reaches one of the effects above, it belongs in here,
 # and the test matrix gets a line for it. Issue #5 came from
@@ -49,25 +55,37 @@
 # the taboo command and follow it. This is stricter than a plain
 # whole-string scan, so a taboo word inside quoted prose --
 # documentation, commit messages, ticket notes -- is matched
-# more often now. The way out is the documented one: rephrase,
-# or write such text to a file with a non-Bash tool.
+# more often.
 #
-# Known, accepted false positives (the patterns are deliberately
-# coarse — this guard protects production disks, not grep
-# pipelines): e.g. `grep poweroff /var/log/syslog` or
-# `systemctl status shutdown.target` are blocked. Rephrase the
-# probe (`grep 'power[o]ff'`) instead of fighting the guard.
-# `cp /etc/ssh/sshd_config /tmp/` is blocked although it only
-# reads the file — copy out via `cat /etc/ssh/sshd_config >
-# /tmp/copy` instead.
+# Issue #8 narrowed the biggest source of that noise: a heredoc
+# body written to a file by cat or tee is data, not code, and is
+# no longer scanned. See the heredoc section below for the exact
+# conditions and for why the consumer, never the body, decides.
+# Writing heinzel's own changelog no longer trips the guard.
+#
+# Known, accepted false positives that REMAIN (the patterns are
+# deliberately coarse — this guard protects production disks, not
+# grep pipelines):
+#   - A taboo word as a quoted ARGUMENT: `grep poweroff
+#     /var/log/syslog`, `systemctl status shutdown.target`.
+#     segments() splits on quotes so that ssh host "shutdown -h
+#     now" is caught, and after that split an argument and an ssh
+#     payload have the same shape. Separating them needs a
+#     per-command list of which arguments are data, which is
+#     open-ended and would reopen issue #4. Rephrase the probe
+#     (`grep 'power[o]ff'`) instead.
+#   - `cp /etc/ssh/sshd_config /tmp/` is blocked although it only
+#     reads the file — copy out via `cat /etc/ssh/sshd_config >
+#     /tmp/copy` instead.
 #
 # Being blocked is EXPECTED behavior. Explain it to the user.
 # Never rephrase, re-quote, or otherwise obfuscate a command to
 # evade this guard.
 #
-# Heinzel-repo development note: commit messages passed as
-# heredocs flow through the Bash command string, so writing
-# ABOUT taboo commands in a message triggers the guard. Write
+# Heinzel-repo development note: a commit message piped straight
+# into `git commit -m`/`-F -` still flows through the command
+# string, and git is not a data sink this hook recognizes, so
+# writing ABOUT taboo commands there can still trigger it. Write
 # the message to a file with a non-Bash tool and use
 # `git commit -F <file>` — that executes nothing on any server.
 #
@@ -94,6 +112,120 @@ if command -v jq >/dev/null 2>&1; then
     | jq -r '.tool_input.command // empty' 2>/dev/null) || CMD=""
 fi
 [ -n "$CMD" ] || CMD="$INPUT"
+
+# --- Heredoc bodies that are DATA, not code -------------------
+# Documentation is the one thing that legitimately contains taboo
+# words: a changelog entry describing a shutdown checkpoint, a
+# rule file about fdisk, a commit message. Scanned as a command
+# string, that prose is indistinguishable from an invocation, and
+# the guard blocked heinzel's own changelog write over the word
+# "shutdown" inside a heredoc.
+#
+# A heredoc body is only safe to skip when the command consuming
+# it CANNOT execute it. That is decided by the consumer, never by
+# the body, because these two look almost identical:
+#
+#   cat >> notes.md <<EOF          <- the body is text
+#   ssh host bash -s <<EOF         <- the body RUNS, remotely
+#
+# So the body is dropped only when the first line is one lone
+# pure data sink -- cat or tee writing to an ordinary file -- and
+# every other condition fails CLOSED back to scanning everything:
+# more than one heredoc, an unrecognized consumer, a missing
+# terminator, a /dev/ target, or any awk failure. Whatever sits
+# OUTSIDE the body (the first line itself, and everything after
+# the terminator) is always still scanned, so
+#   cat >> f <<EOF ... EOF; shutdown -h now
+# is caught on the trailing command exactly as before.
+#
+# Deliberate boundary: a data sink whose target is itself
+# executed later is excluded from the exemption, because writing
+# a taboo INTO such a file reaches the effect on a delay. That
+# set is named by EFFECT -- "something runs this file later" --
+# and enumerated as scheduler and init locations, anything under
+# /etc, launchd, the executable directories, script files by
+# extension, and the shell start-up files. Over-matching there
+# costs nothing: it only means the body is scanned as ordinary
+# command text, which is what every non-exempt command gets.
+# The wider boundary stays the documented one -- this hook is a
+# backstop against the everyday mistake, not a sandbox. A body
+# built at runtime, or fetched, defeats any string matcher.
+#
+# Writes AT a protected path need no rule here: the sink line
+# itself is never dropped, so cat >> ~/.ssh/authorized_keys is
+# still judged by the normal SSH-key rules below.
+#
+# NOT fixed by this, on purpose: a taboo word quoted as an
+# ARGUMENT, e.g. grep shutdown /var/log/syslog. segments() splits
+# on quotes so that ssh host "shutdown -h now" is caught, and
+# after that split the grep argument and the ssh payload are the
+# same shape. Telling them apart needs a per-command list of
+# which arguments are data, which is open-ended and would reopen
+# issue #4. Rephrase the probe (grep 'shut[d]own') instead.
+CMD_NOHEREDOC=$(printf '%s\n' "$CMD" | awk '
+  BEGIN { q = sprintf("%c", 39) }
+  NR == 1 {
+    first = $0
+    # A raw device target is never an ordinary file.
+    if (first ~ /\/dev\//) { bad = 1; exit }
+    # Targets that something later EXECUTES are not inert either.
+    # Schedulers, init and unit locations, anything under /etc:
+    if (first ~ /cron|systemd|init\.d|rc\.d|profile\.d|\/etc\//) {
+      bad = 1; exit
+    }
+    # launchd jobs (macOS):
+    if (first ~ /launchd|LaunchAgents|LaunchDaemons|\.plist/) {
+      bad = 1; exit
+    }
+    # the executable directories -- /bin /sbin /usr/bin ~/bin ...:
+    if (first ~ /\/s?bin\//) { bad = 1; exit }
+    # a script file by extension:
+    if (first ~ /\.(sh|bash|zsh|ksh|command|py|pl|rb)([ \t<]|$)/) {
+      bad = 1; exit
+    }
+    # a shell start-up file, sourced on the next login:
+    if (first ~ /\.(bashrc|bash_profile|bash_login|zshrc|zshenv|zprofile|zlogin|kshrc|cshrc|profile|login)([ \t<]|$)/) {
+      bad = 1; exit
+    }
+    # Exactly one heredoc, so there is exactly one body to find.
+    tmp = first; cnt = 0
+    while (match(tmp, /<</)) { cnt++; tmp = substr(tmp, RSTART + 2) }
+    if (cnt != 1) { bad = 1; exit }
+    # The whole first line must be the data sink and nothing else:
+    # no ; & | backtick $( ) that could smuggle a second command.
+    # The target may arrive either way round -- cat writes through
+    # a redirect (cat > f), tee takes it as a plain argument
+    # (tee f) -- so both separators are allowed. The path token
+    # itself still excludes every character that could start
+    # another command, and < > stay out of it so the heredoc
+    # operator can never be swallowed as a filename.
+    p = "[\"" q "]?[^ \t;|&`$()<>\"" q "]+[\"" q "]?"
+    shape = "^[ \t]*(cat|tee)([ \t]+-a)?(([ \t]*>>?[ \t]*|[ \t]+)" p ")?[ \t]*<<-?[ \t]*[\"" q "]?[A-Za-z_][A-Za-z0-9_]*[\"" q "]?[ \t]*$"
+    if (first !~ shape) { bad = 1; exit }
+    d = first
+    sub(/^.*<<-?[ \t]*/, "", d)
+    gsub(/["]/, "", d); gsub(q, "", d); sub(/[ \t]*$/, "", d)
+    if (d !~ /^[A-Za-z_][A-Za-z0-9_]*$/) { bad = 1; exit }
+    delim = d
+    print first
+    next
+  }
+  # Drop the body. Ending it on a whitespace-stripped match too is
+  # deliberate: erring early only scans MORE text, never less.
+  !ended {
+    t = $0; sub(/^[ \t]+/, "", t)
+    if ($0 == delim || t == delim) ended = 1
+    next
+  }
+  { print }
+  END { if (bad || !ended) exit 1 }
+' 2>/dev/null)
+GUARD_STRIP_STATUS=$?
+# Only a clean parse of a recognized data sink may shrink the
+# scanned text. Anything else keeps the full command string.
+if [ "$GUARD_STRIP_STATUS" -eq 0 ] && [ -n "$CMD_NOHEREDOC" ]; then
+  CMD="$CMD_NOHEREDOC"
+fi
 
 # The command string, plus one line per invocation it contains.
 # Separators are ; & | quotes and newlines. Quotes count on
