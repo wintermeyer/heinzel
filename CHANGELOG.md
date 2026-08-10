@@ -1,5 +1,54 @@
 # Changelog
 
+## 2.18.0 — 2026-08-10
+
+- **Taboo guard: a heredoc body that only ever
+  becomes a file is no longer scanned.** Prose is the
+  one thing that legitimately contains taboo words: a
+  changelog entry describing a shutdown checkpoint, a
+  rule file about `fdisk`. Read as a command
+  string, that prose is indistinguishable from an
+  invocation, and the guard blocked heinzel's own
+  changelog write over a single word inside a
+  heredoc. Writing documentation no longer trips it.
+- **The consumer decides, never the body.**
+  `cat >> notes.md <<EOF` and
+  `ssh host bash -s <<EOF` look almost identical and
+  the second one runs its body on a production
+  server, so the exemption is granted on the command
+  that swallows the heredoc, not on what the heredoc
+  says. It needs the whole first line to be one lone
+  data sink: `cat` or `tee`, one heredoc, an ordinary
+  file, and nothing else on the line that could
+  smuggle a second command. Text outside the body is
+  still scanned, so a taboo after the terminator is
+  caught as before.
+- **Everything else fails closed**: two heredocs, an
+  unrecognized consumer, a missing terminator, a
+  `/dev/` target, or `awk` failing for any reason all
+  fall back to scanning the full command string. A
+  fixture stubs `awk` to exit 2 and asserts the body
+  is still scanned, because a stripping step that
+  fails open would be worse than no stripping at all.
+- **A file that something later executes is not
+  inert.** Writing a taboo into one reaches the
+  effect on a delay, so those targets keep their
+  bodies scanned: schedulers and unit locations,
+  anything under `/etc`, launchd jobs, the executable
+  directories, script files by extension, and the
+  shell start-up files. Over-matching there is free:
+  it only means the body is read like ordinary
+  command text.
+- **Still blocked, on purpose:** a taboo word as a
+  quoted argument, e.g. grepping a log for
+  `poweroff`. Quotes are a segment separator so that
+  a command carried inside `ssh host "…"` is caught,
+  and after that split an argument and an SSH payload
+  have the same shape. Separating them needs a
+  per-command list of which arguments are data, which
+  is open-ended and would reopen issue #4. Rephrase
+  the probe (`grep 'power[o]ff'`) instead.
+
 ## 2.17.0 — 2026-08-06
 
 - **Testing a credential must not print it.** A new
