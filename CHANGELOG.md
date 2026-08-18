@@ -1,5 +1,56 @@
 # Changelog
 
+## 2.19.0 — 2026-08-18
+
+- **A ceiling on what heinzel says.** New "Talking to
+  Humans" section in `CLAUDE.md`: facts, one line per
+  fact, and a hard limit per surface — three lines for
+  an answer, one for the result of an action, at most
+  three recommendations and only when something is
+  actually wrong. The report formats were already
+  terse tables; the prose around them was not, and
+  nothing in `CLAUDE.md` or the rule files had ever
+  asked for brevity. It sits in `CLAUDE.md` rather
+  than in `rules/` because a style rule has no trigger
+  that would ever load it from disk.
+- **The email body has a shape now.** The
+  `heinzel-email` skill described it as "verbatim user
+  content", which left the composing to judgement and
+  produced cover letters. It is now one line naming
+  what ran and where, the report exactly as its skill
+  produced it, and the closing — with a five-line
+  ceiling on heinzel's own text and one line per
+  attachment.
+- **A blocked reload is not a policy decision.** New
+  section in `rules/service-reload.md`: the agent
+  harness has its own permission layer and can refuse
+  a reload heinzel already auto-approved. The two
+  failures look alike and need opposite fixes —
+  `memory/service-policy.md` cannot lift a harness
+  refusal, and in Claude Code `permissions.allow`
+  does not cover the auto-mode classifier, which has
+  its own `autoMode.allow` key. Such a refusal leaves
+  the host half-changed: the config is on disk and
+  tested, only the process is stale, so the next
+  restart applies a config nobody watched go live.
+  Surface it, never move on quietly.
+- **Decommissioning an object orphans its backups.**
+  New section in `rules/file-naming-changes.md`.
+  Retention is normally applied by a loop over the
+  live objects, so the files of a deleted one are
+  never visited again: `autopostgresqlbackup` calls
+  `db_purge` inside its loop over the databases that
+  exist right now. Look for per-object directories,
+  config fragments and state at every decommission,
+  and never say leftovers "expire on their own"
+  without having read the pruning loop.
+- **`.claude/settings.local.json` is gitignored.**
+  Claude Code appends an allow rule to it on every
+  approval, so it fills up with the literal commands
+  that ran, production hostnames included. Same
+  always-personal category as `memory/user.md`;
+  `.claude/settings.json` stays the shared half.
+
 ## 2.18.0 — 2026-08-10
 
 - **Taboo guard: a heredoc body that only ever
