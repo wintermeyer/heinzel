@@ -50,3 +50,14 @@ HISTORY.md
 # Not shipped with heinzel; created by /loop, /schedule, and
 # the scheduler machinery in the Claude Code CLI.
 .claude/*.lock
+
+# Personal Claude Code permission overrides. ALWAYS personal,
+# never shared — same category as memory/user.md.
+#
+# Claude Code appends an allow rule to this file every time you
+# approve a command, so it fills up with the literal commands you
+# ran, hostnames and all (e.g. an ssh line naming a production
+# server). That is exactly the internal detail that must not
+# reach a public repo. .claude/settings.json is the shared,
+# hostname-free half; this one stays local.
+.claude/settings.local.json
