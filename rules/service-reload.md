@@ -184,6 +184,74 @@ If an auto-proceeded reload or restart fails:
 - Offer to roll back the config file from the
   backup written per `rules/backups.md`.
 
+## When the Agent Harness Blocks the Reload
+
+Everything above is heinzel's **policy** layer: what
+heinzel decides it should do. The agent harness
+running heinzel has its own, independent
+**permission** layer, and that one can refuse a
+reload this rule file has already auto-approved.
+
+Tell them apart by who says no:
+
+- **heinzel** declines by explaining the policy
+  ("nginx is on `reload-always-ask`").
+- **The harness** declines with a permission error
+  naming the tool call, e.g. Claude Code's
+  "denied by the auto mode classifier".
+
+They fail differently, so fix them differently. A
+harness refusal is not something a rule file, a
+custom rule, or a per-server override can lift —
+editing `memory/service-policy.md` in response to
+one changes nothing at all.
+
+**In Claude Code**, note that `permissions.allow`
+does NOT override the auto-mode classifier: a
+session can carry `Bash(ssh *)` in its allow list
+and still have `systemctl reload nginx` refused.
+The classifier has its own key. Add to
+`.claude/settings.json`:
+
+```json
+"autoMode": {
+  "allow": [
+    "$defaults",
+    "Reloading/restarting services heinzel administers, over ssh."
+  ]
+}
+```
+
+The literal `"$defaults"` entry is required — it
+inherits the built-in rules. Omit it and you
+replace the harness's own safety rules with just
+your line.
+
+This does not weaken heinzel's taboos. Those are
+enforced by `.claude/hooks/guard-taboos.sh`, a
+PreToolUse hook, and hooks run regardless of
+permission mode; `permissions.deny` (halt,
+poweroff, mkfs) likewise still wins over any allow.
+Nor does it skip the gates above: heinzel still
+runs the config test, still honours
+`reload-always-ask` / `restart-never`, and still
+asks before a restart that is not in
+`restart-auto`. It only stops the harness blocking
+the reload mechanically before heinzel's own policy
+gets to decide.
+
+**Why this matters more than it looks.** A blocked
+reload does not leave the host untouched — it
+leaves it *half-changed*. The new config is already
+written to disk and the config test has already
+passed; only the running process is stale. Any
+later restart, a package upgrade, a logrotate
+`postrotate`, or a reboot then applies a config
+nobody has watched go live. Finishing the reload is
+the safer end state than abandoning it, so surface
+a harness refusal to the user immediately rather
+than quietly moving on to the next task.
+
 ## Override Chain
 
 This rule follows the standard heinzel override
