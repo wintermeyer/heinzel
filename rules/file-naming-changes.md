@@ -62,7 +62,36 @@ Write the mapping to `/var/backups/heinzel/` as
 the rename can be replayed backwards, and use
 `mv -n` so an unforeseen collision cannot overwrite.
 
-## 3. Say what the retention now costs
+## 3. Deleting the subject also deletes its housekeeping
+
+The mirror image of a glob that stopped matching: the
+glob is fine, but the thing that *drives* it is gone.
+Rotation and retention are almost always applied by a
+loop over the live objects — databases, vhosts, units,
+mailboxes — so removing an object silently orphans
+whatever that loop used to prune for it. Its old files
+then sit on disk forever under a retention that no
+longer runs.
+
+`autopostgresqlbackup` is the concrete case:
+`db_purge` is called *inside* `for db in ${DBNAMES}`,
+and with `DBNAMES="all"` that list comes from
+`db_list`, i.e. the databases that exist right now.
+Drop a database and its `daily/<db>/` and `weekly/<db>/`
+directories are never visited again — 159 MB of dumps
+that will outlive every retention setting, plus the
+copies already pulled to the cross-backup hosts.
+
+So when decommissioning anything: after the removal,
+look for per-object directories, per-object config
+fragments and per-object state that the tool creates
+automatically, and decide explicitly whether they go
+or stay. Never tell the user that leftovers "will
+expire on their own" without checking that the pruning
+loop still reaches them — read the tool's loop, don't
+assume the retention is global.
+
+## 4. Say what the retention now costs
 
 When retention grows, state the measured volume per
 day and the resulting total, and check it against free
