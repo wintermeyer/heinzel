@@ -207,11 +207,20 @@ the only root-privileged operation in the workflow.
    - Default subject: `[heinzel/<short-hostname>] <topic>` —
      even on the local-side path, the subject names the
      server the report is *about*.
-   - Body: plain text. Verbatim user content, followed by
-     the Heinzel closing (see **Greeting** and **Signature**
-     below). If the user asks to send command output, run the
-     command and embed stdout/stderr inline in a fenced block
-     above the closing.
+   - Body: plain text, in this order and nothing else — one
+     line naming what ran and on which host, the report or the
+     user's content verbatim, then the Heinzel closing (see
+     **Greeting** and **Signature** below). If the user asks to
+     send command output, run the command and embed
+     stdout/stderr inline in a fenced block in place of the
+     report.
+   - **Ceiling: 5 lines of your own text** around that block,
+     per "Talking to Humans" in `CLAUDE.md`. No cover sentence,
+     no restatement of the subject, no "as requested", no recap
+     under the report. A report goes in exactly as its skill
+     produced it — nothing added before or after it.
+     Attachments get one line each: name and size, not a
+     description of the contents.
 
    **Attachments** (e.g. "email me /var/log/auth.log"):
 

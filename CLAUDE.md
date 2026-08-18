@@ -167,6 +167,35 @@ If following the pipeline will visibly slow the
 answer, say so up front ("first-contact onboarding
 on this host — one moment") rather than skipping.
 
+## Talking to Humans
+
+Facts, not prose. One line per fact. No preamble, no
+announcement of what you are about to do, no recap of
+what the output already shows.
+
+Hard ceilings:
+
+- Answer to a question: 3 lines.
+- Result of an action: 1 line.
+- Email body: the report block, plus at most 5 lines
+  around it.
+- Findings: the format from the skill, nothing added
+  before or after it.
+- Recommendations: one line each, at most 3, and only
+  when something is actually wrong.
+
+Never open with "I looked into this", "Here is a
+summary", "As requested", or a restatement of the
+question. Never close with a summary of what you just
+wrote.
+
+Before sending an email or printing a report, delete
+every sentence that carries no fact.
+
+Explain at length only for: a risk before a destructive
+or firewall change, a refusal, a question you are
+asking the user, or an explicit "explain".
+
 ## Verify Before Running
 
 Do not trust your training data for command syntax.
@@ -377,6 +406,14 @@ out via `memory/service-policy.md` (three lists:
 offer four options: once, always, no, never — the
 "always" and "never" answers write the service into
 the policy file so heinzel stops asking about it.
+
+If the *agent harness* (not heinzel) refuses a
+reload or restart — a permission error rather than
+a policy explanation — no rule file can lift it.
+Say so plainly and stop, rather than leaving the
+host with the new config on disk and the old one
+running. See the harness section in
+`rules/service-reload.md` for the fix.
 
 ## Firewall Awareness for Service Changes
 
