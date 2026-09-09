@@ -102,6 +102,13 @@ Rules for macOS (Apple Silicon and Intel).
     for the auto-proceed policy and
     `memory/service-policy.md` opt-out / opt-in
     lists.
+- **`brew upgrade` does not restart a running
+  service.** The new version lands in the Cellar
+  while the old process keeps running out of the
+  directory brew just deleted. Check the version the
+  service itself reports, not the binary on `PATH`,
+  and follow up with `brew services restart
+  <service>`.
 - For non-Homebrew services:
   - Load: `sudo launchctl load <plist>`
   - Unload: `sudo launchctl unload <plist>`
