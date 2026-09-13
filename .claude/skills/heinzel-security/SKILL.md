@@ -37,10 +37,16 @@ applies before any of this runs.
    Code cancels sibling calls, so grouping limits blast radius.
    Put commands with complex quoting (awk, sed) in their own batch
    so a quoting mistake does not cancel simple commands.
-3. **SSH quoting warning:** avoid awk's `!~` operator — zsh
-   interprets `!` as history expansion and mangles it even inside
-   quotes. Use positive `~` match with `next` instead (see System
-   Accounts check in `references/user-accounts.md`).
+3. **Match what you want, not what you want to skip.** Two
+   separate hazards push every probe the same way. awk's `!~`
+   operator does not survive SSH + zsh quoting — zsh reads `!`
+   as history expansion and mangles it even inside quotes. And
+   a list of things to *exclude* has to spell them out, which
+   is how the system-account probe came to carry the words
+   `shutdown` and `halt`: heinzel's own `guard-taboos.sh` reads
+   them as power-off commands and denies the whole batch. A
+   positive `~` match names neither. See the System Accounts
+   check in `references/user-accounts.md`.
 4. **Select checks** per the references below. Use the preferred
    method when privileges allow; fall back to the unprivileged
    method otherwise.

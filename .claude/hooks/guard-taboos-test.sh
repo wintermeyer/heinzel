@@ -218,6 +218,20 @@ check pass 'dd if=/dev/sda of=/root/disk-backup.img'
 check pass 'uname -a'
 check pass 'echo see HEINZEL_GUARD_DISABLE in the docs'
 
+# --- the security skill's system-account probe -----------------
+# Listing the system accounts that own an interactive shell is
+# read-only, but the obvious spelling excludes the inert shells
+# BY NAME, and two of those names are power-off commands. The
+# guard denies that, correctly: it scans the command string and
+# cannot tell a regex alternative from an invocation. The fix
+# belongs in the probe, not in the guard -- match the shells
+# that DO log in, which names no inert shell at all. Keep both
+# lines: the deny pins why the old shape was retired, the pass
+# pins the shape heinzel-security actually ships.
+check deny "awk -F: '(\$7 ~ /(nologin|false|sync|shutdown|halt)\$/)' /etc/passwd"
+check pass "awk -F: '(\$3 < 1000) && (\$7 ~ /sh\$/) {print \$1 \":\" \$7}' /etc/passwd"
+check pass "awk -F: '(\$3 < 1000) {print \$1 \":\" \$7}' /etc/passwd"
+
 # --- read-only forms of the newly covered tools (issue #5) -----
 check pass 'diskutil info disk0'
 check pass 'diskutil apfs list'

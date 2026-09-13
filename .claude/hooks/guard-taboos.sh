@@ -68,6 +68,13 @@
 # grep pipelines):
 #   - A taboo word as a quoted ARGUMENT: `grep poweroff
 #     /var/log/syslog`, `systemctl status shutdown.target`.
+#     A real one from an audit: a read-only awk over /etc/passwd
+#     that listed the INERT login shells to skip carried two of
+#     them as a regex alternative, and the whole parallel batch
+#     was cancelled. Fixed in the probe, where it belongs: match
+#     the shells that do log in (`$7 ~ /sh$/`) and no inert shell
+#     is named at all. The habit generalizes -- match what you
+#     want, do not list what you want to skip.
 #     segments() splits on quotes so that ssh host "shutdown -h
 #     now" is caught, and after that split an argument and an ssh
 #     payload have the same shape. Separating them needs a
