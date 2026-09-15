@@ -61,9 +61,37 @@ user frames as quick.
 ### SSH Options
 
 Always use these options on every SSH and
-SCP/rsync-over-SSH command:
+SCP/rsync-over-SSH command (for rsync inside
+`-e "ssh …"`):
 
-    ssh -o BatchMode=yes -o ConnectTimeout=5 …
+    ssh -o BatchMode=yes -o ConnectTimeout=5 \
+      -o ControlMaster=auto \
+      -o ControlPath=~/.cache/heinzel/ssh-%C \
+      -o ControlPersist=10m \
+      -o ServerAliveInterval=15 -o ServerAliveCountMax=3 …
+
+They share one connection per host and remote user
+across calls, independent of `~/.ssh/config`. Once
+per session, before the first remote call, create
+the socket directory locally:
+`mkdir -p -m 700 ~/.cache/heinzel`.
+
+**Fresh-login options** — for access tests and the
+single retry after a hanging call:
+
+    ssh -o BatchMode=yes -o ConnectTimeout=5 \
+      -o ControlMaster=no -o ControlPath=none …
+
+Use them **instead of** the standard options, never
+appended to them: for a repeated option, SSH keeps
+the first value it sees.
+
+### Few, Shared, Patient Connections
+
+Read `rules/ssh-connections.md`. Rate limits and IPS
+rules count connections, not commands: bundle calls,
+share connections, never retry SSH in a loop. When
+SSH stops answering, read `rules/ssh-unreachable.md`.
 
 ## Access Control (Blacklist & Read-Only)
 
