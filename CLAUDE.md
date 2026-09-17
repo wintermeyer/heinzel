@@ -155,8 +155,8 @@ remote connection before any other work.
   session.
   When *writing* a probe, remember the guard scans the
   whole command string and cannot tell a taboo word
-  used as data from an invocation. So match what you
-  want, never list what you want to skip, and keep a
+  used as data from an invocation. So write patterns
+  that never spell one from the start, and keep a
   probe that merely *mentions* a guarded path in its
   own call — two innocent commands can deny each other
   when batched into one.

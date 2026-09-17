@@ -4,7 +4,8 @@
 # changes:  sh .claude/hooks/guard-taboos-test.sh
 # Not invoked by Claude Code at runtime.
 
-HOOK="$(cd "$(dirname "$0")" && pwd)/guard-taboos.sh"
+CLAUDE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+HOOK="$CLAUDE_DIR/hooks/guard-taboos.sh"
 PASS=0
 FAIL=0
 
@@ -224,19 +225,65 @@ check pass 'dd if=/dev/sda of=/root/disk-backup.img'
 check pass 'uname -a'
 check pass 'echo see HEINZEL_GUARD_DISABLE in the docs'
 
-# --- the security skill's system-account probe -----------------
-# Listing the system accounts that own an interactive shell is
-# read-only, but the obvious spelling excludes the inert shells
-# BY NAME, and two of those names are power-off commands. The
-# guard denies that, correctly: it scans the command string and
-# cannot tell a regex alternative from an invocation. The fix
-# belongs in the probe, not in the guard -- match the shells
-# that DO log in, which names no inert shell at all. Keep both
-# lines: the deny pins why the old shape was retired, the pass
-# pins the shape heinzel-security actually ships.
+# --- every bash block the skills ship passes the guard ---------
+# A taboo word used as data in a documented probe is denied like
+# the command itself and cancels the whole parallel batch. The
+# security skill once skipped inert login shells by a regex of
+# their names; the deny pins why that shape was retired. rules/
+# is left out: os-replacement.md runs taboo commands by design.
 check deny "awk -F: '(\$7 ~ /(nologin|false|sync|shutdown|halt)\$/)' /etc/passwd"
-check pass "awk -F: '(\$3 < 1000) && (\$7 ~ /sh\$/) {print \$1 \":\" \$7}' /etc/passwd"
-check pass "awk -F: '(\$3 < 1000) {print \$1 \":\" \$7}' /etc/passwd"
+
+BLOCKS=$(mktemp -d)
+find "$CLAUDE_DIR/skills" -name '*.md' -exec awk -v dir="$BLOCKS" '
+  /^```bash$/ { f = FILENAME; gsub(/\//, "_", f); n++
+                out = dir "/" f "." n; next }
+  /^```$/     { if (out) close(out); out = ""; next }
+  out         { print > out }
+' {} +
+NBLOCKS=0
+for blk in "$BLOCKS"/*; do
+  [ -f "$blk" ] || continue
+  NBLOCKS=$((NBLOCKS + 1))
+  check pass "$(cat "$blk")"
+done
+rm -rf "$BLOCKS"
+if [ "$NBLOCKS" -eq 0 ]; then
+  FAIL=$((FAIL + 1))
+  echo "FAIL: no bash blocks found under $CLAUDE_DIR/skills"
+fi
+
+# --- the system-account probe fails closed ---------------------
+# Printing only shells that end in sh passes the guard and misses
+# every shell it does not know. The probe is read from the skill,
+# and stripping its path makes awk read the fixture from stdin; a
+# missing probe or one that stops ending in /etc/passwd fails.
+PROBE=$(awk '/^## System Accounts with Login Shells/ { s = 1 }
+  s && b && /^```$/ { exit }
+  b { print }
+  s && /^```bash$/ { b = 1 }' \
+  "$CLAUDE_DIR/skills/heinzel-security/references/user-accounts.md")
+WANT="bash empty ksh postgres py root "
+GOT=$(printf '%s\n' \
+  'root:x:0:0:root:/root:/bin/bash' \
+  'daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin' \
+  'sync:x:4:65534:sync:/bin:/bin/sync' \
+  'games:x:5:60:games:/usr/games:/bin/false' \
+  'shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown' \
+  'halt:x:7:0:halt:/sbin:/sbin/halt' \
+  'postgres:x:110:118::/var/lib/postgresql:/bin/bash' \
+  'bash:x:990:990::/tmp:/bin/bash' \
+  'ksh:x:991:991::/tmp:/bin/ksh93' \
+  'py:x:992:992::/tmp:/usr/bin/python3' \
+  'empty:x:993:993::/tmp:' \
+  'alice:x:1000:1000::/home/alice:/usr/bin/zsh' \
+  | sh -c "${PROBE%/etc/passwd}" | cut -d: -f1 | LC_ALL=C sort \
+  | tr '\n' ' ')
+if [ "$GOT" = "$WANT" ]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL: system-account probe reported [$GOT], want [$WANT]"
+fi
 
 # --- read-only forms of the newly covered tools (issue #5) -----
 check pass 'diskutil info disk0'
@@ -502,7 +549,7 @@ fi
 # relative path breaks after any `cd` and the guard fails
 # open (issue #2). Every hook command must resolve its
 # script via $CLAUDE_PROJECT_DIR.
-SETTINGS="$(cd "$(dirname "$0")/.." && pwd)/settings.json"
+SETTINGS="$CLAUDE_DIR/settings.json"
 if grep -o '"command": *"[^"]*\.sh' "$SETTINGS" \
   | grep -v 'CLAUDE_PROJECT_DIR' >/dev/null; then
   FAIL=$((FAIL + 1))

@@ -32,36 +32,30 @@ Check for system accounts (UID < 1000) that have interactive
 login shells.
 
 ```bash
-awk -F: '($3 < 1000) && ($7 ~ /sh$/) \
-  {print $1 ":" $7}' /etc/passwd
+awk -F: '$3 < 1000 {
+  s = $7; sub(/.*\//, "", s)
+  inert = (s == "nologin" || s == "false" || s == $1)
+  if (s ~ /sh$/ || inert == 0) print $1 ":" $7
+}' /etc/passwd
 ```
 
-Practically every interactive shell ends in `sh` — `bash`, `sh`,
-`dash`, `zsh`, `ksh`, `csh`, `tcsh`, `fish` — while every inert
-shell ends in something else (`nologin`, `false`, `sync`). So
-matching `sh$` selects the accounts that can log in without
-naming a single inert shell.
+Inert shells are `nologin`, `false`, and a binary named after
+its account (`sync`, on RHEL also `shutdown` and `halt`), which
+`s == $1` catches without spelling a name. A shell ending in
+`sh` is reported regardless, so an account named after its
+shell (`bash` with `/bin/bash`) cannot hide.
 
-When a shell does not follow that rule (`ksh93`, a wrapper
-script, a runtime as the shell), list every system account and
-judge the shells directly:
+**Three traps this shape avoids; do not "simplify" it back:**
 
-```bash
-awk -F: '($3 < 1000) {print $1 ":" $7}' /etc/passwd
-```
-
-**Two traps this command shape avoids — do not "simplify" it
-back:**
-
-- awk's `!~` (not-match) does not survive SSH + zsh quoting
-  layers: zsh reads `!` as history expansion and mangles it,
-  even inside quotes.
-- Excluding inert shells by name means writing their names, and
-  two of those names (`shutdown`, `halt`) are power-off commands.
-  heinzel's own `guard-taboos.sh` hook scans the whole command
-  string and cannot tell a regex alternative from an invocation,
-  so it denies the command — correctly, by its own design. The
-  positive `sh$` match names no inert shell at all and passes.
+- Printing only shells that end in `sh` fails open: `ksh93`,
+  `python3` and an empty field (which means `/bin/sh`) go
+  unreported. A security check reports what it does not
+  recognize.
+- A regex of inert shell names writes `shutdown` and `halt`
+  into the command, and `guard-taboos.sh` denies it (see
+  `CLAUDE.md`, Critical Safety Rules).
+- awk's `!~` (and any `!`) does not survive SSH + zsh quoting:
+  zsh reads `!` as history expansion, even inside quotes.
 
 No root needed.
 
