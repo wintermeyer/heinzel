@@ -528,7 +528,7 @@ writes_to() {
 # dd of= does. /dev/null, /dev/stderr and /dev/disk/by-id are
 # unaffected.
 if hit ">[[:space:]]*[\"']?$DEV" \
-  || { hit "$DEV" && writes_to "$DEV[[:alnum:]]*"; }
+  || { hit "$DEV" && writes_to "${DEV}[[:alnum:]]*"; }
 then
   deny "writing onto a raw disk device overwrites its content \
 and partition table"
@@ -585,7 +585,7 @@ replaces the keys there"
   # invocation: in ssh -i ~/.ssh/id_ed25519 host "sed -i ..." the
   # key belongs to ssh, and the edit runs elsewhere.
   if hit "(^|[^[:alnum:]_.-])sed[[:space:]]([^;&|]*[[:space:]])?(-[[:alpha:]]*i|--in-place)[^;&|]*$KEYPRIV" \
-    || hit "(^|[^[:alnum:]_-])$EDITOR[[:space:]][^;&|]*$KEYPRIV"
+    || hit "(^|[^[:alnum:]_-])${EDITOR}[[:space:]][^;&|]*$KEYPRIV"
   then
     deny "editing an SSH key file in place can delete keys from it"
   fi
