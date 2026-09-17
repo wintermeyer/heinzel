@@ -75,13 +75,30 @@ This produces `deploy_ed25519` (private) and
 
 ### Install the public key on the server
 
+The taboo guard denies heinzel any write to
+`authorized_keys` and any `chmod` or `chown` on
+`.ssh`, appends included. Hand this block to the
+user with the real key path; without a root login,
+it takes `sudo sh -c` and passwordless sudo:
+
+```bash operator
+ssh root@hostname 'sh -c "
+  mkdir -p /home/deploy/.ssh
+  cat >> /home/deploy/.ssh/authorized_keys
+  chmod 700 /home/deploy/.ssh
+  chmod 600 /home/deploy/.ssh/authorized_keys
+  chown -R deploy:deploy /home/deploy/.ssh
+"' < /path/to/deploy_ed25519.pub
+```
+
+Then verify: both paths belong to `deploy`, with
+modes `drwx------` and `-rw-------`, and the last
+line matches the public key.
+
 ```bash
-mkdir -p /home/deploy/.ssh
-chmod 700 /home/deploy/.ssh
-cat deploy_ed25519.pub \
-  >> /home/deploy/.ssh/authorized_keys
-chmod 600 /home/deploy/.ssh/authorized_keys
-chown -R deploy:deploy /home/deploy/.ssh
+ls -ld /home/deploy/.ssh \
+  /home/deploy/.ssh/authorized_keys
+tail -n 1 /home/deploy/.ssh/authorized_keys
 ```
 
 ### Store the private key as a CI secret
@@ -94,7 +111,8 @@ private key to a repository.**
 ### Restrict the authorized key (optional)
 
 For maximum lockdown, prepend restrictions to the
-key in `authorized_keys`:
+key line in `deploy_ed25519.pub` before the
+handoff above:
 
 ```
 no-port-forwarding,no-X11-forwarding,no-agent-forwarding ssh-ed25519 AAAA...
@@ -174,7 +192,7 @@ command plus restrictive key options:
 usermod -s /bin/sh deploy
 ```
 
-In `authorized_keys`:
+As the key line:
 
 ```
 command="/home/deploy/deploy.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA...
