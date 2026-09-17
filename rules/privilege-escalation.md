@@ -34,10 +34,14 @@ the sudo flag.
 ## Root SSH Fallback
 
 When sudo is unusable and a privileged action is
-needed, probe root SSH access once:
+needed, probe root SSH access once, with the
+fresh-login options (`CLAUDE.md` → SSH Options) — a
+shared root connection opened earlier would answer
+even if root login has been disabled since:
 
 ```
 ssh -o BatchMode=yes -o ConnectTimeout=5 \
+  -o ControlMaster=no -o ControlPath=none \
   root@hostname "id" 2>&1
 ```
 
@@ -50,7 +54,10 @@ ssh -o BatchMode=yes -o ConnectTimeout=5 \
   ```
 
 Only probe when a privileged action is actually
-needed.
+needed. On later connections, read `Root SSH:` from
+server memory instead of probing again: a refused
+root login can count toward a fail2ban ban
+(`rules/ssh-connections.md` → 3).
 
 ## Unprivileged Mode
 

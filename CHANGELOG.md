@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.20.0 — 2026-09-17
+
+- **One SSH connection per host.** The standard SSH
+  options in `CLAUDE.md` now turn on OpenSSH
+  connection sharing. Firewall rate limits and
+  network IPS count connections, not commands, so a
+  busy session could lock itself out. The sockets
+  live in `~/.cache/heinzel`, which a SessionStart
+  hook and `bin/heinzel-migrate` create. Access
+  tests, the root SSH probe included, log in fresh,
+  since a shared connection keeps answering after
+  the login broke. New `rules/ssh-connections.md`.
+  Contributed by Julian Pawlowski (#9).
+- **No retry loops when SSH stops answering.** New
+  `rules/ssh-unreachable.md`: one retry with a fresh
+  login and `-v`, then stop and wait, plus how to
+  tell a filter on the way from a broken host. Port
+  probes with `nc -z` are gone, since fail2ban's
+  stricter modes and sshd's `PerSourcePenalties`
+  count them (#9).
+- **heinzel stays out of fail2ban's count.**
+  fail2ban counts failed logins per address, the
+  user's own included. The rules now avoid what it
+  counts (section 3 of `rules/ssh-connections.md`):
+  no guessed user names, `Root SSH:` read from server
+  memory instead of probed again, and no retry after
+  `Permission denied` or `Too many authentication
+  failures`.
+- **`brew upgrade` leaves the old service running.**
+  Homebrew replaces the files but not the launchd
+  process. `rules/macos.md` now says to check the
+  version the service reports, not the binary on
+  `PATH`, and to restart the service.
+
 ## 2.19.0 — 2026-08-18
 
 - **A ceiling on what heinzel says.** New "Talking to

@@ -91,6 +91,11 @@ per-server override in `memory/user.md`.
 **On subsequent connections:** look up the server in
 `memory/user.md`. Do not ask again.
 
+**After a rejected login**, never try another user
+name or root on your own; ask. A wrong name is an
+`Invalid user`, which fail2ban counts
+(`rules/ssh-connections.md` → 3).
+
 When the user explicitly specifies a username on the
 command line, skip the interview, use that name, and
 update `memory/user.md`.

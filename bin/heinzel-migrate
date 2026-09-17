@@ -1,7 +1,9 @@
 #!/bin/sh
-# heinzel-migrate — migrate user state from the 1.x
+# heinzel-migrate — bring local state up to date
+# after a pull: migrate user state from the 1.x
 # layout (rules/custom/ + repo-root opencode.json)
-# to the 2.0 layout (everything under memory/).
+# to the 2.0 layout (everything under memory/), and
+# create the SSH socket directory (2.20.0).
 # Idempotent: re-running on an already-migrated
 # tree is a silent no-op.
 #
@@ -48,3 +50,12 @@ if [ -n "$MOVED" ]; then
   echo "Review any personal scripts or cron jobs that"
   echo "reference the old paths. See CHANGELOG.md 2.0.0."
 fi
+
+# SSH connection sharing needs its socket directory
+# before the first remote call
+# (rules/ssh-connections.md). A SessionStart hook
+# creates it as well, but the session that pulls an
+# update started with the old settings, and this
+# script runs from the new tree. Last, so a failure
+# here cannot stop the moves above.
+mkdir -p -m 700 "$HOME/.cache/heinzel" || true

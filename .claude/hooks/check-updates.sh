@@ -1,8 +1,9 @@
 #!/bin/sh
 # SessionStart hook: auto-pull latest heinzel changes
 # with version awareness and pinning support. Also
-# migrates user state from the 1.x layout to the
-# 2.0 layout when needed.
+# runs bin/heinzel-migrate after every pull, which
+# migrates old user state and creates local
+# directories new versions need.
 
 if [ -n "$CLAUDE_PROJECT_DIR" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
   cd "$CLAUDE_PROJECT_DIR" || exit 0
