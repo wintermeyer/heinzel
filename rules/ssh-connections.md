@@ -1,14 +1,18 @@
 # SSH Connections: Few and Shared
 
-sshd `MaxStartups` and `PerSourcePenalties` (OpenSSH
-9.8+), fail2ban and sshguard, firewall rules that
-rate-limit new connections to port 22, and network
-IPS signatures for SSH scans ("N connections in M
-seconds") all count **TCP connections, not
-commands**. A busy heinzel session can trip them and
-lock itself out — and the block looks like a broken
-host. If that has already happened, see
-`rules/ssh-unreachable.md`.
+Firewall rules that rate-limit new connections to
+port 22 (`ufw limit`: 6 in 30 seconds; iptables
+`recent` or `hashlimit`) and network IPS signatures
+for SSH scans count **TCP connections, not
+commands**, successful logins included. A busy
+heinzel session can trip them and lock itself out,
+and the block looks like a broken host. If that has
+already happened, see `rules/ssh-unreachable.md`.
+
+fail2ban, sshguard and sshd's own
+`PerSourcePenalties` (OpenSSH 9.8+) count failed and
+aborted logins, not successful ones. Sharing changes
+nothing for them; only avoiding failed logins does.
 
 ## 1. Bundle commands
 
@@ -38,39 +42,33 @@ key agents that confirm each use ask only once.
 It does not help with the first connection per host
 and remote user, with the first one after
 `ControlPersist` expires, or with **failed logins**,
-which are never shared and still earn
-`PerSourcePenalties`.
+which are never shared.
 
 ### Why these values
 
-- **On the command line, not in `~/.ssh/config`.**
-  Sharing works on every machine heinzel runs from
-  without setup. Command-line options take precedence
-  over the config file, so a `ControlMaster` block the
-  user keeps for their own sessions neither helps nor
-  interferes.
-- **Under `~/.cache/heinzel/`, not `~/.ssh/`.** The
-  taboo guard (`.claude/hooks/guard-taboos.sh`) treats
-  paths under `.ssh/` as SSH key material. A socket
-  path there makes every remote command that runs
-  `rm`, `mv` or `chmod` look like a key operation, and
-  it is blocked. Not `/tmp` either: keep the socket in
-  a directory only the local user can write to.
-- **`%C`** is a fixed-length hash of local host,
-  remote host, port, user and jump host. Readable
-  names (`%r@%h:%p`) can exceed the Unix socket path
-  limit (104 bytes on macOS); SSH then fails the call
-  with `ControlPath too long` instead of falling back
-  to a normal connection.
-- **`ServerAliveInterval`** retires a master whose
-  network path died (VPN switch, sleep). Without it,
-  later calls can hang, and `ConnectTimeout` does not
-  apply to a reused connection.
+Keep them as they are:
+
+- **Command line, not `~/.ssh/config`:** works on
+  every machine without setup and overrides a
+  `ControlMaster` block the user keeps for
+  themselves.
+- **`~/.cache/heinzel/`, not `~/.ssh/` or `/tmp`:**
+  the taboo guard reads any path under `.ssh/` as key
+  material and would block every remote `rm`, `mv` or
+  `chmod`; `/tmp` is writable by other users.
+- **`%C`:** a fixed-length hash. Readable names can
+  pass the 104-byte socket path limit on macOS, and
+  SSH then fails the call (`ControlPath too long`).
+- **`ServerAliveInterval=15`,
+  `ServerAliveCountMax=3`:** retire a master with a
+  dead network path after 45 seconds, whatever
+  `~/.ssh/config` says. `ConnectTimeout` does not
+  cover a call over an existing connection.
 
 ### Fresh-login options
 
-The second option set in `CLAUDE.md` → SSH Options
-(`ControlMaster=no`, `ControlPath=none`). Use it for:
+The second option set in `CLAUDE.md` → SSH Options.
+Use it for:
 
 - **Access tests.** Anything that answers "can this
   login still succeed?" — after changing
@@ -82,19 +80,27 @@ The second option set in `CLAUDE.md` → SSH Options
   broken login reads as working. Make all related
   changes first, then run one fresh-login call that
   also prints what you need (`id; groups`).
-- **A call that hangs or fails while sharing** — a
-  stale master, or `Session open refused by peer`
-  (sshd `MaxSessions`, default 10 per connection).
-  Retry **once** this way. If that fails too, follow
-  `rules/ssh-unreachable.md`.
+- **A call that hangs or fails while sharing:** a
+  stale master. Follow `rules/ssh-unreachable.md`.
 
-Always write the fresh-login set out in full. Placed
-after the standard options, `ControlPath=none` is
-ignored — SSH keeps the first value of a repeated
-option.
+`Session open refused by peer` is different: the
+master is fine but full (sshd `MaxSessions`, default
+10 per connection). Let your own parallel calls to
+that host finish, then repeat the call as usual.
 
 ### Caveats
 
+- **The socket directory must exist.** If it is
+  missing, every call fails *after* the login with
+  `unix_listener: cannot bind to path … No such file
+  or directory` and exit 255. The host is fine:
+  create the directory
+  (`mkdir -p -m 700 ~/.cache/heinzel`) and repeat
+  the call.
+- **`scp` never starts a master.** It passes
+  `-oControlMaster=no` ahead of your options, so it
+  only reuses one. Open it with an `ssh` call first;
+  the onboarding already does.
 - **Never close a master you did not start.** Other
   heinzel sessions and scripts on the same local
   account use the same socket path, and

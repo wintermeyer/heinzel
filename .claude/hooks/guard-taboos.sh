@@ -77,6 +77,10 @@
 #   - `cp /etc/ssh/sshd_config /tmp/` is blocked although it only
 #     reads the file — copy out via `cat /etc/ssh/sshd_config >
 #     /tmp/copy` instead.
+#   - An ssh ControlPath under .ssh/ makes any rm, mv or chmod in
+#     the same command look like a key operation. heinzel keeps
+#     its sockets in ~/.cache/heinzel for that reason
+#     (rules/ssh-connections.md).
 #
 # Being blocked is EXPECTED behavior. Explain it to the user.
 # Never rephrase, re-quote, or otherwise obfuscate a command to

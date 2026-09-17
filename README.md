@@ -57,6 +57,12 @@ changes — no changes until you say go.
   This is not needed for local administration
   (localhost / your own machine).
 
+  Heinzel shares one SSH connection per host and
+  keeps it open for 10 minutes after the last call.
+  The sockets live in `~/.cache/heinzel` (mode 0700),
+  so any process of your local user can use an open
+  connection without asking for the key again.
+
   Quick setup: generate a key with `ssh-keygen`,
   copy it to the server with `ssh-copy-id user@host`,
   and test with `ssh user@host`. See the
@@ -959,6 +965,10 @@ rules/                 — Upstream rule files (git-tracked)
   privilege-escalation.md — Sudo, root SSH, unprivileged mode
   os-detection.md      — OS detection procedure
   ssh-user.md          — SSH username & language management
+  ssh-connections.md   — Bundled, shared SSH connections
+                         (rate limits count connections)
+  ssh-unreachable.md   — No retry loops; blocked path vs
+                         broken host
   server-memory.md     — Server memory file format
   changelog.md         — Session logging procedure
   activity-check.md    — Recent-activity summary on connect

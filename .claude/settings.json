@@ -19,6 +19,15 @@
             "timeout": 15
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p -m 700 \"$HOME/.cache/heinzel\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PreToolUse": [

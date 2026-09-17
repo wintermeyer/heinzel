@@ -71,10 +71,9 @@ SCP/rsync-over-SSH command (for rsync inside
       -o ServerAliveInterval=15 -o ServerAliveCountMax=3 …
 
 They share one connection per host and remote user
-across calls, independent of `~/.ssh/config`. Once
-per session, before the first remote call, create
-the socket directory locally:
-`mkdir -p -m 700 ~/.cache/heinzel`.
+across calls. A SessionStart hook creates the socket
+directory; where hooks do not run (OpenCode), run
+`mkdir -p -m 700 ~/.cache/heinzel` first.
 
 **Fresh-login options** — for access tests and the
 single retry after a hanging call:
@@ -86,12 +85,9 @@ Use them **instead of** the standard options, never
 appended to them: for a repeated option, SSH keeps
 the first value it sees.
 
-### Few, Shared, Patient Connections
-
-Read `rules/ssh-connections.md`. Rate limits and IPS
-rules count connections, not commands: bundle calls,
-share connections, never retry SSH in a loop. When
-SSH stops answering, read `rules/ssh-unreachable.md`.
+Rate limits count connections, not commands: read
+`rules/ssh-connections.md`. When SSH stops
+answering, read `rules/ssh-unreachable.md`.
 
 ## Access Control (Blacklist & Read-Only)
 

@@ -192,6 +192,12 @@ check deny "python3 -c \"open('/dev/sda','wb').write(b'0'*4096)\""
 check deny "perl -e 'open(D,\">\",\"/dev/nvme0n1\"); print D chr(0)'"
 check deny "node -e \"require('fs').writeFileSync('/dev/vda','')\""
 
+# --- SSH connection sharing (rules/ssh-connections.md) ---------
+# heinzel's control socket must not read as key material, or
+# every remote rm/mv/chmod sent with the standard options is
+# denied (see the accepted false positives in the guard).
+check pass 'ssh -o ControlMaster=auto -o ControlPath=~/.cache/heinzel/ssh-%C root@h "rm -f /var/tmp/old.log; chmod 644 /etc/motd"'
+
 # --- must pass -------------------------------------------------
 check pass 'fdisk -l'
 check pass 'sfdisk -l /dev/sda'
