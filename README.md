@@ -706,7 +706,8 @@ under pressure.
   PreToolUse hook (`.claude/hooks/guard-taboos.sh`)
   mechanically blocks the absolute taboos — halt/
   poweroff, `mkfs`, partition-table writers, deleting
-  SSH keys, writes to `sshd_config` — in **every**
+  or overwriting SSH keys, writes to `sshd_config` —
+  in **every**
   permission mode, even
   `--dangerously-skip-permissions`, and even when the
   command hides inside an `ssh host "…"` wrapper or

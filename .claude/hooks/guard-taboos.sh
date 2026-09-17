@@ -11,12 +11,14 @@
 #     sgdisk/parted/gpart/gpt/diskutil write forms)
 #   - raw-device wipers that leave the partition table
 #     alone (blkdiscard, nvme format/sanitize, hdparm
-#     secure-erase, badblocks -w, shred, dd/redirect/tee
-#     onto a disk device)
+#     secure-erase, badblocks -w, shred, dd, a redirect,
+#     tee, cp or a download onto a disk device)
 #   - destroying SSH keys (host keys, authorized_keys,
 #     id_*, or the ~/.ssh directory holding them) by any
-#     means: rm/shred/truncate/mv/chmod/chown/install/ln,
-#     a truncating redirect, or ssh-keygen -f
+#     means: rm/shred/truncate/mv/chmod/chown/install/ln/
+#     setfacl, find -delete, a redirect, ssh-keygen -f, or
+#     a write into one (tee, cp/rsync/scp, dd, sed -i, an
+#     editor, curl -o and other output flags)
 #   - writes to /etc/ssh/sshd_config(.d/)
 #   - any of the last three reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
@@ -81,6 +83,9 @@
 #     the same command look like a key operation. heinzel keeps
 #     its sockets in ~/.cache/heinzel for that reason
 #     (rules/ssh-connections.md).
+#   - rsync with -e "ssh -i ~/.ssh/id_..." AFTER its operands
+#     reads as a copy onto that key, because writes_to takes the
+#     last word as the destination. Put -e before the operands.
 #
 # Being blocked is EXPECTED behavior. Explain it to the user.
 # Never rephrase, re-quote, or otherwise obfuscate a command to
@@ -280,9 +285,16 @@ DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 # copying a public key stays allowed while the private half does
 # not. It stays filename-only on purpose: it guards a truncating
 # redirect and ssh-keygen -f, neither of which is meaningful
-# against a directory.
+# against a directory. KEYFILE is the same set without the
+# trailing boundary, for writes_to below.
 KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh(/|[^[:alnum:]_.-]|$))'
-KEYPRIV='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)([^.[:alnum:]]|$)'
+KEYFILE='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
+KEYPRIV="$KEYFILE"'([^.[:alnum:]]|$)'
+
+# sshd's config file or its drop-in directory, and the editors
+# that rewrite a file in place.
+SSHD='/etc/ssh/sshd_config(\.d(/[[:alnum:]_.-]*)?)?'
+EDITOR='(vi|vim|nvim|nano|emacs|ed)'
 
 # A general-purpose language runtime. See the interpreter section
 # at the bottom for why this list, and not a list of the ways
@@ -483,13 +495,43 @@ if hit '(^|[^[:alnum:]_.-])shred([^[:alnum:]_.-]|$)' \
   && hit "$DEV"; then
   deny "shred on a disk device overwrites the whole device"
 fi
-# A redirect or tee onto a disk device does what dd of= does.
-# /dev/null, /dev/stderr and /dev/disk/by-id are unaffected.
+
+# True when the command writes INTO a path matching $1 (a regex
+# without a trailing boundary) through a tool that names its
+# target: tee or sponge, dd of=, an output flag (curl -o, wget -O,
+# sort -o, openssl -out), or the destination of cp, rsync or scp.
+# The same shapes reach a disk device, sshd_config and a key.
+#
+# A copy is judged by its DESTINATION, the last operand of its
+# invocation, because the common legitimate forms name the
+# protected path as the source: scp -i ~/.ssh/id_ed25519, a backup
+# of authorized_keys, cp /dev/sda disk.img. Trailing options,
+# redirects, a closing parenthesis or backtick and a comment are
+# skipped while looking for that operand; cp -t names it up front.
+# An = right before an output path is excluded on purpose:
+# ssh -o IdentityFile=~/.ssh/id_ed25519 only reads the key.
+#
+# The set of writers cannot be closed (an archive unpacked into
+# place, a git checkout, any tool with an output flag of its own),
+# so this stays a backstop, not a sandbox.
+END="([\"'[:space:];|&)\`]|\$)"
+ENDARG="[\"']?([[:space:]]+(-[^[:space:]]*|[0-9]*[<>]+&?([[:space:]]*[^[:space:]]+)?))*[[:space:])\`]*(#.*)?\$"
+writes_to() {
+  hit "(^|[^[:alnum:]_.-])(tee|sponge)[[:space:]]([^;|&<>]*[[:space:]])?[^[:space:];|&]*$1$END" \
+    || hit "(^|[[:space:]])of=[^[:space:]]*$1$END" \
+    || hit "(^|[[:space:]])(-[oO]|-out|--output(-document)?)([[:space:]]+|=)?[^[:space:]=]*$1$END" \
+    || hit "(^|[^[:alnum:]_.-])(cp|rsync|scp)[[:space:]]([^;&|]*[[:space:]])?[^[:space:]]*$1$ENDARG" \
+    || hit "(^|[^[:alnum:]_.-])cp[[:space:]]([^;&|]*[[:space:]])?(-[[:alpha:]]*t[[:space:]]*|--target-directory[=[:space:]])[^[:space:]]*$1$END"
+}
+
+# A redirect, tee, cp or download onto a disk device does what
+# dd of= does. /dev/null, /dev/stderr and /dev/disk/by-id are
+# unaffected.
 if hit ">[[:space:]]*[\"']?$DEV" \
-  || hit "(^|[^[:alnum:]_.-])tee([[:space:]]+-a)?[[:space:]]+[\"']?$DEV"
+  || { hit "$DEV" && writes_to "$DEV[[:alnum:]]*"; }
 then
-  deny "redirecting onto a raw disk device overwrites its \
-content and partition table"
+  deny "writing onto a raw disk device overwrites its content \
+and partition table"
 fi
 
 # --- SSH keys and sshd_config ---------------------------------
@@ -497,8 +539,14 @@ fi
 # truncating it to zero, or making it unreadable to sshd have
 # the same effect, and the sshd_config rule below already
 # reflected that while this one did not.
-if hit '(^|[^[:alnum:]_-])(rm|shred|unlink|truncate|mv|chmod|chown|install|ln)([^[:alnum:]_-]|$)' \
-  && hit "$KEY"; then
+# KEY is checked once and first: most commands name no key, and
+# every key rule below needs one.
+HAS_KEY=0
+hit "$KEY" && HAS_KEY=1
+if [ "$HAS_KEY" -eq 1 ] \
+  && { hit '(^|[^[:alnum:]_-])(rm|shred|unlink|truncate|mv|chmod|chown|install|ln|setfacl)([^[:alnum:]_-]|$)' \
+       || hit '(^|[[:space:]])(-delete|--remove-s(ource|ent)-files)([[:space:]]|$)'; }
+then
   deny "deleting, moving or re-permissioning SSH keys is never \
 allowed"
 fi
@@ -517,11 +565,29 @@ if hit '/etc/ssh/sshd_config'; then
     || hit 'tee[[:space:]]+(-a[[:space:]]+)?["'\'']?/etc/ssh/sshd_config' \
     || { hit '(^|[^[:alnum:]_-])(sed|perl)([^[:alnum:]_-]|$)' \
          && hit '(^|[[:space:]])-i'; } \
-    || hit '(^|[^[:alnum:]_-])(vi|vim|nvim|nano|emacs|ed)([^[:alnum:]_-]|$)' \
-    || hit '(^|[^[:alnum:]_-])(rm|truncate|chmod|chown|mv|cp)([^[:alnum:]_-]|$)'
+    || hit "(^|[^[:alnum:]_-])$EDITOR([^[:alnum:]_-]|\$)" \
+    || hit '(^|[^[:alnum:]_-])(rm|truncate|chmod|chown|mv|cp)([^[:alnum:]_-]|$)' \
+    || writes_to "$SSHD"
   then
     deny "modifying /etc/ssh/sshd_config is never allowed \
 (reading it is fine: cat, grep, sshd -T)"
+  fi
+fi
+
+# --- Writes INTO an SSH key -----------------------------------
+# Writing into a key file replaces it as surely as deleting it.
+if [ "$HAS_KEY" -eq 1 ]; then
+  if writes_to "($KEYFILE|\\.ssh/?)"; then
+    deny "writing into an SSH key file or a .ssh directory \
+replaces the keys there"
+  fi
+  # An in-place edit needs the key AFTER the tool in the same
+  # invocation: in ssh -i ~/.ssh/id_ed25519 host "sed -i ..." the
+  # key belongs to ssh, and the edit runs elsewhere.
+  if hit "(^|[^[:alnum:]_.-])sed[[:space:]]([^;&|]*[[:space:]])?(-[[:alpha:]]*i|--in-place)[^;&|]*$KEYPRIV" \
+    || hit "(^|[^[:alnum:]_-])$EDITOR[[:space:]][^;&|]*$KEYPRIV"
+  then
+    deny "editing an SSH key file in place can delete keys from it"
   fi
 fi
 
