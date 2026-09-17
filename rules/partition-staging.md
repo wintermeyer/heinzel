@@ -61,6 +61,12 @@ table:
    request. Ask before EVERY `gpart delete`,
    `gpart add`, `sgdisk`, `fdisk`, or equivalent
    write command — not once per session.
+4. **Guard override.** Steps 2 and 3 run `mkfs`,
+   `newfs` and `gpart` writes, which the taboo
+   guard blocks. The user relaunches with
+   `HEINZEL_GUARD_DISABLE=1` first, as
+   `rules/os-replacement.md` (Prerequisites, step
+   4) describes.
 
 ### RAM Check
 
@@ -113,7 +119,7 @@ For basic tasks (storing an image, backup
 archive, debootstrap target), format and mount
 the former swap partition:
 
-```
+```sh guard-off
 # Linux
 mkfs.ext2 /dev/sdXn
 mount /dev/sdXn /mnt/staging
@@ -229,7 +235,7 @@ Before running it:
 
 For example on FreeBSD with GPT:
 
-```
+```sh guard-off
 gpart delete -i 3 vtbd0       # remove old root
 gpart add -t freebsd-swap -s 2G vtbd0  # new swap
 gpart add -t linux-data vtbd0  # new root (rest)

@@ -50,6 +50,12 @@ openssl x509 -noout -subject -enddate \
   -fingerprint -in /etc/ssl/certs/example.crt
 ```
 
+Run `ssh-keygen` in a call of its own, even over
+`ssh`: the taboo guard denies it whenever a private
+key path, such as the `file` probe above, appears
+in the same command (`CLAUDE.md`, Critical Safety
+Rules).
+
 Check whether a key matches a certificate by
 comparing hashes of the public parts — never by
 printing either file:

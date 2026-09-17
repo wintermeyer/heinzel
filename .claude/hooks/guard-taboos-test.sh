@@ -284,20 +284,27 @@ check pass 'dd if=/dev/sda of=/root/disk-backup.img'
 check pass 'uname -a'
 check pass 'echo see HEINZEL_GUARD_DISABLE in the docs'
 
-# --- every bash block the skills ship passes the guard ---------
+# --- every code block the skills and rules ship passes ---------
 # A taboo word used as data in a documented probe is denied like
 # the command itself and cancels the whole parallel batch. The
 # security skill once skipped inert login shells by a regex of
-# their names; the deny pins why that shape was retired. rules/
-# is left out: os-replacement.md runs taboo commands by design.
+# their names; the deny pins why that shape was retired. A block
+# meant to be denied says so after the language on its fence:
+# `operator` (the user runs it, heinzel never does) or `guard-off`
+# (heinzel runs it only after the user relaunched with the
+# override, so its file must say how). The file name in each
+# block path keeps names unique when find starts awk twice.
 check deny "awk -F: '(\$7 ~ /(nologin|false|sync|shutdown|halt)\$/)' /etc/passwd"
 
 BLOCKS=$(mktemp -d)
-find "$CLAUDE_DIR/skills" -name '*.md' -exec awk -v dir="$BLOCKS" '
-  /^```bash$/ { f = FILENAME; gsub(/\//, "_", f); n++
-                out = dir "/" f "." n; next }
-  /^```$/     { if (out) close(out); out = ""; next }
-  out         { print > out }
+find "$CLAUDE_DIR/skills" "$CLAUDE_DIR/../rules" -name '*.md' \
+  -exec awk -v dir="$BLOCKS" '
+  /^[ \t]*```/ && !inb { inb = 1
+                         if (/[ \t](operator|guard-off)[ \t]*$/) next
+                         f = FILENAME; gsub(/\//, "_", f); n++
+                         out = dir "/" f "." n; next }
+  /^[ \t]*```[ \t]*$/  { if (out) close(out); out = ""; inb = 0; next }
+  out                  { print > out }
 ' {} +
 NBLOCKS=0
 for blk in "$BLOCKS"/*; do
@@ -308,7 +315,30 @@ done
 rm -rf "$BLOCKS"
 if [ "$NBLOCKS" -eq 0 ]; then
   FAIL=$((FAIL + 1))
-  echo "FAIL: no bash blocks found under $CLAUDE_DIR/skills"
+  echo "FAIL: no code blocks found under skills/ or rules/"
+fi
+
+# os-replacement.md has guard-off blocks by design, so finding
+# none means the search broke, not that all is well.
+NGUARDOFF=0
+while read -r md; do
+  [ -n "$md" ] || continue
+  NGUARDOFF=$((NGUARDOFF + 1))
+  if grep -q 'HEINZEL_GUARD_DISABLE' "$md"; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    echo "FAIL: $md has guard-off blocks but never names" \
+      "HEINZEL_GUARD_DISABLE"
+  fi
+done <<EOF
+$(grep -rlE --include='*.md' \
+  '^[[:space:]]*```.*[[:space:]]guard-off[[:space:]]*$' \
+  "$CLAUDE_DIR/skills" "$CLAUDE_DIR/../rules")
+EOF
+if [ "$NGUARDOFF" -eq 0 ]; then
+  FAIL=$((FAIL + 1))
+  echo "FAIL: no guard-off blocks found under rules/"
 fi
 
 # --- the system-account probe fails closed ---------------------
@@ -366,6 +396,11 @@ check pass 'cp /etc/ssh/ssh_host_rsa_key.pub /tmp/'
 check pass 'echo done > /dev/null'
 check pass 'ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub'
 check pass 'growpart --dry-run /dev/sda 1'
+
+# --- key probes deny each other when chained (rules/secrets.md) -
+# Accepted false positive; see the list in the guard header.
+check pass 'file /etc/ssh/ssh_host_ed25519_key'
+check deny 'file /etc/ssh/ssh_host_ed25519_key; ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub'
 
 # --- interpreters away from a protected target (issue #6) ------
 # Only the combination is a taboo. An interpreter on its own,

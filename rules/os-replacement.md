@@ -391,7 +391,7 @@ image.
 
 ### Building the Tmpfs Rescue Root
 
-```
+```sh guard-off
 T=/mnt/tmpfs_rescue
 mkdir -p $T
 mount -t tmpfs -o size=200m tmpfs $T
@@ -568,7 +568,7 @@ will fail with missing library errors. Alternatives:
 
 1. **SysRq (preferred):** mount `/proc` in the
    chroot, then:
-   ```
+   ```sh guard-off
    echo 1 > /proc/sys/kernel/sysrq
    echo s > /proc/sysrq-trigger   # sync
    sleep 1
@@ -652,7 +652,7 @@ immediately before running it.
 After rescue sshd is verified, connect via the
 rescue port and stream the image to disk:
 
-```
+```sh guard-off
 sysctl kern.geom.debugflags=0x10   # FreeBSD only
 fetch -o - "https://url/to/image.raw" | \
   dd of=/dev/vtbd0 bs=1M
@@ -667,7 +667,7 @@ After the dd, the disk has the new OS layout but
 GEOM still caches the old partition table. To
 modify the new EFI partition from tmpfs:
 
-```
+```sh guard-off
 # Copy EFI partition to a memory-backed device
 mdconfig -a -t swap -s 130m -u 1
 dd if=/dev/vtbd0 bs=512 skip=EFI_START \
@@ -1070,7 +1070,7 @@ files from templates or run `ucf` to manage them.
 Copy the default config from the package's
 `/usr/share/` directory:
 
-```
+```sh guard-off
 # Example: openssh-server
 cp <rootfs>/usr/share/openssh/sshd_config \
    <rootfs>/etc/ssh/sshd_config
@@ -1142,7 +1142,7 @@ partition contents.
 
 **From Linux** (after replacement):
 
-```
+```sh guard-off
 # sgdisk: -t PARTNUM:TYPECODE
 sgdisk -t 2:8200 -t 3:8300 /dev/vda
 partprobe /dev/vda
@@ -1150,7 +1150,7 @@ partprobe /dev/vda
 
 **From FreeBSD** (after replacement):
 
-```
+```sh guard-off
 # gpart modify: -t TYPE -i PARTNUM DEVICE
 gpart modify -t freebsd-swap -i 2 vtbd0
 gpart modify -t freebsd-zfs -i 3 vtbd0

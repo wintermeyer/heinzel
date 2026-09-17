@@ -12,6 +12,16 @@ Read this file when:
 - Troubleshooting a freshly deployed VM that won't
   boot or accept SSH
 
+## Taboo Guard
+
+The taboo guard blocks the `dd` below and any edit
+of `sshd_config`, host keys or `authorized_keys`
+inside an offline image. Before the first of them,
+the user relaunches with `HEINZEL_GUARD_DISABLE=1`,
+as `rules/os-replacement.md` (Prerequisites, step
+4) describes. The console fix in §5 is for the
+user to type.
+
 ## Common Issues
 
 Cloud images are built for cloud environments
@@ -93,7 +103,7 @@ Cloud images typically have no root password set
 and expect SSH key injection via cloud-init.
 
 **Fix (from console or rescue):**
-```
+```sh operator
 passwd root
 # or
 mkdir -p /root/.ssh
@@ -144,7 +154,8 @@ steps like creating the `sshd` system user.
 Note: CLAUDE.md's "never modify
 `/etc/ssh/sshd_config`" taboo protects live
 servers. Editing the config inside an offline
-image build is the legitimate exception.
+image build is the legitimate exception, and it
+needs the guard override (see Taboo Guard above).
 
 ## Post-Deployment Checklist
 
@@ -169,7 +180,7 @@ After deploying a cloud image, verify:
 
 Convert between image formats:
 
-```
+```sh guard-off
 # qcow2 to raw
 qemu-img convert -f qcow2 -O raw image.qcow2 \
   image.raw
