@@ -308,6 +308,11 @@ check pass 'echo done > /dev/null'
 check pass 'ssh-keygen -lf /etc/ssh/ssh_host_rsa_key.pub'
 check pass 'growpart --dry-run /dev/sda 1'
 
+# --- key probes deny each other when chained (rules/secrets.md) -
+# Accepted false positive; see the list in the guard header.
+check pass 'file /etc/ssh/ssh_host_ed25519_key'
+check deny 'file /etc/ssh/ssh_host_ed25519_key; ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub'
+
 # --- interpreters away from a protected target (issue #6) ------
 # Only the combination is a taboo. An interpreter on its own,
 # even writing files, is ordinary work and must stay usable.

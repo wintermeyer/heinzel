@@ -77,6 +77,13 @@
 #   - `cp /etc/ssh/sshd_config /tmp/` is blocked although it only
 #     reads the file — copy out via `cat /etc/ssh/sshd_config >
 #     /tmp/copy` instead.
+#   - ssh-keygen with a private key path ANYWHERE in the command:
+#     `file /etc/ssh/ssh_host_ed25519_key; ssh-keygen -lf
+#     ...key.pub` is denied although each part passes alone.
+#     Matching per invocation would miss K=<key>; ssh-keygen -f
+#     $K, and what -l does next to ssh-keygen's write modes is
+#     unverified, so there is no -l exemption either. Run the
+#     fingerprint in a call of its own (rules/secrets.md).
 #   - An ssh ControlPath under .ssh/ makes any rm, mv or chmod in
 #     the same command look like a key operation. heinzel keeps
 #     its sockets in ~/.cache/heinzel for that reason
@@ -510,7 +517,9 @@ fi
 # Reading a .pub (for a fingerprint) stays allowed.
 if hit '(^|[^[:alnum:]_-])ssh-keygen([^[:alnum:]_-]|$)' \
   && hit "$KEYPRIV"; then
-  deny "ssh-keygen pointed at an existing key overwrites it"
+  deny "ssh-keygen pointed at an existing key overwrites it - a \
+fingerprint of a .pub runs in a call of its own, with no private \
+key path in it"
 fi
 if hit '/etc/ssh/sshd_config'; then
   if hit '>>?[[:space:]]*["'\'']?/etc/ssh/sshd_config' \
