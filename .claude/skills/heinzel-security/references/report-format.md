@@ -11,6 +11,7 @@ OS: Debian 12 (Bookworm)
 ### Issues
 
 WARN      SSH allows password authentication
+WARN      deploy (runs myapp) has NOPASSWD ALL
 INFO      macOS Application Firewall disabled
 
 ### Checks
@@ -21,6 +22,11 @@ SSH root login      INFO — PermitRootLogin yes
 Firewall            OK — ufw active, default deny
 Empty passwords     OK — no accounts with empty password
 UID 0 accounts      OK — only root
+Account source      OK — SSSD, AD example.com, online
+Sudo rules          WARN — deploy NOPASSWD ALL; INFO —
+                    %sudo NOPASSWD ALL: anna, bert
+Local accounts      INFO — 2: breakglass (sudo, keys; recorded),
+                    deploy (keys)
 Listening services  OK — no databases on 0.0.0.0
 ASLR                OK — randomize_va_space = 2
 IP forwarding       OK — disabled

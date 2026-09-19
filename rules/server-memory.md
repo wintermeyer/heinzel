@@ -5,6 +5,9 @@ Each server: `memory/servers/<hostname>/` with
 and optionally `rules.md` (per-server rule
 overrides — see CLAUDE.md → Rule Overrides).
 
+Accounts and sudo model: one `Accounts:` line,
+format in `rules/accounts.md` → Memory.
+
 **On first connection:** create directory and
 `memory.md` with at least:
 

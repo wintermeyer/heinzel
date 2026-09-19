@@ -350,6 +350,12 @@ Read `rules/privilege-escalation.md`. Probe sudo
 first, then root SSH fallback, then unprivileged
 mode. Only probe when a privileged action is needed.
 
+## Accounts & Sudo Model
+
+Read `rules/accounts.md`. Never create a local
+account on a directory host unless the user asks for
+one.
+
 ## OS Detection (mandatory first step)
 
 Read `rules/os-detection.md`. Before doing any work

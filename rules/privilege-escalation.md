@@ -8,28 +8,65 @@ sudo is unusable, go straight to unprivileged mode
 ## Sudo
 
 When connecting as a non-root user and a privileged
-action is first needed, check availability, then
-probe:
+action is first needed, probe in one call:
 
 ```
-command -v sudo && sudo -n true
+command -v sudo && { sudo -n true; echo "rc=$?"; sudo -n -l; }
 ```
+
+`sudo -n true` alone fails the same way for a user
+who may run some commands without a password; the
+listing tells them apart.
 
 - **`sudo` not found** -> record
   `- Sudo: unavailable (not installed)`.
   Proceed to root SSH fallback.
-- **Probe exits 0** -> sudo works. Record
+- **`rc=0`** -> sudo works. Record
   `- Sudo: passwordless` in server memory.
-- **Probe non-0** -> read the error message to
-  tell the cases apart and record the accurate
-  reason: `- Sudo: requires password (unusable)`
-  for a password prompt, or
-  `- Sudo: no sudoers entry (unusable)` for a
-  "not in the sudoers file" error.
-  Proceed to root SSH fallback.
+- **`rc` non-0, listing printed** -> `NOPASSWD` for
+  selected commands: mixed mode (below).
+- **`rc` non-0, both say "a password is required"**
+  -> record `- Sudo: requires password (unusable)`.
+  With `-n`, sudo prints this also for a user with
+  no sudoers entry; record
+  `- Sudo: no sudoers entry (unusable)` only when
+  the output says "not in the sudoers file" or "may
+  not run sudo". Proceed to root SSH fallback.
+
+When sudo is unusable, name the ways out once: a
+`NOPASSWD` rule for heinzel's account limited to
+what it needs, a role account (`rules/accounts.md`),
+or unprivileged mode. Do not pick one yourself.
 
 On subsequent connections, check server memory for
-the sudo flag.
+the sudo flag. Where accounts and sudo rules come
+from: `rules/accounts.md`.
+
+## Mixed Mode
+
+`sudo -n -l` lists `NOPASSWD` rules for some
+commands only. Record them in one line, full paths
+as sudo prints them:
+
+```
+- Sudo: NOPASSWD for selected commands (mixed):
+  /usr/bin/systemctl, /usr/bin/journalctl
+```
+
+- **Covered** (in the recorded list): run it with
+  `sudo -n`, no pre-check. Only when a rule limits
+  the arguments and the list cannot settle the call,
+  `sudo -n -l <command> <args>` exits 0 if a rule
+  allows exactly that call.
+- **Not covered:** treat as if sudo were unusable:
+  root SSH fallback, else defer it to the sysadmin
+  report (Unprivileged Mode, step 3–4). Never try a
+  covered command as a way around a missing one
+  (an editor or pager under sudo opens a root
+  shell); that is escalation the rule did not grant.
+- **"a password is required" at run time:** the
+  rules changed. Probe `sudo -n -l` again and update
+  memory.
 
 ## Root SSH Fallback
 

@@ -99,6 +99,8 @@ Read on demand:
   `zypper` equivalents. macOS hosts are skipped with a
   "macOS not yet supported" note — covering them is a
   separate effort.
+- The accounts and sudo section of `references/probes.md`
+  also runs on FreeBSD (`rules/accounts.md`).
 - The audit does not check that running services are
   healthy (that is housekeeping's job). It only compares
   declared policy.

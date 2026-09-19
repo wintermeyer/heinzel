@@ -12,6 +12,7 @@ echo "###fw###"; <firewall probe>
 echo "###mta###"; <mta probe>
 echo "###time###"; <time probe>
 echo "###reboot###"; <reboot probe>
+echo "###acct###"; <accounts probe>
 '
 ```
 
@@ -234,3 +235,111 @@ Highlight as drift / warning:
   has not fired despite a pending kernel.
 - Hosts with uptime > 90d — even without a pending reboot,
   worth a heads-up.
+
+## Accounts and sudo model
+
+The probes of `rules/accounts.md` sections 1–3 in compact
+form; keep the two in step. The account source needs no
+root; the sudo rules and the SSSD access rule do. The
+section runs its own root / `sudo -n` check at its top.
+
+```bash
+if [ "$(id -u)" = "0" ]; then
+  SUDO=""
+elif sudo -n true 2>/dev/null; then
+  SUDO="sudo -n"
+else
+  SUDO="-"
+fi
+for f in /etc/nsswitch.conf /usr/etc/nsswitch.conf; do
+  [ -e "$f" ] || continue
+  grep -E '^(passwd|sudoers):' "$f"
+  break
+done
+if command -v systemctl >/dev/null 2>&1; then
+  for d in sssd nslcd winbind oddjobd; do
+    echo "$d=$(systemctl is-active "$d" 2>/dev/null)"
+  done
+else
+  service -e 2>/dev/null | grep -E 'sssd|nslcd' \
+    | sed 's/^/enabled=/'
+fi
+if command -v realm >/dev/null 2>&1; then
+  realm list 2>/dev/null | grep -E \
+    '^[^ ]|server-software:|login-policy:|permitted-groups:'
+fi
+command -v authselect >/dev/null 2>&1 && authselect current
+# Local accounts (rules/accounts.md → 5), name:uid.
+min=$(awk '$1 == "UID_MIN" {print $2}' /etc/login.defs 2>/dev/null)
+echo "local: $(awk -F: -v min="${min:-1000}" \
+  '$3 >= min && $3 < 65534 {printf "%s:%s ", $1, $3}' /etc/passwd)"
+echo "mkhomedir=$(grep -RlE 'pam_(oddjob_)?mkhomedir' \
+  /etc/pam.d/ /usr/lib/pam.d/ 2>/dev/null | tr '\n' ' ')"
+if [ "$SUDO" = "-" ]; then
+  echo "sudoers=unknown(needs-root)"
+elif command -v visudo >/dev/null 2>&1; then
+  F=$($SUDO visudo -c 2>&1 | sed -n 's|^\(/[^:]*\): .*|\1|p')
+  echo "sudoers-files: $(echo $F)"
+  [ -n "$F" ] && $SUDO grep -HvE '^[[:space:]]*(#|$)' $F
+  # Members of each group a rule names: list, then primary.
+  # Names may be quoted or have escaped spaces (AD groups).
+  [ -n "$F" ] && $SUDO sed -nE \
+    's/^[[:space:]]*%("[^"]*"|([^[:space:],\\]|\\.)+).*/\1/p' $F \
+    | sed -e 's/\\\(.\)/\1/g' -e 's/"//g' | sort -u \
+    | while IFS= read -r g; do
+    getent group "$g" | { IFS=: read -r n x gid m
+      echo "group $g: $m primary: $(awk -F: -v g="$gid" \
+        '$4 == g {printf "%s,", $1}' /etc/passwd)"; }
+  done
+else
+  echo "sudoers=none"
+fi
+[ "$SUDO" = "-" ] || $SUDO grep -rhE \
+  '^[[:space:]]*(access_provider|simple_allow|ldap_access)' \
+  /etc/sssd 2>/dev/null
+```
+
+(`$F` is unquoted on purpose: one word per file.)
+
+Row keys:
+
+- Account source: `files`, or the directory (`sss`, `ldap`,
+  `winbind`) with its daemon state and realm.
+- `login-policy` and `permitted-groups`.
+- SSSD access rule: `access_provider` and its groups or
+  filter (none: every directory user may log in).
+- `sudoers:` line (absent means files only).
+- mkhomedir: on / off.
+- Rules with `ALL` as the command, per user or `%group`,
+  with `NOPASSWD` marked.
+- Rules with `NOPASSWD` on selected commands.
+- Members of each `%group` in a rule.
+- Local accounts (`name:uid`); which have keys is per
+  host (`heinzel-security`), not in this call.
+- `Defaults` that change who needs a password
+  (`!authenticate`, `targetpw`, `rootpw`).
+- Model from the `Accounts:` line in each host's
+  `memory.md` (`(unset)` when missing).
+
+Highlight as drift:
+
+- Different account sources or models on hosts that should
+  admit the same admins.
+- A directory host whose daemon is not active, or that
+  admits all directory users (realm or SSSD access rule)
+  while the others restrict them.
+- `NOPASSWD: ALL` on some hosts but not others, or granted
+  to different groups.
+- A local sudo rule for a named user on one directory host:
+  a hand-made exception the directory does not control.
+- mkhomedir on some directory hosts but not others.
+- A local account on some hosts only, or one name with
+  different UIDs on different hosts (files on shared
+  storage then belong to someone else). With a team
+  roster in `memory/network.md`
+  (`rules/accounts.md` → Team accounts), compare each host with it:
+  missing, extra, other UID.
+- A different `sudoers.d` file on hosts with the same
+  `Accounts:` model.
+- A probe that contradicts the `Accounts:` line: memory is
+  stale (report it, do not update memory).

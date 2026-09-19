@@ -100,6 +100,15 @@ When the user explicitly specifies a username on the
 command line, skip the interview, use that name, and
 update `memory/user.md`.
 
+## Account model
+
+When the recorded user does not fit the host's
+`Accounts:` model (`rules/accounts.md` → What it
+means for heinzel), e.g. `root` where admins use
+personal accounts and sudo, say so once and ask
+whether to switch. Never switch on your own; the new
+name goes through the same interview.
+
 ## User Language
 
 **File:** `memory/user.md` (same file as SSH

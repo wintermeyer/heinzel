@@ -85,6 +85,9 @@ Read on demand, only when the relevant section applies:
   (Application Firewall).
 - `references/user-accounts.md` — empty passwords, multiple UID
   0, system accounts with login shells.
+- `references/accounts-sudo.md` — where accounts and sudo rules
+  come from, who gets `ALL` or `NOPASSWD`, local accounts
+  (Linux, FreeBSD, macOS).
 - `references/listening-services.md` — audit `ss` / `lsof`
   output, flag databases on 0.0.0.0.
 - `references/kernel-os.md` — sysctl checks: ASLR, IP forwarding,

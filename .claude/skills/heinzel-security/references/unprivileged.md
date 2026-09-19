@@ -17,6 +17,12 @@ Many checks in this audit work without root:
   (`ss -tulnp`), cron directory permissions (some dirs may be
   unreadable).
 
+Accounts and sudo (`references/accounts-sudo.md`): the account
+source, the local accounts and the SSH user's own sudo rules
+(`sudo -n -l`) work unprivileged; the sudoers files, other
+users' rules (`sudo -l -U`), `sssctl` and other accounts'
+`.ssh` need root.
+
 If a check cannot be performed due to missing privileges, do not
 skip it silently. Add it to the report:
 

@@ -83,6 +83,17 @@ Enterprise Server (SLES).
 - Logs: `/var/log/`
 - Nginx config: `/etc/nginx/conf.d/`
 
+## Vendor Defaults under /usr (Tumbleweed)
+
+Tumbleweed ships some defaults under `/usr` instead of
+`/etc`: `/usr/etc/nsswitch.conf`, `/usr/etc/sudoers`
+(mode `0444`), `/usr/lib/pam.d/`. A file of the same
+name in `/etc` replaces the default. Probes read both,
+`/etc` first. Edit only in `/etc`: an update overwrites
+`/usr`. `visudo -c` calls the `0444` vendor file "bad
+permissions" and exits 1; sudo still reads it, and
+that alone is not a finding. Leap keeps them in `/etc`.
+
 ## Notes
 
 - openSUSE Tumbleweed is a rolling release — package
