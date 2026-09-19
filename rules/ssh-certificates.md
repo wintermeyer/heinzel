@@ -35,6 +35,41 @@ Certificates themselves are public and may be
 printed. The CA **signing keys** are secrets
 (`rules/secrets.md`).
 
+## Per operating system
+
+Everything below is OpenSSH and the same on every
+target. What differs:
+
+- **Linux:** files in `/etc/ssh`. Reload
+  `systemctl reload ssh` (Debian, Ubuntu) or
+  `sshd` (RHEL, SUSE). Renewal jobs are systemd
+  timers or cron. Log: `journalctl`. Checksum:
+  `sha256sum`.
+- **FreeBSD:** base sshd reads `/etc/ssh`
+  (`service sshd reload`); the `openssh-portable`
+  package reads `/usr/local/etc/ssh`
+  (`service openssh reload`). Which one runs:
+  `sysrc sshd_enable openssh_enable`. Renewal jobs
+  are cron (`crontab -l`, `/etc/crontab`,
+  `/etc/cron.d/`). Log: `/var/log/auth.log`.
+  Checksum: `sha256 -q`.
+- **OPNsense, pfSense:** the appliance writes the
+  sshd config from its GUI, so CA directives go
+  through the GUI, never by hand. Run the quick
+  probe again after every firmware update.
+- **macOS:** launchd starts a fresh sshd for every
+  connection, so a new host certificate or CA file
+  takes effect on the next login — no reload.
+  Remote Login must be on (`rules/macos.md`).
+  Renewal jobs are launchd jobs
+  (`/Library/LaunchDaemons`). Log: `log show` (see
+  "Who logged in"). Checksum: `shasum -a 256`.
+- **Windows** is not a heinzel target: a Windows
+  OpenSSH server is out of scope. As the
+  **workstation** it matters for heinzel's own login
+  (see there): Git Bash, WSL and Windows each can
+  have their own `ssh`, `~/.ssh` and agent.
+
 ## When to check
 
 - **First connection**, while creating server memory:
@@ -160,7 +195,8 @@ renew`, `vault write …/sign`, a script). No job and a
 certificate that expires is the typical outage.
 
 **sshd serves the certificate it loaded at start or
-reload.** A renewed file on disk does nothing until
+reload** (Linux, FreeBSD; macOS starts sshd per
+connection). A renewed file on disk does nothing until
 `sshd` reloads, and a job that renews without a
 reload leaves the old certificate running until it
 expires. After the renewal job, check that it
@@ -274,6 +310,18 @@ the ones in the agent:
 ssh-keygen -L -f ~/.ssh/id_ed25519-cert.pub
 ssh-add -L | grep -- '-cert-v01@' | ssh-keygen -L -f /dev/stdin
 ```
+
+**Windows workstation:** check which `ssh` heinzel
+runs (`command -v ssh; ssh -V`) and whether
+`ssh-add -L` shows the certificate. Git for Windows
+brings its own `ssh`, which does not use the agent
+of Windows' own OpenSSH, and WSL has its own
+`~/.ssh` and agent. A certificate the CA tool
+loaded into one of them is invisible to the others,
+and the login fails with `Permission denied`. The
+fix is on the workstation: renew into the agent
+heinzel's `ssh` uses, or point it at the certificate
+file with `CertificateFile`.
 
 - **Expired certificates are offered anyway.** The
   client does not check the date; the server
@@ -506,8 +554,9 @@ at the first server where the access test fails.
   `RevokedKeys` path on every server — `cp` or
   `scp` over the existing file, not `mv` (the guard
   denies moving the list, and a missing one locks
-  everyone out). Check each server with
-  `sha256sum <path>` against the local copy and
+  everyone out). Check each server with its
+  checksum tool (see "Per operating system")
+  against the local copy and
   `ssh-keygen -Q -f <path> <revoked cert>`. A
   server without `RevokedKeys` cannot revoke at all:
   report it — the certificate stays valid there

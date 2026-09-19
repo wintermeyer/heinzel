@@ -6,7 +6,8 @@ description: Compare key policies across all servers in
   changes; writes one audit-trail line to each host's journal.
   Probes unattended-upgrades, sshd effective config (including
   SSH CA trust and host certificates), firewall posture, MTA,
-  time sync, and auto-reboot behaviour. Use when the user asks to "fleet audit", "vergleiche alle server",
+  time sync, and auto-reboot behaviour. Use when the user asks
+  to "fleet audit", "vergleiche alle server",
   "policy drift check", "are my servers configured the same?",
   or after a fix on one host to find which others carry the
   same bug.

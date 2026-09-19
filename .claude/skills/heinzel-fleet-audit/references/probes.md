@@ -105,7 +105,9 @@ else
   RK=$($SSHD -T 2>/dev/null | grep '^revokedkeys ')
   RK=${RK#revokedkeys }
   if [ -n "$RK" ] && [ "$RK" != "none" ]; then
-    echo "revokedkeys-sha256: $(sha256sum "$RK" 2>&1)"
+    # sha256sum on Linux, sha256 -q on FreeBSD.
+    echo "revokedkeys-sha256: $(sha256sum "$RK" 2>/dev/null \
+      || sha256 -q "$RK" 2>&1)"
   fi
 fi
 # Host certificates are world-readable: no root needed.

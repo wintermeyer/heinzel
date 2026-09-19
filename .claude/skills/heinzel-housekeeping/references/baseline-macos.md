@@ -83,6 +83,14 @@ diskutil info disk0 | grep "SMART Status"
 
 - **CRITICAL** if SMART status is not "Verified"
 
+## SSH Host Certificate Expiry
+
+Only with Remote Login on and a host certificate
+present. Same probe and thresholds as in
+`baseline-linux.md`; the files are in `/etc/ssh`. macOS
+starts sshd per connection, so the file on disk is what
+clients get.
+
 ## Time Sync
 
 ```bash
