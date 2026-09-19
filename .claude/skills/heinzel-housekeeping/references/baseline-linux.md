@@ -231,6 +231,19 @@ systemctl --failed --no-pager --no-legend
 
 - **WARN** for each failed unit — list them by name
 
+## Network
+
+Run the Linux probe from `rules/network.md` → Probe —
+Linux (one call) and compare it with the host's
+`network.md`. Report every finding from
+`rules/network.md` → Findings at its severity. An
+uplink address that differs from `network.md` is
+**INFO**: re-run the profile and update `network.md`
+(workflow step 6), including the `- Network:` summary line
+in `memory.md`. On hosts with a global IPv6 address, also run
+`heinzel-security` → `references/firewall-ipv6.md`; an
+unfiltered IPv6 is **CRITICAL**.
+
 ## NTP / Time Sync
 
 ```bash

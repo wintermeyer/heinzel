@@ -11,6 +11,7 @@ echo "###sshd###"; <sshd probe>
 echo "###fw###"; <firewall probe>
 echo "###mta###"; <mta probe>
 echo "###time###"; <time probe>
+echo "###net###"; <network probe>
 echo "###reboot###"; <reboot probe>
 '
 ```
@@ -213,6 +214,57 @@ Highlight as drift:
 - `NTPSynchronized=no` on any host.
 - Different timesync daemons across the fleet.
 - Different timezones.
+
+## Network
+
+Run the Linux probe from `rules/network.md` → Probe —
+Linux as the `###net###` block. It contains single
+quotes, so it cannot go inside the single-quoted
+command above: send the bundle as a script on stdin
+(`ssh … USER@HOST 'sh -s' <<'EOF'`) instead. It is one
+script,
+runs its own root / `sudo -n` check for its one
+root-only read (netplan), and bounds its output.
+Classify with `rules/network.md` → Classification.
+
+Row keys:
+
+- Network manager, and whether cloud-init owns it
+- Stack (`dual-stack`, `v4-only`, `v6-only`,
+  `v4 + ULA`, plus `v6 broken` / `no v6 route`)
+- IPv4 class and addressing (public / RFC 1918 /
+  CGNAT; static / DHCP)
+- IPv6 class and addressing (GUA / ULA / none;
+  static / SLAAC / DHCPv6)
+- RA handled by (kernel / networkd /
+  NetworkManager / none)
+- Forwarding v4 / v6
+- Egress v4 / v6 (`OK`, `fail`, `inconclusive`,
+  `via proxy`)
+- resolv.conf mode and upstream nameservers
+- IPv6 filtered (hosts with a global IPv6 address):
+  the check from `heinzel-security` →
+  `references/firewall-ipv6.md`, with this section's
+  own root / `sudo -n` check and the
+  `unknown(needs-root)` sentinel
+
+Drift that only a comparison across hosts shows:
+
+- Different managers or resolv.conf modes on hosts
+  of the same distro release — the same fix will not
+  apply everywhere.
+- Different upstream nameservers in the same
+  network.
+- IPv6 disabled on one host while the others run
+  dual-stack.
+- A live value that contradicts the host's
+  `network.md` (the profile is stale) — mention it
+  like any memory file that contradicts live config,
+  and suggest re-running the profile there.
+
+Every finding from `rules/network.md` → Findings on
+any host also goes into "Drift detected", with its
+severity.
 
 ## 6. Auto-reboot behaviour (cross-check with UA)
 

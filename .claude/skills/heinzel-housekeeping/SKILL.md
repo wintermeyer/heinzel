@@ -2,14 +2,14 @@
 name: heinzel-housekeeping
 argument-hint: "[hostname]"
 description: Run a heinzel housekeeping (health) inspection on a
-  server — disk, memory, load, pending updates, firewall, SSL
-  certs, failed systemd units, logs, kernel reboot status, and
-  service-specific checks. Use when the user asks to "run
-  housekeeping", "housekeeping report", "run a health check on
-  <host>", or "do routine inspection". Do NOT auto-invoke for
-  ambiguous requests like "check server <host>" — that's
-  reserved for quick queries. Covers Linux (Debian, Ubuntu, RHEL,
-  CentOS, Fedora, SUSE) and macOS.
+  server — disk, memory, load, pending updates, firewall,
+  network reachability, SSL certs, failed systemd units, logs,
+  kernel reboot status, and service-specific checks. Use when
+  the user asks to "run housekeeping", "housekeeping report",
+  "run a health check on <host>", or "do routine inspection".
+  Do NOT auto-invoke for ambiguous requests like "check server
+  <host>" — that's reserved for quick queries. Covers Linux
+  (Debian, Ubuntu, RHEL, CentOS, Fedora, SUSE) and macOS.
 ---
 
 # heinzel-housekeeping
@@ -64,9 +64,9 @@ Read on demand, only when the relevant section applies:
 - `references/report-format.md` — required output format and
   severity rules (CRITICAL / WARN / INFO).
 - `references/baseline-linux.md` — disk, memory, load, uptime,
-  updates, firewall, NTP, logs, SSL certs, kernel.
+  updates, firewall, network, NTP, logs, SSL certs, kernel.
 - `references/baseline-macos.md` — disk, memory, load, updates,
-  Homebrew, Application Firewall, SMART, time sync.
+  Homebrew, Application Firewall, network, SMART, time sync.
 - `references/backup-presence.md` — generic "any backup at
   all?" probe, the provider-snapshot question, and the
   `Backup:` acknowledgment line in `memory.md`.

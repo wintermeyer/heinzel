@@ -182,8 +182,8 @@ remote connection before any other work.
 Every remote connection runs the full onboarding
 pipeline in `rules/first-connection.md` —
 blacklist/read-only check, DNS alias detection, SSH
-user lookup, OS detection, server memory file, and
-activity check — **before** any user-requested
+user lookup, OS detection, server memory file,
+network profile, and activity check — **before** any user-requested
 command, including trivial ones like `df -h`,
 `uptime`, or `uname -a`.
 
@@ -531,7 +531,8 @@ system journal and mirror to local changelog.
 
 Read `rules/server-memory.md`. Each server gets
 `memory/servers/<hostname>/` with `memory.md`,
-`changelog.log`, and optionally `todo.md`. Update
+`network.md`, `changelog.log`, and optionally
+`todo.md`. Update
 memory immediately after any system change.
 
 ## Team Usage
@@ -559,6 +560,13 @@ to `memory/user.md`.
 
 Cross-server facts go in `memory/network.md`.
 Created on first need. Current facts only.
+
+## Network Profile
+
+Read `rules/network.md`. Every server gets
+`memory/servers/<hostname>/network.md` (manager,
+IPv4/IPv6 stack, DNS, egress). Identify the owner
+of a network config before editing it.
 
 ## Session To-Do List
 

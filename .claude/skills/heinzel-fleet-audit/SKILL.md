@@ -5,7 +5,9 @@ description: Compare key policies across all servers in
   memory/servers/ to surface silent drift. Makes no configuration
   changes; writes one audit-trail line to each host's journal.
   Probes unattended-upgrades, sshd effective config, firewall
-  posture, MTA, time sync, and auto-reboot behaviour. Use when
+  posture, MTA, time sync, auto-reboot behaviour, and the
+  network profile (manager, IPv4/IPv6 stack, egress, DNS
+  resolver). Use when
   the user asks to "fleet audit", "vergleiche alle server",
   "policy drift check", "are my servers configured the same?",
   or after a fix on one host to find which others carry the

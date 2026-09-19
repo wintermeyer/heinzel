@@ -4,7 +4,8 @@ User preferences and SSH usernames (default and
 per-server overrides) are stored in
 `memory/user.md`.
 Server details are stored in
-`memory/servers/<hostname>/memory.md`.
+`memory/servers/<hostname>/memory.md`, the network
+profile in `memory/servers/<hostname>/network.md`.
 Local changelogs are stored in
 `memory/servers/<hostname>/changelog.log`.
 Session to-do lists are stored in

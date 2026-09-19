@@ -89,6 +89,8 @@ Read on demand, only when the relevant section applies:
   output, flag databases on 0.0.0.0.
 - `references/kernel-os.md` — sysctl checks: ASLR, IP forwarding,
   ICMP redirects, SUID core dumps.
+- `references/firewall-ipv6.md` — whether the firewall filters
+  IPv6 as well (ufw, firewalld, nftables, legacy iptables).
 - `references/file-permissions.md` — world-writable system files,
   SUID/SGID audit, /tmp mount options, cron perms, unowned files.
 - `references/intrusion-prevention.md` — fail2ban status.

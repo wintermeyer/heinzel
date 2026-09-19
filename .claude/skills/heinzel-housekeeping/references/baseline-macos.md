@@ -75,6 +75,15 @@ command -v brew &>/dev/null && brew outdated
 - **INFO** if the firewall is off (not WARN — common and less
   critical on macOS behind NAT)
 
+## Network
+
+Run the macOS probe and egress test from
+`rules/network.md` and compare with the machine's
+`network.md`. Report findings from
+`rules/network.md` → Findings at their severity. A
+changed primary service or address is normal on a
+laptop: update `network.md`, no finding.
+
 ## SMART Disk Status
 
 ```bash

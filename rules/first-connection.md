@@ -30,7 +30,15 @@ moment") — don't skip.
    connection, read on every subsequent connection.
    See `rules/server-memory.md`.
 7. **Activity check.** Every connection, not just
-   the first. See `rules/activity-check.md`.
+   the first. See `rules/activity-check.md`. The
+   same call carries the network check: on first
+   connection, without `network.md`, or when its
+   `Probed:` is older than 90 days, build the full
+   profile per `rules/network.md`; otherwise add
+   `ip -br addr show dev <uplink>` (`ifconfig
+   <uplink>` on BSD and macOS) and compare it with
+   `network.md`, reading `rules/network.md` only
+   when it differs.
 8. **Then** execute the user's request.
 
 ## Local mode

@@ -287,6 +287,21 @@ The first time you point Heinzel at any machine, it
 detects the OS, gathers hardware info, and remembers
 everything for future sessions.
 
+### Network profile
+
+On first contact Heinzel also records how the
+machine's network is built: which manager owns it
+(systemd-networkd, NetworkManager, netplan, ifupdown,
+cloud-init, …), IPv4 and IPv6 addresses and ranges
+(public, RFC 1918, CGNAT, GUA, ULA), static or
+DHCP/SLAAC, how DNS is set, and whether outbound
+traffic actually works per address family —
+configured IPv6 is often broken IPv6. It compares A,
+AAAA and PTR records with the real addresses. The
+profile lives in
+`memory/servers/<hostname>/network.md`; housekeeping
+and the fleet audit check it for drift.
+
 ### DNS alias detection
 
 When multiple DNS names point to the same server,

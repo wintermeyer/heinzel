@@ -27,6 +27,13 @@ keys, weak permissions) is the job of the
 - Mail credentials (`msmtprc`, `sasl_passwd`)
 - Backup repository passwords (restic/borg env
   and password files)
+- Network configs that can embed keys or
+  passwords: WireGuard configs, `.netdev` files
+  (`PrivateKey=`), NetworkManager keyfiles, netplan
+  YAML (Wi-Fi, WireGuard, 802.1X), proxy URLs with
+  credentials. Grep only named non-secret keys
+  with an anchored pattern, as `rules/network.md`
+  does.
 
 When in doubt, treat it as a secret.
 

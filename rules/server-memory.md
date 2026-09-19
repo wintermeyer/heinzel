@@ -30,3 +30,12 @@ outdated entries, merge related items.
 
 Memory files never hold credential values — see
 `rules/secrets.md`.
+
+`memory/servers/<hostname>/network.md` holds the
+network profile (`rules/network.md`). `memory.md`
+carries one summary line for it, kept in step with
+`network.md`:
+
+```markdown
+- Network: dual-stack, v6 egress OK — see network.md
+```

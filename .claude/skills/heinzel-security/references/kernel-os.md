@@ -16,6 +16,7 @@ sysctl -n kernel.randomize_va_space
 
 ```bash
 sysctl -n net.ipv4.ip_forward
+sysctl -n net.ipv6.conf.all.forwarding
 ```
 
 On macOS:
@@ -27,6 +28,9 @@ sysctl -n net.inet.ip.forwarding
 - `1` → **WARN** unless the server's `memory.md` mentions
   WireGuard, VPN, or router functionality. In that case → OK
   with note.
+- IPv6 forwarding on a host that gets its IPv6 default route
+  from Router Advertisements can kill that route — see the
+  RA/forwarding trap in `rules/network.md` → Findings.
 - `0` → OK
 
 ## ICMP Redirect Acceptance — Linux only
