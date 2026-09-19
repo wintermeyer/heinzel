@@ -71,6 +71,9 @@ finding. See `rules/version-check.md`.
   `rules/service-reload.md` for the auto-proceed
   policy and `memory/service-policy.md` opt-out /
   opt-in lists.
+- sshd: unit `sshd`, config `/etc/ssh`, auth log in
+  the journal (`journalctl -u sshd`) or
+  `/var/log/secure`, checksum `sha256sum`
 
 ## SELinux
 

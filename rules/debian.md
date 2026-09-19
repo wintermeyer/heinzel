@@ -170,6 +170,9 @@ third-party PPAs.
 - `systemctl` (systemd)
 - Check service: `systemctl status <service>`
 - Logs: `journalctl -u <service>`
+- sshd: unit `ssh`, config `/etc/ssh`, auth log in
+  the journal (`journalctl -u ssh`), checksum
+  `sha256sum`
 
 ## Directory Conventions
 
