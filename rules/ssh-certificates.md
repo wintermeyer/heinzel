@@ -303,6 +303,11 @@ grep -n '^@revoked' <known-hosts files> 2>/dev/null
   if set, else `hostname` after canonicalization
   (both from `ssh -G`), not necessarily what was
   typed. The host certificate must list it too.
+- On a port other than 22, run the loop for
+  `[<name>]:<port>` as well. ssh accepts a CA line in
+  either form, `ssh-keygen -F` finds only the exact
+  one — a `[*.example.com]:*` line is missed by the
+  plain name.
 - A pattern of `*` trusts the CA for every host.
 - `@revoked * <key>` refuses that host key or
   certificate, CA or not — the answer to a stolen
