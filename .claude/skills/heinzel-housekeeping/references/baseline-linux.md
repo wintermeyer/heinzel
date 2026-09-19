@@ -221,6 +221,30 @@ firewall-cmd --state
 firewall-cmd --state
 ```
 
+**Native nftables** (Debian's own default, when neither ufw
+nor firewalld is active; needs root):
+
+```bash
+systemctl is-active nftables
+nft list chains | grep -B1 -e ^table -e "hook input"
+```
+
+Default deny as in `heinzel-security` →
+`references/firewall-nftables-docker.md`. Input chains that
+fail2ban or Docker add with `policy accept;` are not a
+firewall.
+
+**Docker** (when `command -v docker` finds it):
+
+```bash
+docker ps --format '{{.Names}} {{.Ports}}'
+```
+
+- **WARN** for each published port (`->`) not bound to
+  `127.0.0.1` or `[::1]` — Docker routes it past ufw and
+  firewalld. OK if a `DOCKER-USER` rule restricts it (same
+  reference).
+
 - **CRITICAL** if the firewall is inactive or not installed
 
 ## Failed systemd Units

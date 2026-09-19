@@ -371,9 +371,11 @@ verification, and removal procedures.
 
 Every Linux server should have a firewall and
 automatic security updates. See `rules/<family>.md`.
-Flag if missing. On macOS, a disabled Application
-Firewall is common and less critical — see
-`rules/macos.md`.
+Native nftables counts as a firewall too; never add
+a second firewall manager on top
+(`rules/service-class-check.md`). Flag if missing.
+On macOS, a disabled Application Firewall is common
+and less critical — see `rules/macos.md`.
 
 ## Housekeeping
 
@@ -454,7 +456,10 @@ network-facing service, always consider firewall
 implications and raise them with the user.
 
 1. Check if the service needs ports opened.
-2. Check current firewall rules.
+2. Check current firewall rules. Ports published
+   by Docker bypass ufw and firewalld: bind them to
+   `127.0.0.1:` or restrict them in `DOCKER-USER`
+   (`rules/best-practices.md`).
 3. **Ask the user** before changing anything:
    open to all or restricted? Public or internal?
 4. **Recommend a safe default** and explain why.

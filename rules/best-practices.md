@@ -195,6 +195,15 @@ especially should never bind to all interfaces
 without explicit need.
 → Bind to `127.0.0.1` or a Unix socket.
 
+**Docker `-p` without a host address**
+`-p 8080:80` publishes on all interfaces, and Docker
+routes the traffic past ufw's and firewalld's INPUT
+rules: the port is public despite a default-deny
+firewall.
+→ Publish as `-p 127.0.0.1:8080:80` behind a reverse
+proxy, or restrict sources in the `DOCKER-USER`
+chain.
+
 ### File & Storage
 
 **Persistent data in /tmp**
