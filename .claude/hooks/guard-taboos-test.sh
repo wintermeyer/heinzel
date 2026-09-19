@@ -224,34 +224,44 @@ check pass 'cp /etc/ssh/ssh_host_ed25519_key-cert.pub /var/backups/heinzel/'
 check deny 'ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N ""'
 check deny 'ssh-keygen -f ~/.ssh/id_ed25519-work -N ""'
 check deny 'rm /etc/ssh/ssh_host_ed25519_key-cert.pub'
-# Files that decide which certificates may log in: reads pass.
+# CA trust and principals are ordinary maintenance: a mistake
+# there affects certificate logins only, and the rule file asks
+# first. heinzel must be able to set up and run an SSH CA.
 check pass 'cat /etc/ssh/trusted_user_ca_keys'
 check pass 'ssh-keygen -lf /etc/ssh/user_ca.pub'
 check pass 'grep -H . /etc/ssh/auth_principals/root'
-check pass 'ls -l /etc/ssh/auth_principals /etc/ssh/revoked_keys'
-check pass 'ssh-keygen -Q -f /etc/ssh/revoked_keys /tmp/k.pub'
-check pass 'stat -c %a /etc/ssh/ca.pub 2>/dev/null'
-check pass 'cp /etc/ssh/trusted-user-ca-keys.pem /var/backups/heinzel/'
+check pass 'cp /tmp/ca.pub /etc/ssh/trusted_user_ca_keys'
+check pass 'cat /tmp/ca.pub >> /etc/ssh/user_ca.pub'
+check pass 'install -d -m 755 /etc/ssh/auth_principals'
+check pass 'echo root-everywhere > /etc/ssh/auth_principals/root'
+check pass 'sed -i /alice/d /etc/ssh/auth_principals/root'
+check pass 'chmod 644 /etc/ssh/ca.pub'
+check pass 'curl -o /etc/ssh/trusted-user-ca-keys.pem https://ca.example.com/ssh/roots'
+check pass 'cp /tmp/ca.pub /usr/local/etc/ssh/trusted_user_ca_keys'
 check pass 'cat /etc/ssh/ssh_known_hosts /etc/ssh/moduli'
 check pass 'cp /tmp/new.conf /etc/ssh/ssh_config.d/local.conf'
-# ... and every write is left to the operator.
-check deny 'cp /tmp/ca.pub /etc/ssh/trusted_user_ca_keys'
-check deny 'cat /tmp/ca.pub >> /etc/ssh/user_ca.pub'
-check deny 'echo root > /etc/ssh/auth_principals/root'
-check deny 'tee -a /etc/ssh/auth_principals/root < p.txt'
-check deny 'sed -i /alice/d /etc/ssh/auth_principals/root'
+# Host certificates: installing a renewed one passes, the key
+# beside it stays protected.
+check pass 'cp /tmp/new-cert.pub /etc/ssh/ssh_host_ed25519_key-cert.pub'
+# The revocation list: writing it passes (an empty file is a
+# valid list) ...
+check pass 'ls -l /etc/ssh/revoked_keys'
+check pass 'ssh-keygen -Q -f /etc/ssh/revoked_keys /tmp/k.pub'
+check pass 'ssh-keygen -k -u -f /etc/ssh/revoked_keys leaked.pub'
+check pass 'cp /tmp/krl /etc/ssh/revoked_keys'
+check pass 'touch /etc/ssh/revoked_keys'
+# ... losing it does not: sshd then refuses every key login.
 check deny 'rm /etc/ssh/revoked_keys'
-check deny 'chmod 600 /etc/ssh/ca.pub'
-check deny 'ssh-keygen -k -u -f /etc/ssh/revoked_keys leaked.pub'
-check deny 'curl -o /etc/ssh/trusted-user-ca-keys.pem https://ca.example.com/ssh/roots'
-check deny 'ssh root@h "cp /tmp/p /home/alice/.ssh/authorized_principals"'
-check deny "python3 -c \"open('/etc/ssh/ssh_user_key.pub','w')\""
+check deny 'rm -f /usr/local/etc/ssh/revoked_keys'
+check deny 'mv /etc/ssh/revoked_keys /tmp/'
+check deny 'chmod 000 /etc/ssh/revoked_keys'
+check deny 'chown nobody /etc/ssh/ssh_revoked_keys'
+check deny 'ssh root@h "rm /etc/ssh/revoked_keys.krl"'
+check deny "python3 -c \"import os; os.remove('/etc/ssh/revoked_keys')\""
 # Outside /etc/ssh: the OpenSSH port and an appliance key store.
 check pass 'ssh-keygen -L -f /usr/local/etc/ssh/ssh_host_ed25519_key-cert.pub'
 check pass 'ssh-keygen -L -f /conf/sshd/ssh_host_ed25519_key-cert.pub'
 check deny 'ssh-keygen -f /conf/sshd/ssh_host_ed25519_key -N ""'
-check deny 'cp /tmp/ca.pub /usr/local/etc/ssh/trusted_user_ca_keys'
-check deny 'tee /conf/sshd/user_ca.pub < ca.pub'
 
 # --- SSH keys reached through their directory (issue #7) -------
 # The protected paths were key FILENAMES, so any operation on the

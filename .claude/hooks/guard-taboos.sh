@@ -22,9 +22,8 @@
 #     and other output flags)
 #   - writes to sshd_config(.d/) under any .../etc/ssh, or
 #     to a file an appliance merges into it (/etc/sshd_extra)
-#   - writes to the files that decide which SSH certificates
-#     may log in (CA trust, principals, revocation list),
-#     matched by their common names
+#   - deleting, moving or re-permissioning sshd's revocation
+#     list (RevokedKeys), matched by its common names
 #   - any of the last four reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
@@ -336,19 +335,19 @@ KEY="($HOSTKEY|authorized_keys|$KEYDIR"'(/|[^[:alnum:]_.-]|$))'
 KEYFILE="($HOSTKEY"'[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
 KEYPRIV="$KEYFILE"'([^.[:alnum:]-]|$)'
 
-# Files that decide which SSH certificates may log in:
-# TrustedUserCAKeys, AuthorizedPrincipalsFile and RevokedKeys.
-# Writing one grants every holder of a CA's certificates access,
-# or locks all of them out -- the fleet-wide form of a write into
-# authorized_keys (rules/ssh-certificates.md). sshd lets the
-# admin choose any path, so this matches the names the common
-# guides and CA tools use under /etc/ssh (unanchored on the
-# left like HOSTKEY, so /usr/local/etc/ssh counts) or a key
-# directory; a path from sshd -T outside them is protected by the
-# rule file only. CATRUSTF is the whole path, for writes_to.
+# sshd's revocation list (RevokedKeys). Once sshd_config names
+# it, a missing or unreadable file makes sshd refuse EVERY public
+# key login, authorized_keys included -- the same lockout as
+# deleting the keys themselves. Writing it (ssh-keygen -k, cp,
+# an empty file) is ordinary CA maintenance and stays allowed.
+# The CA trust and principals files are deliberately NOT here: a
+# mistake in them affects certificate logins only, and heinzel
+# maintains them after asking (rules/ssh-certificates.md). sshd
+# lets the admin choose any path, so this matches the common
+# names under /etc/ssh (unanchored on the left like HOSTKEY) or a
+# key directory; another path is protected by the rule file only.
 CAPATH='[^[:space:]"'\'';|&<>]*'
-CATRUST="(/etc/ssh|$KEYDIR)/$CAPATH"'(trusted|user[_-]?ca|ca[_.-]?(keys?|pub)|ssh_user_key|principals|revoked|krl)'
-CATRUSTF="$CATRUST$CAPATH"
+REVOKED="(/etc/ssh|$KEYDIR)/$CAPATH"'(revoked|krl)'
 
 # sshd's config: sshd_config, its drop-in directory, and a file
 # an appliance merges into it when it regenerates the config
@@ -654,24 +653,19 @@ replaces the keys there"
   fi
 fi
 
-# --- SSH certificate trust ------------------------------------
-# Same effects as the key rules above, applied to the CA trust,
-# principals and revocation files. Reading stays allowed: cat,
-# grep, ls, stat, ssh-keygen -lf and ssh-keygen -Q (a revocation
-# query). ssh-keygen -k writes a revocation list.
-if hit "$CATRUST"; then
-  if hit '(^|[^[:alnum:]_-])(rm|shred|unlink|truncate|mv|chmod|chown|install|ln|setfacl)([^[:alnum:]_-]|$)' \
+# --- SSH revocation list --------------------------------------
+# Only the effects that make the file missing or unreadable:
+# deleting, moving it away, re-permissioning, and an interpreter
+# (which could do either). mv is denied even as the destination
+# of an atomic replace; cp over the file does the same job.
+if hit "$REVOKED"; then
+  if hit '(^|[^[:alnum:]_-])(rm|shred|unlink|mv|chmod|chown|ln|setfacl)([^[:alnum:]_-]|$)' \
     || hit '(^|[[:space:]])(-delete|--remove-s(ource|ent)-files)([[:space:]]|$)' \
-    || hit ">[[:space:]]*[\"']?[^[:space:];|&]*$CATRUST" \
-    || writes_to "$CATRUSTF" \
-    || hit "(^|[^[:alnum:]_.-])sed[[:space:]]([^;&|]*[[:space:]])?(-[[:alpha:]]*i|--in-place)[^;&|]*$CATRUST" \
-    || hit "(^|[^[:alnum:]_-])${EDITOR}[[:space:]][^;&|]*$CATRUST" \
-    || hit '(^|[^[:alnum:]_-])ssh-keygen[[:space:]]([^;&|]*[[:space:]])?-[[:alpha:]]*k' \
     || hit "$INTERP"
   then
-    deny "changing which SSH certificates may log in (CA trust, \
-principals or revocation files) is left to the operator - a \
-mistake grants a whole CA access or locks every certificate out"
+    deny "deleting, moving or re-permissioning the SSH revocation \
+list makes sshd refuse every public key login - write it with \
+ssh-keygen -k or cp instead"
   fi
 fi
 

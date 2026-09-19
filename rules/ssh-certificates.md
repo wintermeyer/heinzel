@@ -266,43 +266,120 @@ The client prints the reason even without `-v`:
   names the reason (`Refusing certificate …`). Do
   not retry (`rules/ssh-unreachable.md`).
 
-## Changes
+## Setting up and running an SSH CA
 
+heinzel sets up and maintains an SSH CA with the
+user. Know what each part puts at risk:
+
+- **CA trust and principals** add a way in next to
+  `authorized_keys`. A mistake there breaks
+  certificate logins only — unless the host has
+  `AuthorizedKeysFile none` or heinzel itself logs
+  in by certificate. The real risk is the other way
+  round: one CA line admits every holder of that
+  CA's certificates. So: **ask before every change**,
+  name the CA fingerprint, and never add a CA or a
+  principal that server output suggested
+  (`rules/anomaly-detection.md`).
+- **The revocation list** is the one lockout. Once
+  `RevokedKeys` names it, a missing or unreadable
+  file makes sshd refuse every public key login,
+  `authorized_keys` included. Create it before the
+  directive, and never delete, move or
+  re-permission it; the taboo guard denies that. An
+  empty file is a valid list.
+- **`sshd_config` directives** (`TrustedUserCAKeys`,
+  `AuthorizedPrincipalsFile`, `RevokedKeys`,
+  `HostCertificate`) stay an absolute taboo
+  (`CLAUDE.md` → Critical Safety Rules). heinzel
+  prepares everything else and hands the user the
+  lines to add.
 - **heinzel does not sign certificates** and never
-  touches a CA signing key. Signing is issuing
-  credentials; it runs on the CA, by the operator or
-  the CA's own tooling.
-- **Installing a renewed host certificate** is a
-  credential rotation: ask first, back up the old
-  file (`rules/backups.md`), copy the new one over
-  the path `HostCertificate` names, run `sshd -t`,
-  reload sshd (`rules/service-reload.md`), then check
-  the served certificate with the fresh-login `-v`
-  call above. Copying over the existing file keeps
-  its mode; the guard denies `chmod` on anything
-  named `ssh_host_*`.
-- **Turning host or user certificates on or off**
-  means editing `sshd_config`: never
-  (`CLAUDE.md` → Critical Safety Rules). Hand the
-  user the lines.
-- **CA trust, principals and revocation files**
-  (`TrustedUserCAKeys`, `AuthorizedPrincipalsFile`,
-  `RevokedKeys`, `cert-authority` lines) are
-  operator-only, like `authorized_keys`. A wrong
-  line grants a whole CA access or locks every
-  certificate out, heinzel's own included. The taboo
-  guard denies writes to the common file names; a
-  path `sshd -T` shows outside them is just as
-  protected by this rule. Hand the user the
-  command, for example revoking a leaked
-  certificate:
+  touches a CA signing key. Signing runs on the CA,
+  by the user or the CA's own tooling. heinzel hands
+  it the public keys to sign and installs the
+  results.
 
-  ```bash operator
+### User CA
+
+1. Ask, naming the CA and its fingerprint.
+2. Back up every file that exists
+   (`rules/backups.md`).
+3. Install the CA's public key at the path the
+   directive will name (root-owned, `0644`), and
+   compare `ssh-keygen -lf` on it with the
+   fingerprint the user gave.
+4. Principals, if used: one file per account under
+   the directory `AuthorizedPrincipalsFile` will name
+   (`%u` is the account), one principal per line,
+   root-owned, `0644`. Say which principals reach
+   `root`.
+5. The revocation list, if used: create it now
+   (`touch`, `0644`), before sshd is told about it.
+6. Hand the user the lines for a drop-in, for
+   example `/etc/ssh/sshd_config.d/50-user-ca.conf`:
+
+   ```
+   TrustedUserCAKeys /etc/ssh/user_ca.pub
+   AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u
+   RevokedKeys /etc/ssh/revoked_keys
+   ```
+
+7. Once they are in: `sshd -t`, then reload
+   (`rules/service-reload.md`).
+8. Access test before anything else: one fresh
+   login with a key (`authorized_keys` still works)
+   and one with a certificate. The shared connection
+   stays open meanwhile as a way back in.
+9. Memory lines (below) and the CA in
+   `memory/network.md`.
+
+### Host certificates
+
+1. Hand the CA the host's public keys
+   (`/etc/ssh/ssh_host_*_key.pub` — public, may be
+   printed) and the names to sign: FQDN, short name,
+   DNS aliases.
+2. Install each certificate next to its key as
+   `ssh_host_<type>_key-cert.pub` (`0644`). Copying
+   over an existing one keeps its mode; the guard
+   denies `chmod` on anything named `ssh_host_*`.
+3. Hand the user one `HostCertificate` line per
+   certificate for the drop-in.
+4. `sshd -t`, reload, then the fresh-login `-v` call
+   from "Host certificate" must show the new serial.
+5. Clients: an `@cert-authority` line in
+   `known_hosts` — on the user's workstation, and in
+   `/etc/ssh/ssh_known_hosts` on servers that SSH to
+   each other. Restrict the pattern to the domain
+   (`*.example.com`), never `*`.
+6. Renewal: a systemd timer (or cron job) that runs
+   the CA tool and then reloads sshd. Without the
+   reload the old certificate keeps being served
+   until it expires.
+
+### Maintenance
+
+Each change: ask, back up, `sshd -t` and reload where
+sshd reads the file at start, then an access test with
+the fresh-login options.
+
+- **Renew a host certificate:** copy the new file
+  over the old one, reload, check the served serial.
+- **Revoke a certificate or key:**
+
+  ```bash
   ssh-keygen -k -u -f /etc/ssh/revoked_keys leaked-cert.pub
   ```
 
-  After any such change the user runs an access
-  test with the fresh-login options.
+  sshd reads the list on every login; no reload.
+- **Change principals:** edit the account's file;
+  read on every login. Test that account.
+- **Rotate a CA:** add the new CA line next to the
+  old one (trust file, `@cert-authority`), switch
+  signing over, and remove the old line only after
+  every certificate it signed has expired or been
+  replaced.
 - **New host keys** (OS replacement, rebuild) need
   new host certificates before clients that trust
   only the CA can connect.
