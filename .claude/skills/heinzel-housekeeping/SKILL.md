@@ -73,6 +73,9 @@ Read on demand, only when the relevant section applies:
 - `references/service-checks.md` — PostgreSQL, backups, nginx,
   Docker, Ollama, node_exporter, NVIDIA GPU, MariaDB/MySQL,
   WireGuard. Only run the ones the server's `memory.md` mentions.
+- `references/service-checks.md` → Mesh VPNs and WireGuard —
+  connected state and expiry of mesh VPN agents, on a
+  `Mesh VPN:` line (`rules/mesh-vpn.md`).
 - `references/unprivileged.md` — which checks work without root
   and how to report skipped ones.
 

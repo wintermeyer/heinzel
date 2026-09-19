@@ -10,6 +10,7 @@ echo "###ua###"; <ua probe>
 echo "###sshd###"; <sshd probe>
 echo "###fw###"; <firewall probe>
 echo "###mta###"; <mta probe>
+echo "###meshvpn###"; <mesh VPN probe>
 echo "###time###"; <time probe>
 echo "###reboot###"; <reboot probe>
 '
@@ -189,6 +190,81 @@ Highlight as drift:
 - One host with no MTA while others have one.
 - Different MTAs in use without a documented reason in
   the per-host `memory.md`.
+
+## Mesh VPNs and tunnels
+
+Which hosts are in which mesh VPN, whether it is connected,
+expiry, and the SSH servers some agents bring, a way in the sshd
+rows do not show. Run `rules/mesh-vpn.md` → Probe unchanged
+(no root), then the root parts of its Tailscale SSH and NetBird
+SSH sections, only where that SSH server is on. This section
+runs its own root check:
+
+```bash
+# After the rule's probe, which sets P (Tailscale prefs).
+if [ "$(id -u)" = "0" ]; then MS=""
+elif sudo -n true 2>/dev/null; then MS="sudo -n"
+else MS="-"; fi
+case $P in *'"RunSSH": true'*)
+  if [ "$MS" = "-" ]; then
+    echo "tailscale-rules: unknown(needs-root)"
+  else
+    echo "tailscale-rules:"
+    T=$(printf '\t')
+    $MS tailscale debug netmap 2>&1 | sed -n \
+      "/^$T\"SSHPolicy\": null/p; /^$T\"SSHPolicy\": {/,/^$T}/p" \
+      | grep -e '"root": "' -e '"\*": "="' -e '"any": true' \
+        -e '"accept": true' -e '"holdAndDelegate"' \
+        -e '"SSHPolicy": null' | sort | uniq -c
+  fi ;;
+esac
+# Skip only an explicit "Disabled": older clients print no line.
+if command -v netbird >/dev/null 2>&1; then
+  case $(netbird status 2>/dev/null) in
+    *'SSH Server: Disabled'*) ;;
+    *) if [ "$MS" = "-" ]; then
+         echo "netbird-flags: unknown(needs-root)"
+       else
+         $MS grep -rHE --include='*.json' \
+           '"(ServerSSHAllowed|EnableSSH[A-Za-z]*|DisableSSHAuth)"' \
+           /var/lib/netbird /var/db/netbird /etc/netbird 2>/dev/null
+       fi ;;
+  esac
+fi
+```
+
+`$MS` is unquoted where it is used, so an empty value
+disappears; `-` marks "no privilege path".
+
+No output: no agent on the host. The counts under
+`tailscale-rules` only hint at the rules (`"root": ""` keeps root
+out of a `"*": "="` rule); read the whole block
+(`rules/mesh-vpn.md`) on a host that stands out. NetBird flags
+count only from the active profile's file.
+
+Row keys:
+
+- Agents running, WireGuard interfaces
+- Agent and version; connected (`BackendState`, `Online`,
+  `Daemon status`, `Management`)
+- Login expiry (`KeyExpiry`, `Session expires`)
+- SSH server on (`RunSSH`, `SSH Server:`)
+- Tailscale control server (`ControlURL`)
+- Root admitted, and by accept or check (Tailscale); root and
+  OIDC flags (NetBird)
+
+Highlight as drift:
+
+- A host outside the VPN the others are in, or in one nobody
+  recorded (no `Mesh VPN:` line in `memory.md`).
+- SSH server on some hosts only, or on a host whose
+  `network.md` → Mesh VPN has no entry for it or says off.
+- Different control or management servers.
+- Login expiry on some hosts only: those drop out of the VPN
+  when it runs out (`rules/access-path.md` → Only one way in).
+- Root admitted on some hosts only, or by accept on some and
+  by check on others.
+- `EnableSSHRoot` or `DisableSSHAuth` differing across hosts.
 
 ## 5. Time sync
 

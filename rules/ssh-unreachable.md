@@ -35,6 +35,12 @@ block alive.
    before the next attempt, and never wrap SSH in an
    automatic retry.
 
+## Another recorded path
+
+An `Access:` line in server memory
+(`rules/access-path.md`) naming a second path that
+works: try that path once too, then stop.
+
 ## Target or path?
 
 Signs that something **on the way** blocks, not the

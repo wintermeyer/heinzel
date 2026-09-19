@@ -28,5 +28,10 @@ outdated entries, merge related items.
 
 **Update `Last connected:` on every connection.**
 
+How heinzel reaches the host: an `Access:` line,
+format in `rules/access-path.md` → Memory. Mesh VPN
+agents: a `Mesh VPN:` summary line here, details in
+`network.md` (`rules/mesh-vpn.md` → Memory).
+
 Memory files never hold credential values — see
 `rules/secrets.md`.

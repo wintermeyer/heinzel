@@ -99,6 +99,14 @@ Recent heinzel activity (last 7 days):
 - If there are more than 10 entries, summarize the
   oldest and show the most recent 5 in detail.
 
+## Mesh VPN and access path
+
+sshd is not the only way in: with a `Mesh VPN:` line
+in server memory, also read the agent's log
+(`rules/mesh-vpn.md` → Who logged in). Add
+`echo "SSH_CONNECTION=$SSH_CONNECTION"` to the same
+call, for the access path (`rules/access-path.md`).
+
 ## No activity
 
 If the journal has no heinzel entries, say nothing.

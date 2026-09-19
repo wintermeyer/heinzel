@@ -49,3 +49,11 @@ checks missing concurrent teammate work, and
 blacklisted hosts getting commands they should
 never receive. The overhead of a few extra commands
 is acceptable; silent skipping is a bug.
+
+## Mesh VPN and access path
+
+On creating the server memory file, run the mesh VPN
+probe (`rules/mesh-vpn.md` → Probe) in the OS
+detection call, and record the access path
+(`rules/access-path.md`) from the activity-check
+call.

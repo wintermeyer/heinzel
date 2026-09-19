@@ -102,6 +102,9 @@ Read on demand:
 - The audit does not check that running services are
   healthy (that is housekeeping's job). It only compares
   declared policy.
+- Mesh VPN membership, connected state and the agents' SSH
+  servers are compared in `references/probes.md` → Mesh
+  VPNs and tunnels.
 - BatchMode SSH means no password prompts. Hosts that need
   a passphrase get skipped — fix the agent setup
   separately.

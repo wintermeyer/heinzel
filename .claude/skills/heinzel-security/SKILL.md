@@ -87,6 +87,8 @@ Read on demand, only when the relevant section applies:
   0, system accounts with login shells.
 - `references/listening-services.md` — audit `ss` / `lsof`
   output, flag databases on 0.0.0.0.
+- `rules/mesh-vpn.md` → Security audit — mesh VPN agents and
+  tunnels, and the SSH servers some bring past sshd.
 - `references/kernel-os.md` — sysctl checks: ASLR, IP forwarding,
   ICMP redirects, SUID core dumps.
 - `references/file-permissions.md` — world-writable system files,

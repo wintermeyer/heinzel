@@ -367,6 +367,16 @@ and summarize it for the user.
 Read `rules/dns-aliases.md` for the full detection,
 verification, and removal procedures.
 
+## Access Path and Mesh VPNs
+
+Read `rules/access-path.md` for how heinzel reaches a
+host (`Access:` in server memory), and before a
+firewall or network change that could cut heinzel's
+only way in. Read `rules/mesh-vpn.md` for a host with
+a `Mesh VPN:` line: agents, their state, and the SSH
+servers some bring, whose logins bypass sshd and its
+logs.
+
 ## Expected Software
 
 Every Linux server should have a firewall and

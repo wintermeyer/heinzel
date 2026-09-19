@@ -169,16 +169,17 @@ mysqladmin status 2>/dev/null \
 - **CRITICAL** if the database is not responding
 - Report uptime and thread count
 
-## WireGuard
+## Mesh VPNs and WireGuard
 
-Triggered when `memory.md` mentions WireGuard.
+Triggered by a `Mesh VPN:` line, or WireGuard, in `memory.md`.
+Run `rules/mesh-vpn.md` → Probe, and `wg show` (root) for
+WireGuard; read each agent's Connected and Expiry there.
 
-```bash
-wg show 2>/dev/null
-```
-
-Check each peer's latest handshake timestamp.
-
-- **WARN** if any peer's last handshake was > 5 minutes ago (may
-  indicate connectivity issues)
-- Report interface names and peer handshake ages
+- **WARN** if an agent is not connected, or its login or
+  certificate expires within 7 days (**CRITICAL** where the
+  `Access:` line says only via that VPN)
+- WireGuard: report handshake ages. An old handshake is a
+  finding only for peers with `persistent keepalive`
+  (**WARN** if > 5 minutes); without it, it means no recent
+  traffic.
+- Report each agent's state in one line

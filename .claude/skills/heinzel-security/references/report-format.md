@@ -22,6 +22,8 @@ Firewall            OK — ufw active, default deny
 Empty passwords     OK — no accounts with empty password
 UID 0 accounts      OK — only root
 Listening services  OK — no databases on 0.0.0.0
+Mesh VPN            WARN — Tailscale SSH on, root by accept
+                    (no check); sshd checks do not cover it
 ASLR                OK — randomize_va_space = 2
 IP forwarding       OK — disabled
 File permissions    OK — no world-writable system files
