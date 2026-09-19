@@ -318,8 +318,9 @@ session start.
 Read `rules/ssh-certificates.md` when a host presents
 a host certificate, trusts a user CA, or heinzel
 logs in with a certificate; before setting up or
-maintaining an SSH CA; and whenever a login or host
-verification fails with `Certificate invalid:`.
+maintaining an SSH CA or SSH from one server to
+others; and whenever a login or host verification
+fails with `Certificate invalid:`.
 Host certificates and user certificates are recorded
 separately in server memory.
 

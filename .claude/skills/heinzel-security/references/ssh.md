@@ -24,11 +24,14 @@ sshd -T 2>/dev/null | grep -i passwordauthentication
 
 ### Fallback method (unprivileged)
 
-If `sshd -T` is unavailable or requires root, use the sshd
-probe in `rules/ssh-config.md`: `sshd -G` gives the same
-effective values without host keys, and every file read. Only
-when that fails too, read the config files directly, following
-their `Include` lines.
+If `sshd -T` is unavailable or requires root, `sshd -G`
+(OpenSSH 9.3+) prints the same effective values without host
+keys, and with `-dd` every file it read — main file, drop-ins
+and anything `Include` names, wherever it lives
+(`rules/ssh-certificates.md` → Which files sshd and ssh read).
+Only when that fails too, read the config files directly. They
+are usually world-readable; follow their `Include` lines, and
+use `/usr/local/etc/ssh` for the FreeBSD package and appliances.
 
 ```bash
 # Main config
@@ -38,8 +41,8 @@ cat /etc/ssh/sshd_config 2>/dev/null
 cat /etc/ssh/sshd_config.d/*.conf 2>/dev/null
 ```
 
-Filter `sshd -T`/`-G` output with `grep -i`
-(`rules/ssh-config.md` → Output case).
+From OpenSSH 10.4 on, `sshd -T` and `sshd -G` print directive
+names in mixed case: filter their output with `grep -i`.
 
 Parse the files for `PasswordAuthentication`. The last matching
 directive wins (drop-ins are read in lexical order before the
@@ -181,10 +184,20 @@ User CA:
   them. With `Match` blocks, evaluate `root` via
   `sshd -T -C` (see the rule), not only the global
   values
-- `@cert-authority` for `*` in a known-hosts file on
-  the server (`/etc/ssh/ssh_known_hosts`) → **INFO**
 - `AuthorizedPrincipalsCommand` in use → **INFO**,
   name command and user
 - No `RevokedKeys` → **INFO**
 - `cert-authority` lines in `authorized_keys` →
   **INFO**, list account and CA fingerprint
+
+SSH client on the server (for root and the service
+accounts that connect out; probe and reasoning in
+`rules/ssh-certificates.md` → SSH client):
+
+- `stricthostkeychecking no`, or a known-hosts file of
+  `/dev/null`, in the system client config → **WARN**
+- `stricthostkeychecking accept-new` → **INFO**
+- The fleet uses a host CA, but the global known-hosts
+  file has no `@cert-authority` line, or the lines sit
+  only in some users' files → **INFO**
+- `@cert-authority` for `*` → **INFO**

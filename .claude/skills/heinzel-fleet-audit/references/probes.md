@@ -77,7 +77,8 @@ if [ -z "$SSHD" ]; then
   echo "unknown(needs-root)"
 else
   T=$($SSHD -T 2>/dev/null)
-  printf '%s\n' "$T" | grep \
+  # -i: OpenSSH 10.4+ prints the names in mixed case.
+  printf '%s\n' "$T" | grep -i \
     -e '^permitrootlogin ' \
     -e '^passwordauthentication ' \
     -e '^pubkeyauthentication ' \
@@ -95,14 +96,12 @@ else
     -e '^authorizedprincipalscommand ' \
     -e '^revokedkeys '
   # User CA fingerprints, from the path sshd uses.
-  CA=$(printf '%s\n' "$T" | grep '^trustedusercakeys ')
-  CA=${CA#trustedusercakeys }
+  CA=$(printf '%s\n' "$T" | grep -i '^trustedusercakeys ' | cut -d' ' -f2-)
   if [ -n "$CA" ] && [ "$CA" != "none" ]; then
     echo "userca:"; ssh-keygen -lf "$CA" 2>&1
   fi
   # Same revocation list everywhere? Compare checksums.
-  RK=$(printf '%s\n' "$T" | grep '^revokedkeys ')
-  RK=${RK#revokedkeys }
+  RK=$(printf '%s\n' "$T" | grep -i '^revokedkeys ' | cut -d' ' -f2-)
   if [ -n "$RK" ] && [ "$RK" != "none" ]; then
     # sha256sum on Linux, sha256 -q on FreeBSD.
     echo "revokedkeys-sha256: $(sha256sum "$RK" 2>/dev/null \
@@ -115,10 +114,19 @@ for c in /etc/ssh/*-cert.pub /usr/local/etc/ssh/*-cert.pub; do
   echo "hostcert: $c"
   ssh-keygen -L -f "$c" | grep -E 'Signing CA|Valid:'
 done
+# SSH client: host CA lines in the global known-hosts files,
+# which every account on the host shares.
+for f in $(ssh -G localhost 2>/dev/null \
+  | grep -i '^globalknownhostsfile ' | cut -d' ' -f2-); do
+  [ -e "$f" ] || continue
+  echo "globalknownhosts: $f"
+  grep '^@cert-authority' "$f" | cut -d' ' -f1-3
+done
 ```
 
 Row keys: each line is `key value`; compare keys without
-regard to case. Compare column-by-
+regard to case (OpenSSH 10.4+ prints `PermitRootLogin`,
+older ones `permitrootlogin`). Compare column-by-
 column. A host whose sshd column is `unknown(needs-root)`
 is reported as such, never as "defaults".
 
@@ -141,6 +149,9 @@ Highlight as drift:
   all — list them too.
 - A host certificate that expires well before the
   others: its renewal job is likely not running.
+- `globalknownhosts` trusting a different host CA, or
+  none, on hosts that connect to others: every account
+  there has to keep its own `@cert-authority` line.
 
 Host certificate and user CA are separate rows (see
 `rules/ssh-certificates.md`): a host can have one
