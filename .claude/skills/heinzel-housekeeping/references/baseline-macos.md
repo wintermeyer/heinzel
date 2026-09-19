@@ -85,10 +85,9 @@ diskutil info disk0 | grep "SMART Status"
 
 ## SSH Host Certificate Expiry
 
-Only with Remote Login on and a host certificate
-present. Same probe and thresholds as in
-`baseline-linux.md`; the files are in `/etc/ssh`. macOS
-starts sshd per connection, so the file on disk is what
+Only with Remote Login on and an `SSH host cert:` line
+in `memory.md`: as in `baseline-linux.md`. macOS starts
+sshd per connection, so the file on disk is what
 clients get.
 
 ## Time Sync

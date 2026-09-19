@@ -298,29 +298,11 @@ echo | openssl s_client -connect localhost:443 \
 
 ## SSH Host Certificate Expiry
 
-Only when a host certificate exists (`SSH host cert:`
-in `memory.md`, or the glob below matches). The file
-is world-readable, so this needs no root:
-
-```bash
-for c in /etc/ssh/*-cert.pub; do
-  [ -e "$c" ] || continue
-  echo "== $c"
-  ssh-keygen -L -f "$c" | grep -E 'Type:|Valid:'
-done
-```
-
-- **CRITICAL** if expired or not yet valid: every
-  client that knows the host only through the CA
-  fails with `Host key verification failed.`
-- **WARN** if it expires in < 7 days, or less than a
-  third of its lifetime is left (renewal overdue)
-
-The file on disk is not necessarily what sshd serves:
-sshd loads it at start and reload.
-
-Details and the renewal check:
-`rules/ssh-certificates.md` → Host certificate.
+Only when `memory.md` has an `SSH host cert:` line.
+Run the loop from `rules/ssh-certificates.md` → Host
+certificate (no root) in the same call as the TLS
+check above, and rate it with the severities listed
+there.
 
 ## Kernel: Running vs Installed
 

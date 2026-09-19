@@ -76,9 +76,8 @@ fi
 if [ -z "$SSHD" ]; then
   echo "unknown(needs-root)"
 else
-  # -i: names are mixed case since OpenSSH 10.4
-  # (rules/ssh-config.md).
-  $SSHD -T 2>/dev/null | grep -i \
+  T=$($SSHD -T 2>/dev/null)
+  printf '%s\n' "$T" | grep \
     -e '^permitrootlogin ' \
     -e '^passwordauthentication ' \
     -e '^pubkeyauthentication ' \
@@ -96,13 +95,13 @@ else
     -e '^authorizedprincipalscommand ' \
     -e '^revokedkeys '
   # User CA fingerprints, from the path sshd uses.
-  CA=$($SSHD -T 2>/dev/null | grep '^trustedusercakeys ')
+  CA=$(printf '%s\n' "$T" | grep '^trustedusercakeys ')
   CA=${CA#trustedusercakeys }
   if [ -n "$CA" ] && [ "$CA" != "none" ]; then
     echo "userca:"; ssh-keygen -lf "$CA" 2>&1
   fi
   # Same revocation list everywhere? Compare checksums.
-  RK=$($SSHD -T 2>/dev/null | grep '^revokedkeys ')
+  RK=$(printf '%s\n' "$T" | grep '^revokedkeys ')
   RK=${RK#revokedkeys }
   if [ -n "$RK" ] && [ "$RK" != "none" ]; then
     # sha256sum on Linux, sha256 -q on FreeBSD.
@@ -111,7 +110,7 @@ else
   fi
 fi
 # Host certificates are world-readable: no root needed.
-for c in /etc/ssh/*-cert.pub; do
+for c in /etc/ssh/*-cert.pub /usr/local/etc/ssh/*-cert.pub; do
   [ -e "$c" ] || continue
   echo "hostcert: $c"
   ssh-keygen -L -f "$c" | grep -E 'Signing CA|Valid:'

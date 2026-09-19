@@ -151,22 +151,18 @@ Skip this check on macOS.
 ## SSH Certificates — Linux and macOS
 
 Detection, probes and the reasoning live in
-`rules/ssh-certificates.md`; run its "Detect",
-"Host certificate" and "User certificates" probes.
-Report host and user certificates as **separate**
-lines. Skip both lines with `none` when neither is
-configured.
+`rules/ssh-certificates.md`; run its "Host
+certificate" and "User CA" probes (the latter needs
+root; without it, the quick probe). Report host and
+user certificates as **separate** lines. Skip both
+lines with `none` when neither is configured.
 
 Host certificate:
 
-- Expired, not yet valid, or its public key differs
-  from the host key next to it → **CRITICAL**
-- Expires in < 7 days, or less than a third of its
-  lifetime left, and no renewal job → **WARN**
-- Renewal job found but it does not reload sshd →
-  **WARN**
-- `Valid: forever` → **WARN** (cannot expire, only
-  be revoked on every client)
+- Validity and key match: the severities in
+  `rules/ssh-certificates.md` → Host certificate
+- No renewal job, or one that does not reload sshd
+  → **WARN**
 - A name from server memory (FQDN, DNS alias)
   missing from the principals → **INFO**
 

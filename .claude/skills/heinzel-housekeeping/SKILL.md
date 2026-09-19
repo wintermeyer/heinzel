@@ -87,10 +87,8 @@ Read on demand, only when the relevant section applies:
   `freebsd-update fetch` dry run, `pfctl -s info` for the
   firewall, `df -h` / `swapinfo` / `uptime` for the basics,
   `service -e` for enabled services, the SSH host
-  certificate expiry from `baseline-linux.md` with the paths
-  from `rules/ssh-certificates.md` → Per operating system)
-  and state in the report that FreeBSD has no baseline
-  reference yet.
+  certificate expiry from `baseline-linux.md`) and state in
+  the report that FreeBSD has no baseline reference yet.
 
 ## Custom checks
 

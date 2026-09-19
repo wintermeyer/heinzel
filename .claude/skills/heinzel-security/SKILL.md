@@ -64,9 +64,8 @@ applies before any of this runs.
   do not silently skip: run the closest equivalent checks
   manually (`pkg audit -F` for known-vulnerable packages,
   `pfctl -s info` / `pfctl -sr` for the firewall, `sshd -T`
-  for SSH hardening and certificates (`references/ssh.md`,
-  paths per `rules/ssh-certificates.md` → Per operating
-  system), `find / -perm -4000` for SUID, sysctl
+  for SSH hardening and certificates (`references/ssh.md`),
+  `find / -perm -4000` for SUID, sysctl
   `security.*` knobs) and state in the report that FreeBSD
   has no baseline reference yet.
 

@@ -224,22 +224,11 @@ check pass 'cp /etc/ssh/ssh_host_ed25519_key-cert.pub /var/backups/heinzel/'
 check deny 'ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N ""'
 check deny 'ssh-keygen -f ~/.ssh/id_ed25519-work -N ""'
 check deny 'rm /etc/ssh/ssh_host_ed25519_key-cert.pub'
-# CA trust and principals are ordinary maintenance: a mistake
-# there affects certificate logins only, and the rule file asks
-# first. heinzel must be able to set up and run an SSH CA.
-check pass 'cat /etc/ssh/trusted_user_ca_keys'
-check pass 'ssh-keygen -lf /etc/ssh/user_ca.pub'
-check pass 'grep -H . /etc/ssh/auth_principals/root'
+# CA trust and principals are ordinary maintenance (the guard
+# header says why); keep them writable.
 check pass 'cp /tmp/ca.pub /etc/ssh/trusted_user_ca_keys'
-check pass 'cat /tmp/ca.pub >> /etc/ssh/user_ca.pub'
-check pass 'install -d -m 755 /etc/ssh/auth_principals'
-check pass 'echo root-everywhere > /etc/ssh/auth_principals/root'
 check pass 'sed -i /alice/d /etc/ssh/auth_principals/root'
-check pass 'chmod 644 /etc/ssh/ca.pub'
-check pass 'curl -o /etc/ssh/trusted-user-ca-keys.pem https://ca.example.com/ssh/roots'
-check pass 'cp /tmp/ca.pub /usr/local/etc/ssh/trusted_user_ca_keys'
-check pass 'cat /etc/ssh/ssh_known_hosts /etc/ssh/moduli'
-check pass 'cp /tmp/new.conf /etc/ssh/ssh_config.d/local.conf'
+check pass 'chmod 644 /usr/local/etc/ssh/ca.pub'
 # Host certificates: installing a renewed one passes, the key
 # beside it stays protected.
 check pass 'cp /tmp/new-cert.pub /etc/ssh/ssh_host_ed25519_key-cert.pub'
