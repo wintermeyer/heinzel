@@ -167,8 +167,15 @@ own: the guard denies `ssh-keygen` next to an
 
 ```bash
 grep -Hn 'cert-authority' /root/.ssh/authorized_keys \
-  /home/*/.ssh/authorized_keys 2>/dev/null
+  /home/*/.ssh/authorized_keys \
+  /Users/*/.ssh/authorized_keys 2>/dev/null
 ```
+
+These are the default locations only. Where
+`authorizedkeysfile` in `OUT` names another path (e.g.
+`/etc/ssh/authorized_keys/%u`), grep that too; homes
+outside `/home` and `/Users` (directory accounts) are
+not covered by the glob.
 
 - `trustedusercakeys none` and no `cert-authority`
   line: no user CA. No `revokedkeys` line: no
