@@ -37,6 +37,8 @@ printed. The CA **signing keys** are secrets
 
 ## When to check
 
+- **First connection**, while creating server memory:
+  the quick probe below. It needs no root.
 - Security audit, fleet audit, housekeeping (host
   certificate expiry) — see the skills.
 - Before any work on SSH access: users, keys, host
@@ -45,6 +47,27 @@ printed. The CA **signing keys** are secrets
   `Certificate invalid:` (see Failures below).
 
 ## Detect (server)
+
+### Quick probe (first connection)
+
+Certificates on disk and the directives in the config
+files, both usually world-readable:
+
+```bash
+ls /etc/ssh/*-cert.pub /usr/local/etc/ssh/*-cert.pub \
+  2>/dev/null
+grep -hiE -e '^[[:space:]]*(HostCertificate|TrustedUserCAKeys)' \
+  -e '^[[:space:]]*(AuthorizedPrincipals|RevokedKeys)' \
+  /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf \
+  /usr/local/etc/ssh/sshd_config 2>/dev/null
+```
+
+No output: no SSH CA on this host; write nothing. A
+hit: write the memory lines (see Memory) from what
+is visible, mark unread details `unchecked`, and run
+the full checks below when root is at hand anyway.
+
+### Full check
 
 `sshd -T` gives the effective values. It needs root
 (`sudo -n sshd -T` otherwise):
@@ -63,7 +86,19 @@ sshd -T 2>/dev/null | grep \
 - No `revokedkeys` line: no revocation list.
 - `sshd -T` shows the global values. A `Match`
   block can set principals or CA keys per user or
-  address; read the config for them.
+  address. When the config has `Match` lines,
+  evaluate them for the accounts that matter —
+  `root` and each account with a principals file:
+
+  ```bash
+  sshd -T -C user=root,host=client.example.com,addr=192.0.2.10 \
+    2>/dev/null | grep -e '^trustedusercakeys ' \
+    -e '^authorizedprincipals' -e '^revokedkeys '
+  ```
+
+  Use a real client name and address when the
+  `Match` blocks test them. Older OpenSSH needs all
+  three of `user`, `host` and `addr`.
 
 Without root, read the config files. They are
 usually world-readable:
@@ -200,10 +235,26 @@ journalctl -u ssh -u sshd --since "7 days ago" \
   | paste - - | sort | uniq -c
 ```
 
-On hosts without the journal, read
-`/var/log/auth.log` or `/var/log/secure`. Refused
-certificates log `Refusing certificate ID "…"`
-with the reason.
+Feed the same two `grep` stages with the system's
+log instead of `journalctl`:
+
+- **Without the journal (Linux):**
+  `cat /var/log/auth.log /var/log/secure 2>/dev/null`
+- **FreeBSD:**
+  `cat /var/log/auth.log`
+- **macOS** — current OpenSSH splits sshd into
+  `sshd`, `sshd-session` and `sshd-auth`, so match
+  the prefix. Absolute path and no `2>/dev/null`, as
+  in `rules/activity-check.md`:
+
+  ```bash
+  /usr/bin/log show --last 7d --info \
+    --predicate 'process BEGINSWITH "sshd"' 2>&1 \
+    | grep -E 'Accepted publickey.*-CERT'
+  ```
+
+Refused certificates log `Refusing certificate ID
+"…"` with the reason.
 
 ## heinzel's own login by certificate
 
@@ -242,6 +293,32 @@ ssh-add -L | grep -- '-cert-v01@' | ssh-keygen -L -f /dev/stdin
   certificate and from which tool, so a rejected
   login points to renewal first.
 
+### Host CA and revocations on the client
+
+Which CAs and revoked host keys this machine knows.
+The CA often sits in a known-hosts file of its own,
+so take the files from `ssh -G`, not from habit:
+
+```bash
+ssh -G <host> | grep -E '^(user|global)knownhostsfile '
+```
+
+Then, in every file listed:
+
+```bash
+grep -n -e '^@cert-authority' -e '^@revoked' <files> 2>/dev/null
+```
+
+- `@cert-authority <pattern> <CA key>` trusts the
+  CA for the hosts matching the pattern. A pattern
+  of `*` trusts it for every host; flag it.
+- `@revoked * <key>` refuses that host key or host
+  certificate everywhere, CA or not. It is the
+  client-side answer to a stolen host key: add the
+  line on every client and in every
+  `/etc/ssh/ssh_known_hosts`, and give the host a
+  new key and certificate.
+
 ## Failures
 
 The client prints the reason even without `-v`:
@@ -266,10 +343,12 @@ The client prints the reason even without `-v`:
   names the reason (`Refusing certificate …`). Do
   not retry (`rules/ssh-unreachable.md`).
 
-## Setting up and running an SSH CA
+## Working with an existing SSH CA
 
-heinzel sets up and maintains an SSH CA with the
-user. Know what each part puts at risk:
+heinzel does not build or run a CA. It connects
+servers to the CA the user already has and does the
+work that CA causes on every SSH server and client.
+Know what each part puts at risk:
 
 - **CA trust and principals** add a way in next to
   `authorized_keys`. A mistake there breaks
@@ -300,7 +379,7 @@ user. Know what each part puts at risk:
   it the public keys to sign and installs the
   results.
 
-### User CA
+### Connecting a server: user CA
 
 1. Ask, naming the CA and its fingerprint.
 2. Back up every file that exists
@@ -334,7 +413,7 @@ user. Know what each part puts at risk:
 9. Memory lines (below) and the CA in
    `memory/network.md`.
 
-### Host certificates
+### Connecting a server: host certificates
 
 1. Hand the CA the host's public keys
    (`/etc/ssh/ssh_host_*_key.pub` — public, may be
@@ -366,13 +445,23 @@ the fresh-login options.
 
 - **Renew a host certificate:** copy the new file
   over the old one, reload, check the served serial.
-- **Revoke a certificate or key:**
+- **Revoke a certificate or key:** by file, or by
+  key ID or serial when the certificate itself is
+  not at hand. The latter needs only the CA's
+  **public** key:
 
   ```bash
   ssh-keygen -k -u -f /etc/ssh/revoked_keys leaked-cert.pub
+  printf 'id: alice@example.com\n' > /tmp/revoke.spec
+  ssh-keygen -k -u -s /etc/ssh/user_ca.pub \
+    -f /etc/ssh/revoked_keys /tmp/revoke.spec
+  ssh-keygen -Q -l -f /etc/ssh/revoked_keys
   ```
 
-  sshd reads the list on every login; no reload.
+  `serial: 42` in the spec revokes one certificate,
+  `id:` every certificate with that key ID. sshd
+  reads the list on every login; no reload. On more
+  than one server, see "Across all servers".
 - **Change principals:** edit the account's file;
   read on every login. Test that account.
 - **Rotate a CA:** add the new CA line next to the
@@ -383,6 +472,66 @@ the fresh-login options.
 - **New host keys** (OS replacement, rebuild) need
   new host certificates before clients that trust
   only the CA can connect.
+
+### Across all servers
+
+A CA is trusted by many servers, so most changes are
+only done when every one of them has it. A server
+that was missed keeps admitting a revoked person
+with no sign of it.
+
+**Scope.** The servers that trust the CA are those
+whose `SSH user CA:` (or `SSH host cert:`) line in
+server memory names its fingerprint. Memory can be
+stale: confirm with the fleet audit
+(`heinzel-fleet-audit`) before and after, and list
+servers that were unreachable or skipped — they are
+not done.
+
+**Progress.** Keep one line per operation under the
+CA's entry in `memory/network.md` until it is done
+everywhere, e.g.
+`- Revocation 2026-09-19 (id alice@example.com):
+done web1 web2, pending db1`. Remove it when
+nothing is pending.
+
+**Order per server.** One bundled SSH call per
+server (`rules/ssh-connections.md`), each with the
+usual ask, backup and access test. Stop the rollout
+at the first server where the access test fails.
+
+- **Revoke:** build the list **once** (on the
+  workstation, from the CA's public key, as under
+  Maintenance), then copy the same file over the
+  `RevokedKeys` path on every server — `cp` or
+  `scp` over the existing file, not `mv` (the guard
+  denies moving the list, and a missing one locks
+  everyone out). Check each server with
+  `sha256sum <path>` against the local copy and
+  `ssh-keygen -Q -f <path> <revoked cert>`. A
+  server without `RevokedKeys` cannot revoke at all:
+  report it — the certificate stays valid there
+  until it expires.
+- **Offboard a person:** revoke by key ID (all
+  their certificates), remove their principal from
+  every principals file (`grep -rl <principal>
+  <principals dir>` per server), and remove their
+  plain keys from `authorized_keys` — the key taboo
+  still leaves that step to the user. Then search
+  the `Who logged in` output of each server for
+  their key ID since the revocation.
+- **Rotate a CA:** phase 1, add the new CA next to
+  the old one on every server and client; fleet
+  audit shows both fingerprints everywhere. Phase 2,
+  the user switches signing to the new CA. Phase 3,
+  once no certificate of the old CA is valid any
+  more, remove the old one everywhere. Never start
+  a phase before the previous one is complete on
+  every server.
+- **Host certificates of the fleet:** the fleet
+  audit lists every host certificate's CA and
+  validity. One that expires much earlier than the
+  rest usually has a dead renewal job.
 
 ## Memory
 
@@ -398,7 +547,22 @@ one line per direction and only when present:
   RevokedKeys none
 ```
 
-Fleet-wide facts in `memory/network.md`: which CA
-fingerprint signs host certificates, which signs
-user certificates, and which tool issues them.
+From the quick probe alone, write what it showed and
+mark the rest, e.g.
+`- SSH user CA: /etc/ssh/user_ca.pub (CA unchecked)`.
+
+Fleet-wide facts in `memory/network.md`, one entry
+per CA: which fingerprint signs host certificates,
+which signs user certificates, which tool issues
+them, and the operations still in progress (see
+"Across all servers"):
+
+```markdown
+## SSH CAs
+- User CA SHA256:9fQe… — step-ca on ca.example.com,
+  certificates 16h
+- Host CA SHA256:Cxr4… — same step-ca, host
+  certificates 30d, renewed on each host
+```
+
 Short fingerprints are enough to recognize a CA.

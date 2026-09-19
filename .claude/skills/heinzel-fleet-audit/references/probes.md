@@ -101,6 +101,12 @@ else
   if [ -n "$CA" ] && [ "$CA" != "none" ]; then
     echo "userca:"; ssh-keygen -lf "$CA" 2>&1
   fi
+  # Same revocation list everywhere? Compare checksums.
+  RK=$($SSHD -T 2>/dev/null | grep '^revokedkeys ')
+  RK=${RK#revokedkeys }
+  if [ -n "$RK" ] && [ "$RK" != "none" ]; then
+    echo "revokedkeys-sha256: $(sha256sum "$RK" 2>&1)"
+  fi
 fi
 # Host certificates are world-readable: no root needed.
 for c in /etc/ssh/*-cert.pub; do
@@ -127,6 +133,11 @@ Highlight as drift:
 - Different user CA fingerprints, principals setup
   or `revokedkeys` across hosts that should admit
   the same people.
+- A different `revokedkeys-sha256` on hosts that
+  trust the same user CA: a revocation did not reach
+  every host, and a revoked certificate still works
+  there. Hosts without `revokedkeys` cannot revoke at
+  all — list them too.
 - A host certificate that expires well before the
   others: its renewal job is likely not running.
 

@@ -28,7 +28,9 @@ moment") — don't skip.
 5. **OS detection.** See `rules/os-detection.md`.
 6. **Server memory file.** Create on first
    connection, read on every subsequent connection.
-   See `rules/server-memory.md`.
+   See `rules/server-memory.md`. On creation, include
+   the SSH CA quick probe
+   (`rules/ssh-certificates.md` → Detect).
 7. **Activity check.** Every connection, not just
    the first. See `rules/activity-check.md`.
 8. **Then** execute the user's request.

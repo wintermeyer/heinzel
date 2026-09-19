@@ -24,8 +24,9 @@ add `Mode: local` for localhost).
 
 SSH certificates get two separate lines,
 `SSH host cert:` and `SSH user CA:`, each only when
-present. Format in `rules/ssh-certificates.md` →
-Memory.
+present. On first connection, run the quick probe in
+`rules/ssh-certificates.md` → Detect; format there
+under Memory.
 
 **Update memory immediately after any system
 change.** Keep it compact (~30 lines max). Remove

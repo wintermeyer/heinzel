@@ -182,7 +182,11 @@ User CA:
 - `casignaturealgorithms` contains `ssh-rsa`
   (SHA-1) → **WARN**
 - Principals that reach `root` → **INFO**, list
-  them
+  them. With `Match` blocks, evaluate `root` via
+  `sshd -T -C` (see the rule), not only the global
+  values
+- `@cert-authority` for `*` in a known-hosts file on
+  the server (`/etc/ssh/ssh_known_hosts`) → **INFO**
 - `AuthorizedPrincipalsCommand` in use → **INFO**,
   name command and user
 - No `RevokedKeys` → **INFO**
