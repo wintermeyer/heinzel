@@ -341,7 +341,8 @@ Check security configuration on any server:
 ```
 
 Heinzel checks SSH password authentication settings,
-firewall status, and reports issues by severity.
+SSH host certificates and user CA trust, firewall
+status, and reports issues by severity.
 
 ### Fleet audit
 

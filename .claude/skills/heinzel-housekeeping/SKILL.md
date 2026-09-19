@@ -64,7 +64,8 @@ Read on demand, only when the relevant section applies:
 - `references/report-format.md` — required output format and
   severity rules (CRITICAL / WARN / INFO).
 - `references/baseline-linux.md` — disk, memory, load, uptime,
-  updates, firewall, NTP, logs, SSL certs, kernel.
+  updates, firewall, NTP, logs, SSL certs, SSH host
+  certificate expiry, kernel.
 - `references/baseline-macos.md` — disk, memory, load, updates,
   Homebrew, Application Firewall, SMART, time sync.
 - `references/backup-presence.md` — generic "any backup at
@@ -85,8 +86,9 @@ Read on demand, only when the relevant section applies:
   manually (`pkg audit -F`, `pkg upgrade -n`,
   `freebsd-update fetch` dry run, `pfctl -s info` for the
   firewall, `df -h` / `swapinfo` / `uptime` for the basics,
-  `service -e` for enabled services) and state in the report
-  that FreeBSD has no baseline reference yet.
+  `service -e` for enabled services, the SSH host
+  certificate expiry from `baseline-linux.md`) and state in
+  the report that FreeBSD has no baseline reference yet.
 
 ## Custom checks
 

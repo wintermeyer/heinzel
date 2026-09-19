@@ -6,6 +6,7 @@ to minimise round-trips:
 
 ```bash
 ssh <standard options from CLAUDE.md → SSH Options> USER@HOST '
+<privilege ladder>
 echo "###ua###"; <ua probe>
 echo "###sshd###"; <sshd probe>
 echo "###fw###"; <firewall probe>
@@ -27,6 +28,22 @@ answer — an active ufw must never be reported as `none` just
 because the probe lacked permission to read its state. See
 `references/output-format.md` for how the sentinel is
 rendered and why it is excluded from drift detection.
+
+The ladder runs once, at the top of the batched script, and
+every probe that needs root uses its `$SUDO`:
+
+```bash
+if [ "$(id -u)" = "0" ]; then
+  SUDO=""
+elif sudo -n true 2>/dev/null; then
+  SUDO="sudo -n"
+else
+  SUDO="-"
+fi
+```
+
+`$SUDO` is intentionally unquoted where it is used, so an
+empty value disappears; `-` marks "no privilege path".
 
 ## 1. Unattended-upgrades (Debian/Ubuntu)
 
@@ -61,22 +78,21 @@ Row keys to extract for the table:
 
 ## 2. sshd effective config
 
-`sshd -T` needs root (it reads host keys). Probe with the
-privilege ladder — direct as root, `sudo -n` otherwise, and
-the sentinel when neither works:
+`sshd -T` needs root (it reads host keys). Uses `$SUDO`
+from the privilege ladder, and the sentinel without it:
 
 ```bash
-if [ "$(id -u)" = "0" ]; then
-  SSHD="sshd"
-elif sudo -n true 2>/dev/null; then
-  SSHD="sudo -n sshd"
-else
-  SSHD=""
-fi
-if [ -z "$SSHD" ]; then
+if [ "$SUDO" = "-" ]; then
   echo "unknown(needs-root)"
 else
-  $SSHD -T 2>/dev/null | grep \
+  SSHD="$SUDO sshd"
+  # A -f on the running daemon, and -i on every filter:
+  # rules/ssh-config.md.
+  FOPT=$(ps ax -o args= \
+    | sed -n 's/^[^ ]*sshd[: ]\(.* \)\{0,1\}-f \([^ ]*\).*/-f \2/p' \
+    | head -n 1)
+  T=$($SSHD $FOPT -T 2>/dev/null)
+  printf '%s\n' "$T" | grep -i \
     -e '^permitrootlogin ' \
     -e '^passwordauthentication ' \
     -e '^pubkeyauthentication ' \
@@ -87,11 +103,48 @@ else
     -e '^maxauthtries ' \
     -e '^logingracetime ' \
     -e '^usepam ' \
-    -e '^port '
+    -e '^port ' \
+    -e '^hostcertificate ' \
+    -e '^trustedusercakeys ' \
+    -e '^authorizedprincipalsfile ' \
+    -e '^authorizedprincipalscommand ' \
+    -e '^revokedkeys '
+  # User CA fingerprints, from the path sshd uses.
+  CA=$(printf '%s\n' "$T" | grep -i '^trustedusercakeys ' | cut -d' ' -f2-)
+  if [ -n "$CA" ] && [ "$CA" != "none" ]; then
+    echo "userca:"; ssh-keygen -lf "$CA" 2>&1
+  fi
+  # Same revocation list everywhere? Compare checksums.
+  RK=$(printf '%s\n' "$T" | grep -i '^revokedkeys ' | cut -d' ' -f2-)
+  if [ -n "$RK" ] && [ "$RK" != "none" ]; then
+    # sha256sum on Linux, sha256 -q on FreeBSD.
+    echo "revokedkeys-sha256: $(sha256sum "$RK" 2>/dev/null \
+      || sha256 -q "$RK" 2>&1)"
+  fi
 fi
+# Host certificates are world-readable: no root needed.
+for c in /etc/ssh/*-cert.pub /usr/local/etc/ssh/*-cert.pub; do
+  [ -e "$c" ] || continue
+  echo "hostcert: $c"
+  ssh-keygen -L -f "$c" | grep -E 'Signing CA|Valid:'
+done
+# SSH client: host CA lines in the global known-hosts files,
+# which every account on the host shares.
+for f in $(ssh -G localhost 2>/dev/null \
+  | grep -i '^globalknownhostsfile ' | cut -d' ' -f2-); do
+  [ -e "$f" ] || continue
+  echo "globalknownhosts: $f"
+  grep -e '^@cert-authority' -e '^@revoked' "$f" \
+    | while read -r m p k; do
+        fp=$(printf '%s\n' "$k" | ssh-keygen -lf /dev/stdin \
+          | cut -d' ' -f2)
+        echo "$m $p $fp"
+      done
+done
 ```
 
-Row keys: each line is `key value`. Compare column-by-
+Row keys: each line is `key value`; compare keys without
+regard to case. Compare column-by-
 column. A host whose sshd column is `unknown(needs-root)`
 is reported as such, never as "defaults".
 
@@ -102,6 +155,27 @@ Highlight as drift:
 - Any host with `permitrootlogin yes` while others use
   `prohibit-password` or `forced-commands-only`.
 - Mismatched `port` values across the fleet.
+- Host certificates on some hosts but not others, or
+  signed by different CAs.
+- Different user CA fingerprints, principals setup
+  or `revokedkeys` across hosts that should admit
+  the same people.
+- A different `revokedkeys-sha256` on hosts that
+  trust the same user CA: a revocation did not reach
+  every host, and a revoked certificate still works
+  there. Hosts without `revokedkeys` cannot revoke at
+  all — list them too.
+- A host certificate that expires well before the
+  others: its renewal job is likely not running.
+- `globalknownhosts` trusting a different host CA, or
+  none, on hosts that connect to others: every account
+  there has to keep its own `@cert-authority` line.
+  An `@revoked` line missing on some hosts: a stolen
+  host key is still accepted there.
+
+Host certificate and user CA are separate rows (see
+`rules/ssh-certificates.md`): a host can have one
+without the other.
 
 ## 3. Firewall posture
 
@@ -114,13 +188,7 @@ emit the sentinel. Never let a permission error degrade to
 firewall is simply unreadable.
 
 ```bash
-if [ "$(id -u)" = "0" ]; then
-  SUDO=""
-elif sudo -n true 2>/dev/null; then
-  SUDO="sudo -n"
-else
-  SUDO="-"
-fi
+# $SUDO from the privilege ladder at the top.
 # Prefer ufw on Debian/Ubuntu; firewall-cmd on RHEL family.
 if command -v ufw >/dev/null 2>&1; then
   echo "tool=ufw"
@@ -140,9 +208,6 @@ else
   echo "tool=none"
 fi
 ```
-
-(`$SUDO` is intentionally unquoted so an empty value
-disappears; `-` marks "no privilege path".)
 
 Row keys for the table:
 

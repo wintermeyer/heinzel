@@ -11,8 +11,10 @@ Many checks in this audit work without root:
   (without process names on Linux), all sysctl checks,
   world-writable system files, SUID/SGID audit, mount options,
   unowned files, fail2ban status (systemctl), macOS checks (SIP,
-  FileVault, Gatekeeper).
-- **Needs root:** `sshd -T`, empty password accounts
+  FileVault, Gatekeeper), host certificate validity
+  (`*-cert.pub` is world-readable).
+- **Needs root:** `sshd -T`, principals files and
+  `RevokedKeys` when not world-readable, empty password accounts
   (`/etc/shadow`), listening services with process names on Linux
   (`ss -tulnp`), cron directory permissions (some dirs may be
   unreadable).

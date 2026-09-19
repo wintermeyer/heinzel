@@ -2,7 +2,8 @@
 name: heinzel-security
 argument-hint: "[hostname]"
 description: Run a heinzel security audit on a server — SSH
-  hardening (password auth, weak algos, root login), firewall,
+  hardening (password auth, weak algos, root login, host
+  certificates, user CA trust), firewall,
   user account hygiene, listening services, kernel hardening
   (ASLR, IP forwarding), file permissions, SUID/SGID audit,
   fail2ban. Use when the user asks for a "security audit",
@@ -63,7 +64,8 @@ applies before any of this runs.
   do not silently skip: run the closest equivalent checks
   manually (`pkg audit -F` for known-vulnerable packages,
   `pfctl -s info` / `pfctl -sr` for the firewall, `sshd -T`
-  for SSH hardening, `find / -perm -4000` for SUID, sysctl
+  for SSH hardening and certificates (`references/ssh.md`),
+  `find / -perm -4000` for SUID, sysctl
   `security.*` knobs) and state in the report that FreeBSD
   has no baseline reference yet.
 
@@ -80,7 +82,12 @@ Read on demand, only when the relevant section applies:
 - `references/report-format.md` — required output format and
   severity rules (CRITICAL / WARN / INFO).
 - `references/ssh.md` — SSH password auth, root login, weak
-  algorithms, MaxAuthTries, X11Forwarding (Linux and macOS).
+  algorithms, MaxAuthTries, X11Forwarding, host certificates
+  and user CA trust, the SSH client on the server (Linux and
+  macOS).
+- `rules/ssh-ca-issuing.md` — when a CA that signs user
+  certificates runs on the host or its rules are at hand: who
+  gets certificates for which principals, and for how long.
 - `references/firewall.md` — Linux (ufw / firewalld) and macOS
   (Application Firewall).
 - `references/user-accounts.md` — empty passwords, multiple UID

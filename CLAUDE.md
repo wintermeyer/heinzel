@@ -134,11 +134,18 @@ remote connection before any other work.
   redirect or `tee` onto one. Read-only inspection
   (e.g. `lsblk`, `fdisk -l`, `gpart show`,
   `diskutil list`, `nvme list`, `hdparm -I`) is
-  always allowed. Never modify
-  `/etc/ssh/sshd_config`. Never delete or overwrite
-  SSH keys, and that includes moving, truncating or
-  re-permissioning them. Never halt or power off a
-  server.
+  always allowed. Never modify `sshd_config`, its
+  `sshd_config.d/` drop-ins or a file an appliance
+  merges into it (pfSense: `/etc/sshd_extra`),
+  wherever sshd keeps it (`/etc/ssh`,
+  `/usr/local/etc/ssh`, …). Never delete or
+  overwrite SSH keys — host keys, `authorized_keys`,
+  `id_*`, or the directory holding them (`~/.ssh`,
+  OPNsense: `/conf/sshd`) — and that includes
+  moving, truncating or re-permissioning them. Never
+  delete, move or re-permission sshd's revocation
+  list (`RevokedKeys`): sshd then refuses every key
+  login. Never halt or power off a server.
   Inspect `sshd_config`, SSH keys and disk devices
   with `cat`, `grep`, `stat`, `ls` or `sshd -T` —
   never through a language runtime (`python3 -c`,
@@ -305,6 +312,24 @@ prompt.
 Read `rules/ssh-user.md`. Usernames and language
 preference are stored in `memory/user.md` — read at
 session start.
+
+## SSH Configuration
+
+Read `rules/ssh-config.md` before judging any sshd or
+ssh setting, and before setting up SSH from one
+server to others: which files the programs really
+read (`Include`, `-f`, `/usr/local/etc/ssh`), and why
+every filter on their output uses `grep -i`.
+
+## SSH Certificates
+
+Read `rules/ssh-certificates.md` when a host presents
+a host certificate, trusts a user CA, or heinzel
+logs in with a certificate; before setting up or
+maintaining an SSH CA; and whenever a login or host
+verification fails with `Certificate invalid:`.
+Host certificates and user certificates are recorded
+separately in server memory.
 
 ## Session Start Preflight
 

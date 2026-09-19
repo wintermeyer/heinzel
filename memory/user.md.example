@@ -10,3 +10,9 @@ Default: your-username
 
 ## Per-server overrides
 # - hostname.example.com: different-username
+
+## Login by SSH certificate (optional)
+# Which tool issues and renews it, so a rejected
+# login points to renewal first
+# (rules/ssh-certificates.md).
+# SSH certificate: <CA software login command>, valid 16h

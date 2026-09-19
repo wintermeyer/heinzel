@@ -96,6 +96,11 @@ Recent heinzel activity (last 7 days):
 
 - Group related entries when possible.
 - Keep it concise — summarize, don't dump raw logs.
+- On hosts with user certificates, the sshd log
+  names the certificate's key ID behind each login
+  to a shared account such as `root`. Use it when
+  the journal entry alone does not say who it was
+  (`rules/ssh-certificates.md` → Who logged in).
 - If there are more than 10 entries, summarize the
   oldest and show the most recent 5 in detail.
 

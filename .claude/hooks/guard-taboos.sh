@@ -13,14 +13,18 @@
 #     alone (blkdiscard, nvme format/sanitize, hdparm
 #     secure-erase, badblocks -w, shred, dd, a redirect,
 #     tee, cp or a download onto a disk device)
-#   - destroying SSH keys (host keys, authorized_keys,
-#     id_*, or the ~/.ssh directory holding them) by any
-#     means: rm/shred/truncate/mv/chmod/chown/install/ln/
-#     setfacl, find -delete, a redirect, ssh-keygen -f, or
-#     a write into one (tee, cp/rsync/scp, dd, sed -i, an
-#     editor, curl -o and other output flags)
-#   - writes to /etc/ssh/sshd_config(.d/)
-#   - any of the last three reached through a language
+#   - destroying SSH keys (host keys, authorized_keys, id_*,
+#     or the directory holding them: ~/.ssh, an appliance
+#     key store such as /conf/sshd) by any means: rm/shred/
+#     truncate/mv/chmod/chown/install/ln/setfacl, find
+#     -delete, a redirect, ssh-keygen -f, or a write into
+#     one (tee, cp/rsync/scp, dd, sed -i, an editor, curl -o
+#     and other output flags)
+#   - writes to sshd_config(.d/) under any .../etc/ssh, or
+#     to a file an appliance merges into it (/etc/sshd_extra)
+#   - deleting, moving or re-permissioning sshd's revocation
+#     list (RevokedKeys), matched by its common names
+#   - any of the last four reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
 #
@@ -79,6 +83,13 @@
 #   - `cp /etc/ssh/sshd_config /tmp/` is blocked although it only
 #     reads the file — copy out via `cat /etc/ssh/sshd_config >
 #     /tmp/copy` instead.
+#   - The sshd paths match as substrings, with no boundary on
+#     either side: sshd_config.bak, /etc/sshd_extra.bak and a
+#     copy staged under another root (mnt/etc/ssh/sshd_config)
+#     count as the real file. The left side stays open on
+#     purpose, so /usr/local/etc/ssh and an offline image are
+#     covered (rules/cloud-image.md). Keep backups outside the
+#     guarded path, e.g. /root/backup/sshd_config.
 #   - ssh-keygen with a private key path ANYWHERE in the command:
 #     `file /etc/ssh/ssh_host_ed25519_key; ssh-keygen -lf
 #     ...key.pub` is denied although each part passes alone.
@@ -288,19 +299,59 @@ DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 # home directory as a key store. This is a backstop against the
 # everyday mistake, not a sandbox.
 #
-# KEYPRIV additionally excludes a trailing .pub, so reading or
-# copying a public key stays allowed while the private half does
-# not. It stays filename-only on purpose: it guards a truncating
-# redirect and ssh-keygen -f, neither of which is meaningful
-# against a directory. KEYFILE is the same set without the
-# trailing boundary, for writes_to below.
-KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh(/|[^[:alnum:]_.-]|$))'
-KEYFILE='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
-KEYPRIV="$KEYFILE"'([^.[:alnum:]]|$)'
+# KEYPRIV additionally excludes a trailing .pub or -cert., so
+# reading or copying a public key or a certificate beside its key
+# (ssh_host_ed25519_key-cert.pub) stays allowed while the private
+# half does not. Any other hyphen suffix is still a private key
+# (ssh_host_rsa_key-old, id_ed25519-work): ERE has no lookahead,
+# so "-cert." is excluded letter by letter. It stays
+# filename-only on purpose: it guards a truncating redirect and
+# ssh-keygen -f, neither of which is meaningful against a
+# directory. KEYFILE is the same set without the trailing
+# boundary, for writes_to below.
+#
+# Host keys and sshd_config do not always live in /etc/ssh:
+# the OpenSSH port or package puts them in /usr/local/etc/ssh
+# (FreeBSD; on OPNsense only sshd_config, see KEYDIR) or
+# /opt/homebrew/etc/ssh. No pattern here
+# is anchored on the left, so /etc/ssh matches every such prefix,
+# and the rules must keep it that way instead of listing
+# prefixes.
+#
+# KEYDIR adds an appliance key store (OPNsense: /conf/sshd) to
+# .ssh; the rest of /conf is config and stays ordinary work.
+# /etc/ssh itself is NOT a key store: it also holds ssh_config
+# and moduli, so rm -rf /etc/ssh or chmod -R on it is left open,
+# on the same terms as the home directory above.
+HOSTKEY='(/etc/ssh|/conf/sshd)/ssh_host_'
+KEYDIR='(\.ssh|/conf/sshd)'
+KEY="($HOSTKEY|authorized_keys|$KEYDIR"'(/|[^[:alnum:]_.-]|$))'
+KEYFILE="($HOSTKEY"'[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
+KEYPRIV="$KEYFILE"'([^.[:alnum:]-]|$|-($|[^c]|c($|[^e])|ce($|[^r])|cer($|[^t])|cert($|[^.])))'
 
-# sshd's config file or its drop-in directory, and the editors
-# that rewrite a file in place.
-SSHD='/etc/ssh/sshd_config(\.d(/[[:alnum:]_.-]*)?)?'
+# sshd's revocation list (RevokedKeys). Once sshd_config names
+# it, a missing or unreadable file makes sshd refuse EVERY public
+# key login, authorized_keys included -- the same lockout as
+# deleting the keys. Writing it (ssh-keygen -k, cp, an empty
+# file) is CA maintenance and stays allowed; CA trust and
+# principals files only affect certificate logins and are not
+# guarded (rules/ssh-certificates.md). This matches the common
+# names under /etc/ssh, unanchored on the left like HOSTKEY; a
+# key directory is already covered by KEY.
+REVOKED='/etc/ssh/[^[:space:]"'\'';|&<>]*(revoked|krl)'
+
+# Commands that delete, move or re-permission their operand, and
+# the find/rsync flags that delete. Truncating and install are
+# added where emptying or replacing the file is the harm too.
+DESTROY='(rm|shred|unlink|mv|chmod|chown|ln|setfacl)'
+FINDDEL='(^|[[:space:]])(-delete|--remove-s(ource|ent)-files)([[:space:]]|$)'
+
+# sshd's config: sshd_config, its drop-in directory, and a file
+# an appliance merges into it when it regenerates the config
+# (pfSense appends /etc/sshd_extra). The .d suffix is optional,
+# so a plain hit on SSHD also finds the bare file. Then the
+# editors that rewrite a file in place.
+SSHD='/etc/(ssh/sshd_config(\.d(/[[:alnum:]_.-]*)?)?|sshd_extra)'
 EDITOR='(vi|vim|nvim|nano|emacs|ed)'
 
 # A general-purpose language runtime. See the interpreter section
@@ -551,8 +602,8 @@ fi
 HAS_KEY=0
 hit "$KEY" && HAS_KEY=1
 if [ "$HAS_KEY" -eq 1 ] \
-  && { hit '(^|[^[:alnum:]_-])(rm|shred|unlink|truncate|mv|chmod|chown|install|ln|setfacl)([^[:alnum:]_-]|$)' \
-       || hit '(^|[[:space:]])(-delete|--remove-s(ource|ent)-files)([[:space:]]|$)'; }
+  && { hit "(^|[^[:alnum:]_-])($DESTROY|truncate|install)([^[:alnum:]_-]|\$)" \
+       || hit "$FINDDEL"; }
 then
   deny "deleting, moving or re-permissioning SSH keys is never \
 allowed"
@@ -569,25 +620,24 @@ if hit '(^|[^[:alnum:]_-])ssh-keygen([^[:alnum:]_-]|$)' \
 fingerprint of a .pub runs in a call of its own, with no private \
 key path in it"
 fi
-if hit '/etc/ssh/sshd_config'; then
-  if hit '>>?[[:space:]]*["'\'']?/etc/ssh/sshd_config' \
-    || hit 'tee[[:space:]]+(-a[[:space:]]+)?["'\'']?/etc/ssh/sshd_config' \
+if hit "$SSHD"; then
+  if hit '>>?[[:space:]]*["'\'']?[^[:space:];|&]*'"$SSHD" \
     || { hit '(^|[^[:alnum:]_-])(sed|perl)([^[:alnum:]_-]|$)' \
          && hit '(^|[[:space:]])-i'; } \
     || hit "(^|[^[:alnum:]_-])$EDITOR([^[:alnum:]_-]|\$)" \
     || hit '(^|[^[:alnum:]_-])(rm|truncate|chmod|chown|mv|cp)([^[:alnum:]_-]|$)' \
     || writes_to "$SSHD"
   then
-    deny "modifying /etc/ssh/sshd_config is never allowed \
-(reading it is fine: cat, grep, sshd -T)"
+    deny "modifying sshd_config or a file merged into it is \
+never allowed (reading it is fine: cat, grep, sshd -T)"
   fi
 fi
 
 # --- Writes INTO an SSH key -----------------------------------
 # Writing into a key file replaces it as surely as deleting it.
 if [ "$HAS_KEY" -eq 1 ]; then
-  if writes_to "($KEYFILE|\\.ssh/?)"; then
-    deny "writing into an SSH key file or a .ssh directory \
+  if writes_to "($KEYFILE|$KEYDIR/?)"; then
+    deny "writing into an SSH key file or a key directory \
 replaces the keys there"
   fi
   # An in-place edit needs the key AFTER the tool in the same
@@ -598,6 +648,20 @@ replaces the keys there"
   then
     deny "editing an SSH key file in place can delete keys from it"
   fi
+fi
+
+# --- SSH revocation list --------------------------------------
+# Only the effects that make the file missing or unreadable.
+# mv is denied even as the destination of an atomic replace; cp
+# over the file does the same job. An interpreter is handled
+# below with the other protected paths.
+if hit "$REVOKED" \
+  && { hit "(^|[^[:alnum:]_-])$DESTROY([^[:alnum:]_-]|\$)" \
+       || hit "$FINDDEL"; }
+then
+  deny "deleting, moving or re-permissioning the SSH revocation \
+list makes sshd refuse every public key login - write it with \
+ssh-keygen -k or cp instead"
 fi
 
 # --- Effects reached through an interpreter -------------------
@@ -642,10 +706,15 @@ line can overwrite or delete the key, and a pattern matcher \
 cannot tell that from a read - read keys with cat, stat or \
 ssh-keygen -lf instead"
   fi
-  if hit '/etc/ssh/sshd_config'; then
+  if hit "$SSHD"; then
     deny "an interpreter with sshd_config on its command line \
 can rewrite it, and a pattern matcher cannot tell that from a \
 read - read it with cat, grep or sshd -T instead"
+  fi
+  if hit "$REVOKED"; then
+    deny "an interpreter with the SSH revocation list on its \
+command line can delete it, which makes sshd refuse every key \
+login - read it with ssh-keygen -Q -l or ls instead"
   fi
   if hit "$DEV"; then
     deny "an interpreter with a raw disk device on its command \

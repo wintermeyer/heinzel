@@ -257,6 +257,10 @@ Options:
       HostName 192.0.2.10
       UserKnownHostsFile ~/.ssh/known_hosts.vm-freebsd
   ```
+- If the hosts use an SSH CA: give each OS a host
+  certificate for the same name. Clients that trust
+  the CA then accept either OS without a warning
+  (`rules/ssh-certificates.md`).
 - `ssh -o StrictHostKeyChecking=no
   -o UserKnownHostsFile=/dev/null` disables
   man-in-the-middle protection entirely. This is
