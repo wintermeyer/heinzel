@@ -16,6 +16,9 @@ keys, weak permissions) is the job of the
 
 - SSH private keys (`~/.ssh/id_*`,
   `/etc/ssh/ssh_host_*_key`)
+- SSH CA signing keys, wherever they turn up. The
+  certificates they sign (`*-cert.pub`) are public;
+  `ssh-keygen -L` on them is fine
 - TLS/SSL private keys (`/etc/ssl/private/`,
   `*.key`, `*.pem` containing `PRIVATE KEY`)
 - `/etc/shadow` and password hashes

@@ -33,6 +33,10 @@ creates a deploy user with an SSH key):
 
 - Adding SSH keys to `authorized_keys` that the
   user did not request
+- Trusting an SSH CA or adding principals the user
+  did not request (`TrustedUserCAKeys`,
+  `cert-authority`, principals files) — one line
+  admits every certificate that CA signs
 - Curling or fetching external scripts unrelated
   to the current task
 - Creating user accounts the user did not request

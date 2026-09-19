@@ -4,6 +4,12 @@
 # Operator name: Your Full Name
 # Greeting: Viele Grüße\nHeinzel   # default; override with your own close
 
+## Login by SSH certificate (optional)
+# Which tool issues and renews it, so a rejected
+# login points to renewal first
+# (rules/ssh-certificates.md).
+# SSH certificate: <CA software login command>, valid 16h
+
 # SSH Users
 
 Default: your-username

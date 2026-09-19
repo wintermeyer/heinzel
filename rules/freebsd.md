@@ -161,6 +161,14 @@ Rules for FreeBSD (all versions).
 - **Base system config:** `/etc/`
   (`rc.conf`, `pf.conf`, `fstab`, `loader.conf`)
 - **Boot loader config:** `/boot/loader.conf`
+- **sshd:** base sshd reads `/etc/ssh`
+  (`service sshd reload`); the `openssh-portable`
+  package reads `/usr/local/etc/ssh`
+  (`service openssh reload`). Which one runs:
+  `sysrc sshd_enable openssh_enable`. Auth log:
+  `/var/log/auth.log`. Checksum: `sha256 -q`.
+  Scheduled jobs: cron (`/etc/crontab`,
+  `/etc/cron.d/`, `crontab -l`).
 
 ## Networking
 

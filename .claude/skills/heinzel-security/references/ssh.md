@@ -24,8 +24,11 @@ sshd -T 2>/dev/null | grep -i passwordauthentication
 
 ### Fallback method (unprivileged)
 
-If `sshd -T` is unavailable or requires root, read the config
-files directly. They are usually world-readable.
+If `sshd -T` is unavailable or requires root, use the sshd
+probe in `rules/ssh-config.md`: `sshd -G` gives the same
+effective values without host keys, and every file read. Only
+when that fails too, read the config files directly, following
+their `Include` lines.
 
 ```bash
 # Main config
@@ -34,6 +37,9 @@ cat /etc/ssh/sshd_config 2>/dev/null
 # Drop-in configs (OpenSSH 8.2+)
 cat /etc/ssh/sshd_config.d/*.conf 2>/dev/null
 ```
+
+Filter `sshd -T`/`-G` output with `grep -i`
+(`rules/ssh-config.md` → Output case).
 
 Parse the files for `PasswordAuthentication`. The last matching
 directive wins (drop-ins are read in lexical order before the
@@ -100,7 +106,7 @@ grep -i "^PermitRootLogin" \
 
 ```bash
 sshd -T 2>/dev/null \
-  | grep -E "^(ciphers|macs|kexalgorithms) "
+  | grep -iE "^(ciphers|macs|kexalgorithms) "
 ```
 
 Fallback: parse `Ciphers`, `MACs`, and `KexAlgorithms` from
@@ -141,3 +147,59 @@ Fallback: parse from config files.
 - `no` → OK
 
 Skip this check on macOS.
+
+## SSH Certificates — Linux and macOS
+
+Detection, probes and the reasoning live in
+`rules/ssh-certificates.md`; run its "Host
+certificate" and "User CA" probes (the latter needs
+root; without it, the quick probe). Report host and
+user certificates as **separate** lines. Skip both
+lines with `none` when neither is configured.
+
+Host certificate:
+
+- Validity and key match: the severities in
+  `rules/ssh-certificates.md` → Host certificate
+- No renewal job, or one that does not reload sshd
+  → **WARN**
+- A name from server memory (FQDN, DNS alias)
+  missing from the principals → **INFO**
+
+User CA:
+
+- `RevokedKeys` set but the file is missing or
+  unreadable → **CRITICAL** (sshd refuses every
+  public key login)
+- CA signing key present on the host → **WARN**
+  (report the path, never read the file)
+- Same CA fingerprint signs host and user
+  certificates → **WARN**
+- `casignaturealgorithms` contains `ssh-rsa`
+  (SHA-1) → **WARN**
+- Principals that reach `root` → **INFO**, list
+  them. With `Match` blocks, evaluate `root` via
+  `sshd -T -C` (see the rule), not only the global
+  values
+- `AuthorizedPrincipalsCommand` in use → **INFO**,
+  name command and user
+- No `RevokedKeys` → **INFO**
+- `cert-authority` lines in `authorized_keys` →
+  **INFO**, list account and CA fingerprint
+
+## SSH Client on the Server — Linux and macOS
+
+For root and every account that connects out; probe in
+`rules/ssh-config.md` → ssh (client). Applies with or without
+an SSH CA:
+
+- `stricthostkeychecking no`, or a known-hosts file of
+  `/dev/null`, in the system client config → **WARN**
+- `stricthostkeychecking accept-new` → **INFO**
+
+With a host CA in the fleet (`rules/ssh-certificates.md` → SSH
+client):
+
+- The global known-hosts file has no `@cert-authority` line,
+  or the lines sit only in some users' files → **INFO**
+- `@cert-authority` for `*` → **INFO**

@@ -141,6 +141,12 @@ Rules for macOS (Apple Silicon and Intel).
 - Application support: `~/Library/Application Support/`
 - Homebrew configs:
   `$(brew --prefix)/etc/` (e.g. nginx config)
+- sshd: config `/etc/ssh`; launchd starts it per
+  connection (`com.openssh.sshd`), so config and key
+  files take effect on the next login without a
+  reload. Auth log in the unified log (`log show`),
+  checksum `shasum -a 256`, scheduled jobs are
+  launchd jobs in `/Library/LaunchDaemons`.
 
 ## Notes
 

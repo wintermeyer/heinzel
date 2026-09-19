@@ -23,6 +23,8 @@
 #   - any of the last three reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
+#   - deleting, moving or re-permissioning sshd's revocation
+#     list (RevokedKeys), directly or through a runtime
 #
 # What it deliberately does NOT scan: the body of a heredoc that
 # is written to an ordinary file by cat or tee (issue #8). That
@@ -296,7 +298,24 @@ DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 # trailing boundary, for writes_to below.
 KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh(/|[^[:alnum:]_.-]|$))'
 KEYFILE='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
-KEYPRIV="$KEYFILE"'([^.[:alnum:]]|$)'
+KEYPRIV="$KEYFILE"'([^.[:alnum:]-]|$|-($|[^c]|c($|[^e])|ce($|[^r])|cer($|[^t])|cert($|[^.])))'
+
+# KEYPRIV's boundary also lets "-cert." pass, so a certificate
+# beside its key (ssh_host_ed25519_key-cert.pub) is public like a
+# .pub; any other hyphen suffix (ssh_host_rsa_key-old,
+# id_ed25519-work) is still a private key. ERE has no lookahead,
+# so "-cert." is excluded letter by letter.
+#
+# sshd's revocation list (RevokedKeys). Once sshd_config names
+# it, a missing or unreadable file makes sshd refuse EVERY public
+# key login, authorized_keys included -- the same lockout as
+# deleting the keys. Writing it (ssh-keygen -k, cp, an empty
+# file) is CA maintenance and stays allowed; CA trust and
+# principals files only affect certificate logins and are not
+# guarded (rules/ssh-certificates.md). The path is unanchored on
+# the left, so /usr/local/etc/ssh counts; a .ssh directory is
+# already covered by KEY.
+REVOKED='/etc/ssh/[^[:space:]"'\'';|&<>]*(revoked|krl)'
 
 # sshd's config file or its drop-in directory, and the editors
 # that rewrite a file in place.
@@ -600,6 +619,20 @@ replaces the keys there"
   fi
 fi
 
+# --- SSH revocation list --------------------------------------
+# Only the effects that make the file missing or unreadable.
+# mv is denied even as the destination of an atomic replace; cp
+# over the file does the same job. An interpreter is handled
+# below with the other protected paths.
+if hit "$REVOKED" \
+  && { hit '(^|[^[:alnum:]_-])(rm|shred|unlink|mv|chmod|chown|ln|setfacl)([^[:alnum:]_-]|$)' \
+       || hit '(^|[[:space:]])(-delete|--remove-s(ource|ent)-files)([[:space:]]|$)'; }
+then
+  deny "deleting, moving or re-permissioning the SSH revocation \
+list makes sshd refuse every public key login - write it with \
+ssh-keygen -k or cp instead"
+fi
+
 # --- Effects reached through an interpreter -------------------
 # Every rule above recognizes a write by the way it is spelled: a
 # redirect, tee, sed -i, an editor, rm/mv/chmod/truncate. A
@@ -651,6 +684,11 @@ read - read it with cat, grep or sshd -T instead"
     deny "an interpreter with a raw disk device on its command \
 line can overwrite the device, which destroys everything the \
 partition table points at"
+  fi
+  if hit "$REVOKED"; then
+    deny "an interpreter with the SSH revocation list on its \
+command line can delete it, which makes sshd refuse every key \
+login - read it with ssh-keygen -Q -l or ls instead"
   fi
 fi
 
