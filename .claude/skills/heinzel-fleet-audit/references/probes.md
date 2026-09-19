@@ -76,9 +76,13 @@ fi
 if [ -z "$SSHD" ]; then
   echo "unknown(needs-root)"
 else
-  # -i: names are mixed case since OpenSSH 10.4
-  # (rules/ssh-config.md).
-  $SSHD -T 2>/dev/null | grep -i \
+  # A -f on the running daemon, and -i on every filter:
+  # rules/ssh-config.md.
+  FOPT=$(ps ax -o args= \
+    | sed -n 's/^[^ ]*sshd[: ]\(.* \)\{0,1\}-f \([^ ]*\).*/-f \2/p' \
+    | head -n 1)
+  T=$($SSHD $FOPT -T 2>/dev/null)
+  printf '%s\n' "$T" | grep -i \
     -e '^permitrootlogin ' \
     -e '^passwordauthentication ' \
     -e '^pubkeyauthentication ' \
@@ -89,8 +93,44 @@ else
     -e '^maxauthtries ' \
     -e '^logingracetime ' \
     -e '^usepam ' \
-    -e '^port '
+    -e '^port ' \
+    -e '^hostcertificate ' \
+    -e '^trustedusercakeys ' \
+    -e '^authorizedprincipalsfile ' \
+    -e '^authorizedprincipalscommand ' \
+    -e '^revokedkeys '
+  # User CA fingerprints, from the path sshd uses.
+  CA=$(printf '%s\n' "$T" | grep -i '^trustedusercakeys ' | cut -d' ' -f2-)
+  if [ -n "$CA" ] && [ "$CA" != "none" ]; then
+    echo "userca:"; ssh-keygen -lf "$CA" 2>&1
+  fi
+  # Same revocation list everywhere? Compare checksums.
+  RK=$(printf '%s\n' "$T" | grep -i '^revokedkeys ' | cut -d' ' -f2-)
+  if [ -n "$RK" ] && [ "$RK" != "none" ]; then
+    # sha256sum on Linux, sha256 -q on FreeBSD.
+    echo "revokedkeys-sha256: $(sha256sum "$RK" 2>/dev/null \
+      || sha256 -q "$RK" 2>&1)"
+  fi
 fi
+# Host certificates are world-readable: no root needed.
+for c in /etc/ssh/*-cert.pub /usr/local/etc/ssh/*-cert.pub; do
+  [ -e "$c" ] || continue
+  echo "hostcert: $c"
+  ssh-keygen -L -f "$c" | grep -E 'Signing CA|Valid:'
+done
+# SSH client: host CA lines in the global known-hosts files,
+# which every account on the host shares.
+for f in $(ssh -G localhost 2>/dev/null \
+  | grep -i '^globalknownhostsfile ' | cut -d' ' -f2-); do
+  [ -e "$f" ] || continue
+  echo "globalknownhosts: $f"
+  grep -e '^@cert-authority' -e '^@revoked' "$f" \
+    | while read -r m p k; do
+        fp=$(printf '%s\n' "$k" | ssh-keygen -lf /dev/stdin \
+          | cut -d' ' -f2)
+        echo "$m $p $fp"
+      done
+done
 ```
 
 Row keys: each line is `key value`; compare keys without
@@ -105,6 +145,27 @@ Highlight as drift:
 - Any host with `permitrootlogin yes` while others use
   `prohibit-password` or `forced-commands-only`.
 - Mismatched `port` values across the fleet.
+- Host certificates on some hosts but not others, or
+  signed by different CAs.
+- Different user CA fingerprints, principals setup
+  or `revokedkeys` across hosts that should admit
+  the same people.
+- A different `revokedkeys-sha256` on hosts that
+  trust the same user CA: a revocation did not reach
+  every host, and a revoked certificate still works
+  there. Hosts without `revokedkeys` cannot revoke at
+  all — list them too.
+- A host certificate that expires well before the
+  others: its renewal job is likely not running.
+- `globalknownhosts` trusting a different host CA, or
+  none, on hosts that connect to others: every account
+  there has to keep its own `@cert-authority` line.
+  An `@revoked` line missing on some hosts: a stolen
+  host key is still accepted there.
+
+Host certificate and user CA are separate rows (see
+`rules/ssh-certificates.md`): a host can have one
+without the other.
 
 ## 3. Firewall posture
 
