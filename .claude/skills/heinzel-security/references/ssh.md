@@ -148,11 +148,43 @@ Fallback: parse from config files.
 
 Skip this check on macOS.
 
-## SSH Client on the Server — Linux and macOS
+## SSH Certificates — Linux and macOS
 
-For root and every account that connects out; probe in
-`rules/ssh-config.md` → ssh (client):
+Detection, probes and the reasoning live in
+`rules/ssh-certificates.md`; run its "Detect",
+"Host certificate" and "User certificates" probes.
+Report host and user certificates as **separate**
+lines. Skip both lines with `none` when neither is
+configured.
 
-- `stricthostkeychecking no`, or a known-hosts file of
-  `/dev/null`, in the system client config → **WARN**
-- `stricthostkeychecking accept-new` → **INFO**
+Host certificate:
+
+- Expired, not yet valid, or its public key differs
+  from the host key next to it → **CRITICAL**
+- Expires in < 7 days, or less than a third of its
+  lifetime left, and no renewal job → **WARN**
+- Renewal job found but it does not reload sshd →
+  **WARN**
+- `Valid: forever` → **WARN** (cannot expire, only
+  be revoked on every client)
+- A name from server memory (FQDN, DNS alias)
+  missing from the principals → **INFO**
+
+User CA:
+
+- `RevokedKeys` set but the file is missing or
+  unreadable → **CRITICAL** (sshd refuses every
+  public key login)
+- CA signing key present on the host → **WARN**
+  (report the path, never read the file)
+- Same CA fingerprint signs host and user
+  certificates → **WARN**
+- `casignaturealgorithms` contains `ssh-rsa`
+  (SHA-1) → **WARN**
+- Principals that reach `root` → **INFO**, list
+  them
+- `AuthorizedPrincipalsCommand` in use → **INFO**,
+  name command and user
+- No `RevokedKeys` → **INFO**
+- `cert-authority` lines in `authorized_keys` →
+  **INFO**, list account and CA fingerprint

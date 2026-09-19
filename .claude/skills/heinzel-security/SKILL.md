@@ -2,7 +2,8 @@
 name: heinzel-security
 argument-hint: "[hostname]"
 description: Run a heinzel security audit on a server — SSH
-  hardening (password auth, weak algos, root login), firewall,
+  hardening (password auth, weak algos, root login, host
+  certificates, user CA trust), firewall,
   user account hygiene, listening services, kernel hardening
   (ASLR, IP forwarding), file permissions, SUID/SGID audit,
   fail2ban. Use when the user asks for a "security audit",
@@ -80,8 +81,8 @@ Read on demand, only when the relevant section applies:
 - `references/report-format.md` — required output format and
   severity rules (CRITICAL / WARN / INFO).
 - `references/ssh.md` — SSH password auth, root login, weak
-  algorithms, MaxAuthTries, X11Forwarding, the SSH client on
-  the server (Linux and macOS).
+  algorithms, MaxAuthTries, X11Forwarding, host certificates
+  and user CA trust (Linux and macOS).
 - `references/firewall.md` — Linux (ufw / firewalld) and macOS
   (Application Firewall).
 - `references/user-accounts.md` — empty passwords, multiple UID

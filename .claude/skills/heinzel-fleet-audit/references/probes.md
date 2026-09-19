@@ -89,8 +89,25 @@ else
     -e '^maxauthtries ' \
     -e '^logingracetime ' \
     -e '^usepam ' \
-    -e '^port '
+    -e '^port ' \
+    -e '^hostcertificate ' \
+    -e '^trustedusercakeys ' \
+    -e '^authorizedprincipalsfile ' \
+    -e '^authorizedprincipalscommand ' \
+    -e '^revokedkeys '
+  # User CA fingerprints, from the path sshd uses.
+  CA=$($SSHD -T 2>/dev/null | grep '^trustedusercakeys ')
+  CA=${CA#trustedusercakeys }
+  if [ -n "$CA" ] && [ "$CA" != "none" ]; then
+    echo "userca:"; ssh-keygen -lf "$CA" 2>&1
+  fi
 fi
+# Host certificates are world-readable: no root needed.
+for c in /etc/ssh/*-cert.pub; do
+  [ -e "$c" ] || continue
+  echo "hostcert: $c"
+  ssh-keygen -L -f "$c" | grep -E 'Signing CA|Valid:'
+done
 ```
 
 Row keys: each line is `key value`; compare keys without
@@ -105,6 +122,17 @@ Highlight as drift:
 - Any host with `permitrootlogin yes` while others use
   `prohibit-password` or `forced-commands-only`.
 - Mismatched `port` values across the fleet.
+- Host certificates on some hosts but not others, or
+  signed by different CAs.
+- Different user CA fingerprints, principals setup
+  or `revokedkeys` across hosts that should admit
+  the same people.
+- A host certificate that expires well before the
+  others: its renewal job is likely not running.
+
+Host certificate and user CA are separate rows (see
+`rules/ssh-certificates.md`): a host can have one
+without the other.
 
 ## 3. Firewall posture
 

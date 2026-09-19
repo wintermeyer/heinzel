@@ -90,7 +90,13 @@ system before it is wiped. Store it in
 - SSL/TLS certificates and keys
   (`/etc/letsencrypt/`, `/usr/local/etc/ssl/`)
 - SSH host keys (`/etc/ssh/ssh_host_*`) — save if
-  you want to avoid host key change warnings
+  you want to avoid host key change warnings.
+  Host certificates (`*-cert.pub`) go with them; new
+  host keys need newly signed certificates
+- SSH CA setup from `sshd -T`: `TrustedUserCAKeys`,
+  principals, `RevokedKeys` files and their paths
+  (`rules/ssh-certificates.md`). Without them,
+  certificate logins stop working on the new OS
 
 **Never store private key material anywhere
 under the heinzel repo.** `pre-replacement.md`
@@ -252,7 +258,9 @@ After the new OS is installed and accessible:
 6. [ ] Automatic security updates enabled
 7. [ ] SSH host keys restored (optional — avoids
        host key warnings for other users/scripts)
-8. [ ] User accounts and SSH keys restored
+8. [ ] User accounts and SSH keys restored; SSH CA
+       trust and host certificates restored by the
+       operator, if the host used them
 9. [ ] Services reinstalled and configured
 10. [ ] Data restored (databases, web content, etc.)
 11. [ ] SSL certificates restored or renewed

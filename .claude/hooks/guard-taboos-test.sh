@@ -212,6 +212,47 @@ check pass 'rsync -a --delete /root/.ssh/ /backup/root-ssh/'
 check pass 'cp /dev/sda /root/disk.img'
 check pass 'curl -o /tmp/sshd_config.new https://example.com/c'
 
+# --- SSH certificates ------------------------------------------
+# A certificate sits next to its key and differs only by the
+# -cert.pub suffix. Reading one must pass; the private key beside
+# it stays protected.
+check pass 'ssh-keygen -L -f /etc/ssh/ssh_host_ed25519_key-cert.pub'
+check pass 'ssh root@h "ssh-keygen -L -f /etc/ssh/ssh_host_ed25519_key-cert.pub"'
+check pass 'ssh-keygen -L -f ~/.ssh/id_ed25519-cert.pub'
+check pass 'ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub'
+check pass 'cp /etc/ssh/ssh_host_ed25519_key-cert.pub /var/backups/heinzel/'
+check deny 'ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N ""'
+check deny 'ssh-keygen -f ~/.ssh/id_ed25519-work -N ""'
+check deny 'rm /etc/ssh/ssh_host_ed25519_key-cert.pub'
+# Files that decide which certificates may log in: reads pass.
+check pass 'cat /etc/ssh/trusted_user_ca_keys'
+check pass 'ssh-keygen -lf /etc/ssh/user_ca.pub'
+check pass 'grep -H . /etc/ssh/auth_principals/root'
+check pass 'ls -l /etc/ssh/auth_principals /etc/ssh/revoked_keys'
+check pass 'ssh-keygen -Q -f /etc/ssh/revoked_keys /tmp/k.pub'
+check pass 'stat -c %a /etc/ssh/ca.pub 2>/dev/null'
+check pass 'cp /etc/ssh/trusted-user-ca-keys.pem /var/backups/heinzel/'
+check pass 'cat /etc/ssh/ssh_known_hosts /etc/ssh/moduli'
+check pass 'cp /tmp/new.conf /etc/ssh/ssh_config.d/local.conf'
+# ... and every write is left to the operator.
+check deny 'cp /tmp/ca.pub /etc/ssh/trusted_user_ca_keys'
+check deny 'cat /tmp/ca.pub >> /etc/ssh/user_ca.pub'
+check deny 'echo root > /etc/ssh/auth_principals/root'
+check deny 'tee -a /etc/ssh/auth_principals/root < p.txt'
+check deny 'sed -i /alice/d /etc/ssh/auth_principals/root'
+check deny 'rm /etc/ssh/revoked_keys'
+check deny 'chmod 600 /etc/ssh/ca.pub'
+check deny 'ssh-keygen -k -u -f /etc/ssh/revoked_keys leaked.pub'
+check deny 'curl -o /etc/ssh/trusted-user-ca-keys.pem https://ca.example.com/ssh/roots'
+check deny 'ssh root@h "cp /tmp/p /home/alice/.ssh/authorized_principals"'
+check deny "python3 -c \"open('/etc/ssh/ssh_user_key.pub','w')\""
+# Outside /etc/ssh: the OpenSSH port and an appliance key store.
+check pass 'ssh-keygen -L -f /usr/local/etc/ssh/ssh_host_ed25519_key-cert.pub'
+check pass 'ssh-keygen -L -f /conf/sshd/ssh_host_ed25519_key-cert.pub'
+check deny 'ssh-keygen -f /conf/sshd/ssh_host_ed25519_key -N ""'
+check deny 'cp /tmp/ca.pub /usr/local/etc/ssh/trusted_user_ca_keys'
+check deny 'tee /conf/sshd/user_ca.pub < ca.pub'
+
 # --- SSH keys reached through their directory (issue #7) -------
 # The protected paths were key FILENAMES, so any operation on the
 # enclosing .ssh directory reached every key in it without naming

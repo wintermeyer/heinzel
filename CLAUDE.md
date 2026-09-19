@@ -142,7 +142,10 @@ remote connection before any other work.
   overwrite SSH keys — host keys, `authorized_keys`,
   `id_*`, or the directory holding them (`~/.ssh`,
   OPNsense: `/conf/sshd`) — and that includes
-  moving, truncating or re-permissioning them.
+  moving, truncating or re-permissioning them. The
+  same holds for the files that decide which SSH
+  certificates may log in (`TrustedUserCAKeys`,
+  principals, `RevokedKeys`).
   Never halt or power off a server.
   Inspect `sshd_config`, SSH keys and disk devices
   with `cat`, `grep`, `stat`, `ls` or `sshd -T` —
@@ -311,13 +314,14 @@ Read `rules/ssh-user.md`. Usernames and language
 preference are stored in `memory/user.md` — read at
 session start.
 
-## SSH Configuration
+## SSH Certificates
 
-Read `rules/ssh-config.md` before judging any sshd or
-ssh setting, and before setting up SSH from one
-server to others: which files the programs really
-read (`Include`, `-f`, `/usr/local/etc/ssh`), and why
-every filter on their output uses `grep -i`.
+Read `rules/ssh-certificates.md` when a host presents
+a host certificate, trusts a user CA, or heinzel
+logs in with a certificate — and whenever a login or
+host verification fails with `Certificate invalid:`.
+Host certificates and user certificates are recorded
+separately in server memory.
 
 ## Session Start Preflight
 

@@ -22,7 +22,10 @@
 #     and other output flags)
 #   - writes to sshd_config(.d/) under any .../etc/ssh, or
 #     to a file an appliance merges into it (/etc/sshd_extra)
-#   - any of the last three reached through a language
+#   - writes to the files that decide which SSH certificates
+#     may log in (CA trust, principals, revocation list),
+#     matched by their common names
+#   - any of the last four reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
 #
@@ -320,8 +323,32 @@ DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 HOSTKEY='(/etc/ssh|/conf/sshd)/ssh_host_'
 KEYDIR='(\.ssh|/conf/sshd)'
 KEY="($HOSTKEY|authorized_keys|$KEYDIR"'(/|[^[:alnum:]_.-]|$))'
+#
+# KEYPRIV's boundary also excludes a hyphen, so a certificate
+# next to its key (ssh_host_ed25519_key-cert.pub,
+# id_ed25519-cert.pub) counts as public: ssh-keygen -L on it only
+# reads. A private key whose own name carries a hyphen
+# (id_ed25519-work) is still caught, because the id_ class spans
+# the hyphen.
+HOSTKEY='(/etc/ssh|/conf/sshd)/ssh_host_'
+KEYDIR='(\.ssh|/conf/sshd)'
+KEY="($HOSTKEY|authorized_keys|$KEYDIR"'(/|[^[:alnum:]_.-]|$))'
 KEYFILE="($HOSTKEY"'[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
-KEYPRIV="$KEYFILE"'([^.[:alnum:]]|$)'
+KEYPRIV="$KEYFILE"'([^.[:alnum:]-]|$)'
+
+# Files that decide which SSH certificates may log in:
+# TrustedUserCAKeys, AuthorizedPrincipalsFile and RevokedKeys.
+# Writing one grants every holder of a CA's certificates access,
+# or locks all of them out -- the fleet-wide form of a write into
+# authorized_keys (rules/ssh-certificates.md). sshd lets the
+# admin choose any path, so this matches the names the common
+# guides and CA tools use under /etc/ssh (unanchored on the
+# left like HOSTKEY, so /usr/local/etc/ssh counts) or a key
+# directory; a path from sshd -T outside them is protected by the
+# rule file only. CATRUSTF is the whole path, for writes_to.
+CAPATH='[^[:space:]"'\'';|&<>]*'
+CATRUST="(/etc/ssh|$KEYDIR)/$CAPATH"'(trusted|user[_-]?ca|ca[_.-]?(keys?|pub)|ssh_user_key|principals|revoked|krl)'
+CATRUSTF="$CATRUST$CAPATH"
 
 # sshd's config: sshd_config, its drop-in directory, and a file
 # an appliance merges into it when it regenerates the config
@@ -624,6 +651,27 @@ replaces the keys there"
     || hit "(^|[^[:alnum:]_-])${EDITOR}[[:space:]][^;&|]*$KEYPRIV"
   then
     deny "editing an SSH key file in place can delete keys from it"
+  fi
+fi
+
+# --- SSH certificate trust ------------------------------------
+# Same effects as the key rules above, applied to the CA trust,
+# principals and revocation files. Reading stays allowed: cat,
+# grep, ls, stat, ssh-keygen -lf and ssh-keygen -Q (a revocation
+# query). ssh-keygen -k writes a revocation list.
+if hit "$CATRUST"; then
+  if hit '(^|[^[:alnum:]_-])(rm|shred|unlink|truncate|mv|chmod|chown|install|ln|setfacl)([^[:alnum:]_-]|$)' \
+    || hit '(^|[[:space:]])(-delete|--remove-s(ource|ent)-files)([[:space:]]|$)' \
+    || hit ">[[:space:]]*[\"']?[^[:space:];|&]*$CATRUST" \
+    || writes_to "$CATRUSTF" \
+    || hit "(^|[^[:alnum:]_.-])sed[[:space:]]([^;&|]*[[:space:]])?(-[[:alpha:]]*i|--in-place)[^;&|]*$CATRUST" \
+    || hit "(^|[^[:alnum:]_-])${EDITOR}[[:space:]][^;&|]*$CATRUST" \
+    || hit '(^|[^[:alnum:]_-])ssh-keygen[[:space:]]([^;&|]*[[:space:]])?-[[:alpha:]]*k' \
+    || hit "$INTERP"
+  then
+    deny "changing which SSH certificates may log in (CA trust, \
+principals or revocation files) is left to the operator - a \
+mistake grants a whole CA access or locks every certificate out"
   fi
 fi
 

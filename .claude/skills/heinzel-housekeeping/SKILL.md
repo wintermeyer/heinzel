@@ -64,7 +64,8 @@ Read on demand, only when the relevant section applies:
 - `references/report-format.md` — required output format and
   severity rules (CRITICAL / WARN / INFO).
 - `references/baseline-linux.md` — disk, memory, load, uptime,
-  updates, firewall, NTP, logs, SSL certs, kernel.
+  updates, firewall, NTP, logs, SSL certs, SSH host
+  certificate expiry, kernel.
 - `references/baseline-macos.md` — disk, memory, load, updates,
   Homebrew, Application Firewall, SMART, time sync.
 - `references/backup-presence.md` — generic "any backup at

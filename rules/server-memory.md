@@ -22,6 +22,11 @@ overrides — see CLAUDE.md → Rule Overrides).
 Adapt fields to OS (add Arch, Homebrew for macOS;
 add `Mode: local` for localhost).
 
+SSH certificates get two separate lines,
+`SSH host cert:` and `SSH user CA:`, each only when
+present. Format in `rules/ssh-certificates.md` →
+Memory.
+
 **Update memory immediately after any system
 change.** Keep it compact (~30 lines max). Remove
 outdated entries, merge related items.

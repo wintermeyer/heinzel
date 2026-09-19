@@ -19,6 +19,22 @@ For too many keys the fix is on the client:
 host in `~/.ssh/config`; check with
 `ssh -G <host> | grep -i identit`.
 
+With certificate logins, check the certificate first:
+an expired one is still offered and simply refused
+(`rules/ssh-certificates.md` → heinzel's own login).
+
+## Host verification failed
+
+`Host key verification failed.` is not an outage
+either, and never a reason for
+`StrictHostKeyChecking=no` or `accept-new`. A line
+`Certificate invalid: …` before it means the host
+certificate expired or does not list the name used
+(`rules/ssh-certificates.md` → Failures). Without
+it, the host key changed: ask the user whether that
+was expected (OS replacement, rebuild) before
+anything else.
+
 ## Do not retry in a loop
 
 This applies when SSH does not answer at all.
