@@ -40,6 +40,8 @@ finding. See `rules/version-check.md`.
   `firewall-cmd --permanent --zone=<zone>
   --add-service=ssh`. Starting `firewalld` without it
   cuts off the SSH session immediately.
+- sshd not on 22? The `ssh` service opens 22 only;
+  see `rules/ssh-port.md` → Firewall.
 - Note the default zone:
   `firewall-cmd --get-default-zone`. A custom or
   renamed default zone is legitimate — what matters

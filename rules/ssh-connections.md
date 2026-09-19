@@ -1,7 +1,7 @@
 # SSH Connections: Few and Shared
 
 Firewall rules that rate-limit new connections to
-port 22 (`ufw limit`: 6 in 30 seconds; iptables
+the SSH port (`ufw limit`: 6 in 30 seconds; iptables
 `recent` or `hashlimit`) and network IPS signatures
 for SSH scans count **TCP connections, not
 commands**, successful logins included. A busy

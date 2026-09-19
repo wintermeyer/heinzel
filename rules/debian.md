@@ -149,6 +149,8 @@ third-party PPAs.
   Enabling `ufw` without an SSH rule locks you out of
   the server immediately. The safe sequence is:
   `ufw allow OpenSSH && ufw enable`.
+- sshd not on 22? `OpenSSH` opens 22 only; see
+  `rules/ssh-port.md` → Firewall.
 - After enabling, verify the default policy:
   `ufw status verbose` — look for
   `Default: deny (incoming)`. If incoming is set to

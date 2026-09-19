@@ -20,7 +20,9 @@ overrides — see CLAUDE.md → Rule Overrides).
 ```
 
 Adapt fields to OS (add Arch, Homebrew for macOS;
-add `Mode: local` for localhost).
+add `Mode: local` for localhost). Add
+`- SSH port: <port>` only for a port other than 22
+(`rules/ssh-port.md`).
 
 **Update memory immediately after any system
 change.** Keep it compact (~30 lines max). Remove

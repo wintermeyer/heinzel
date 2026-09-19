@@ -46,6 +46,8 @@ Rules for FreeBSD (all versions).
   pass out all keep state
   pass in on $ext_if proto tcp to port 22
   ```
+- sshd not on 22? See `rules/ssh-port.md` →
+  Firewall.
 - Do **not** rely on the `egress` interface group in
   rules unless `ifconfig -g egress` shows it is
   populated on this host. If the group is missing or

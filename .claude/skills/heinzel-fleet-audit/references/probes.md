@@ -151,7 +151,7 @@ Row keys for the table:
   its status is unreadable without root
 - Default policy (deny incoming required)
 - Number of open ports / services
-- Whether 22/tcp is open (must be yes)
+- Whether the SSH port is open (must be yes)
 
 Highlight as drift:
 

@@ -218,7 +218,7 @@ compromised.
 ## Firewall
 
 No special firewall changes needed. Deployment
-uses the existing SSH port (22). Do not open
+uses the existing SSH port. Do not open
 additional ports for the deploy user.
 
 ## Server Memory
