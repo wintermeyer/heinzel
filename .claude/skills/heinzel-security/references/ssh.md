@@ -24,8 +24,11 @@ sshd -T 2>/dev/null | grep -i passwordauthentication
 
 ### Fallback method (unprivileged)
 
-If `sshd -T` is unavailable or requires root, read the config
-files directly. They are usually world-readable.
+If `sshd -T` is unavailable or requires root, use the sshd
+probe in `rules/ssh-config.md`: `sshd -G` gives the same
+effective values without host keys, and every file read. Only
+when that fails too, read the config files directly, following
+their `Include` lines.
 
 ```bash
 # Main config
@@ -34,6 +37,9 @@ cat /etc/ssh/sshd_config 2>/dev/null
 # Drop-in configs (OpenSSH 8.2+)
 cat /etc/ssh/sshd_config.d/*.conf 2>/dev/null
 ```
+
+Filter `sshd -T`/`-G` output with `grep -i`
+(`rules/ssh-config.md` → Output case).
 
 Parse the files for `PasswordAuthentication`. The last matching
 directive wins (drop-ins are read in lexical order before the
@@ -100,7 +106,7 @@ grep -i "^PermitRootLogin" \
 
 ```bash
 sshd -T 2>/dev/null \
-  | grep -E "^(ciphers|macs|kexalgorithms) "
+  | grep -iE "^(ciphers|macs|kexalgorithms) "
 ```
 
 Fallback: parse `Ciphers`, `MACs`, and `KexAlgorithms` from
@@ -141,3 +147,12 @@ Fallback: parse from config files.
 - `no` → OK
 
 Skip this check on macOS.
+
+## SSH Client on the Server — Linux and macOS
+
+For root and every account that connects out; probe in
+`rules/ssh-config.md` → ssh (client):
+
+- `stricthostkeychecking no`, or a known-hosts file of
+  `/dev/null`, in the system client config → **WARN**
+- `stricthostkeychecking accept-new` → **INFO**

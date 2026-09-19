@@ -80,7 +80,8 @@ Read on demand, only when the relevant section applies:
 - `references/report-format.md` — required output format and
   severity rules (CRITICAL / WARN / INFO).
 - `references/ssh.md` — SSH password auth, root login, weak
-  algorithms, MaxAuthTries, X11Forwarding (Linux and macOS).
+  algorithms, MaxAuthTries, X11Forwarding, the SSH client on
+  the server (Linux and macOS).
 - `references/firewall.md` — Linux (ufw / firewalld) and macOS
   (Application Firewall).
 - `references/user-accounts.md` — empty passwords, multiple UID

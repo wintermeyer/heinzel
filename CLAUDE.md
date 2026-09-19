@@ -311,6 +311,14 @@ Read `rules/ssh-user.md`. Usernames and language
 preference are stored in `memory/user.md` — read at
 session start.
 
+## SSH Configuration
+
+Read `rules/ssh-config.md` before judging any sshd or
+ssh setting, and before setting up SSH from one
+server to others: which files the programs really
+read (`Include`, `-f`, `/usr/local/etc/ssh`), and why
+every filter on their output uses `grep -i`.
+
 ## Session Start Preflight
 
 At the start of every session, quietly load
