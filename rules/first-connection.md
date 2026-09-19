@@ -23,8 +23,11 @@ moment") — don't skip.
    detection. Known hostname: verify the current IP
    still matches the `- IP:` field in server memory.
    See `rules/dns-aliases.md` for both.
-4. **SSH user lookup** (first connection only). See
-   `rules/ssh-user.md`.
+4. **SSH user and port lookup.** User: first
+   connection only, see `rules/ssh-user.md`. Port:
+   the one the user named, else `- SSH port:` from
+   the memory read in step 3; a new host without one
+   goes through `rules/ssh-port.md` → first contact.
 5. **OS detection.** See `rules/os-detection.md`.
 6. **Server memory file.** Create on first
    connection, read on every subsequent connection.

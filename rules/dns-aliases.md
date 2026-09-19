@@ -65,7 +65,9 @@ symlink):
 
 2. **Compare against known servers.** Scan existing
    `memory/servers/*/memory.md` files (skip
-   symlinks) for a matching `- IP:` line.
+   symlinks) for a matching `- IP:` line and the
+   same SSH port (`rules/ssh-port.md` → NAT and
+   aliases).
 
 3. **Match found -> alias.**
    - Create symlink:

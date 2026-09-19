@@ -295,6 +295,15 @@ addresses. The first hostname becomes the canonical
 name; additional names become symlinks that share the
 same memory. Each alias can have its own SSH user.
 
+### Non-standard SSH ports
+
+A server whose sshd is not on port 22 gets its port
+in server memory, from `host:2222` or the first
+successful login. List the ports you use yourself as
+`Alternative SSH ports:` in `memory/user.md`; on a
+new host whose port 22 refuses, Heinzel tries those
+before it asks. It never scans for a port.
+
 ### Memory across sessions
 
 After working on a machine, Heinzel remembers it.

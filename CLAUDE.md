@@ -85,6 +85,11 @@ Use them **instead of** the standard options, never
 appended to them: for a repeated option, SSH keeps
 the first value it sees.
 
+**Non-standard port:** when server memory holds
+`- SSH port: <port>`, add `-o Port=<port>` to either
+set on every call. New host or 22 refused: read
+`rules/ssh-port.md`. Never scan for a port.
+
 Rate limits count connections, fail2ban counts
 failed logins: read `rules/ssh-connections.md`.
 When SSH stops answering, read
@@ -169,7 +174,8 @@ remote connection before any other work.
   a port in a `listenaddress` line counts too) and
   keep every one open: `ufw allow OpenSSH` and
   firewalld's `ssh` service cover 22 only.
-- **Never remove or block SSH port 22.** If the user
+- **Never remove or block the SSH port** — 22, or
+  any other port sshd listens on. If the user
   asks, explain the risk and refuse. Offer
   alternatives (e.g. restricting to specific IPs).
 - **Verify the default incoming policy is

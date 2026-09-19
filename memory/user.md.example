@@ -10,3 +10,9 @@ Default: your-username
 
 ## Per-server overrides
 # - hostname.example.com: different-username
+
+# SSH Ports
+
+# Ports you run sshd on instead of 22, tried in this
+# order on first contact when port 22 refuses.
+# Alternative SSH ports: 52222, 2222
