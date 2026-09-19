@@ -6,6 +6,7 @@ to minimise round-trips:
 
 ```bash
 ssh <standard options from CLAUDE.md → SSH Options> USER@HOST '
+<privilege ladder>
 echo "###ua###"; <ua probe>
 echo "###sshd###"; <sshd probe>
 echo "###fw###"; <firewall probe>
@@ -27,6 +28,22 @@ answer — an active ufw must never be reported as `none` just
 because the probe lacked permission to read its state. See
 `references/output-format.md` for how the sentinel is
 rendered and why it is excluded from drift detection.
+
+The ladder runs once, at the top of the batched script, and
+every probe that needs root uses its `$SUDO`:
+
+```bash
+if [ "$(id -u)" = "0" ]; then
+  SUDO=""
+elif sudo -n true 2>/dev/null; then
+  SUDO="sudo -n"
+else
+  SUDO="-"
+fi
+```
+
+`$SUDO` is intentionally unquoted where it is used, so an
+empty value disappears; `-` marks "no privilege path".
 
 ## 1. Unattended-upgrades (Debian/Ubuntu)
 
@@ -61,21 +78,14 @@ Row keys to extract for the table:
 
 ## 2. sshd effective config
 
-`sshd -T` needs root (it reads host keys). Probe with the
-privilege ladder — direct as root, `sudo -n` otherwise, and
-the sentinel when neither works:
+`sshd -T` needs root (it reads host keys). Uses `$SUDO`
+from the privilege ladder, and the sentinel without it:
 
 ```bash
-if [ "$(id -u)" = "0" ]; then
-  SSHD="sshd"
-elif sudo -n true 2>/dev/null; then
-  SSHD="sudo -n sshd"
-else
-  SSHD=""
-fi
-if [ -z "$SSHD" ]; then
+if [ "$SUDO" = "-" ]; then
   echo "unknown(needs-root)"
 else
+  SSHD="$SUDO sshd"
   # A -f on the running daemon, and -i on every filter:
   # rules/ssh-config.md.
   FOPT=$(ps ax -o args= \
@@ -178,13 +188,7 @@ emit the sentinel. Never let a permission error degrade to
 firewall is simply unreadable.
 
 ```bash
-if [ "$(id -u)" = "0" ]; then
-  SUDO=""
-elif sudo -n true 2>/dev/null; then
-  SUDO="sudo -n"
-else
-  SUDO="-"
-fi
+# $SUDO from the privilege ladder at the top.
 # Prefer ufw on Debian/Ubuntu; firewall-cmd on RHEL family.
 if command -v ufw >/dev/null 2>&1; then
   echo "tool=ufw"
@@ -204,9 +208,6 @@ else
   echo "tool=none"
 fi
 ```
-
-(`$SUDO` is intentionally unquoted so an empty value
-disappears; `-` marks "no privilege path".)
 
 Row keys for the table:
 
