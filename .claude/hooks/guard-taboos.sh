@@ -13,13 +13,15 @@
 #     alone (blkdiscard, nvme format/sanitize, hdparm
 #     secure-erase, badblocks -w, shred, dd, a redirect,
 #     tee, cp or a download onto a disk device)
-#   - destroying SSH keys (host keys, authorized_keys,
-#     id_*, or the ~/.ssh directory holding them) by any
-#     means: rm/shred/truncate/mv/chmod/chown/install/ln/
-#     setfacl, find -delete, a redirect, ssh-keygen -f, or
-#     a write into one (tee, cp/rsync/scp, dd, sed -i, an
-#     editor, curl -o and other output flags)
-#   - writes to /etc/ssh/sshd_config(.d/)
+#   - destroying SSH keys (host keys, authorized_keys, id_*,
+#     or the directory holding them: ~/.ssh, an appliance
+#     key store such as /conf/sshd) by any means: rm/shred/
+#     truncate/mv/chmod/chown/install/ln/setfacl, find
+#     -delete, a redirect, ssh-keygen -f, or a write into
+#     one (tee, cp/rsync/scp, dd, sed -i, an editor, curl -o
+#     and other output flags)
+#   - writes to sshd_config(.d/) under any .../etc/ssh, or
+#     to a file an appliance merges into it (/etc/sshd_extra)
 #   - any of the last three reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
@@ -79,6 +81,13 @@
 #   - `cp /etc/ssh/sshd_config /tmp/` is blocked although it only
 #     reads the file — copy out via `cat /etc/ssh/sshd_config >
 #     /tmp/copy` instead.
+#   - The sshd paths match as substrings, with no boundary on
+#     either side: sshd_config.bak, /etc/sshd_extra.bak and a
+#     copy staged under another root (mnt/etc/ssh/sshd_config)
+#     count as the real file. The left side stays open on
+#     purpose, so /usr/local/etc/ssh and an offline image are
+#     covered (rules/cloud-image.md). Keep backups outside the
+#     guarded path, e.g. /root/backup/sshd_config.
 #   - ssh-keygen with a private key path ANYWHERE in the command:
 #     `file /etc/ssh/ssh_host_ed25519_key; ssh-keygen -lf
 #     ...key.pub` is denied although each part passes alone.
@@ -294,13 +303,32 @@ DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 # redirect and ssh-keygen -f, neither of which is meaningful
 # against a directory. KEYFILE is the same set without the
 # trailing boundary, for writes_to below.
-KEY='(/etc/ssh/ssh_host_|authorized_keys|\.ssh(/|[^[:alnum:]_.-]|$))'
-KEYFILE='(/etc/ssh/ssh_host_[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
+#
+# Host keys and sshd_config do not always live in /etc/ssh:
+# the OpenSSH port or package puts them in /usr/local/etc/ssh
+# (FreeBSD; on OPNsense only sshd_config, see KEYDIR) or
+# /opt/homebrew/etc/ssh. No pattern here
+# is anchored on the left, so /etc/ssh matches every such prefix,
+# and the rules must keep it that way instead of listing
+# prefixes.
+#
+# KEYDIR adds an appliance key store (OPNsense: /conf/sshd) to
+# .ssh; the rest of /conf is config and stays ordinary work.
+# /etc/ssh itself is NOT a key store: it also holds ssh_config
+# and moduli, so rm -rf /etc/ssh or chmod -R on it is left open,
+# on the same terms as the home directory above.
+HOSTKEY='(/etc/ssh|/conf/sshd)/ssh_host_'
+KEYDIR='(\.ssh|/conf/sshd)'
+KEY="($HOSTKEY|authorized_keys|$KEYDIR"'(/|[^[:alnum:]_.-]|$))'
+KEYFILE="($HOSTKEY"'[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
 KEYPRIV="$KEYFILE"'([^.[:alnum:]]|$)'
 
-# sshd's config file or its drop-in directory, and the editors
-# that rewrite a file in place.
-SSHD='/etc/ssh/sshd_config(\.d(/[[:alnum:]_.-]*)?)?'
+# sshd's config: sshd_config, its drop-in directory, and a file
+# an appliance merges into it when it regenerates the config
+# (pfSense appends /etc/sshd_extra). The .d suffix is optional,
+# so a plain hit on SSHD also finds the bare file. Then the
+# editors that rewrite a file in place.
+SSHD='/etc/(ssh/sshd_config(\.d(/[[:alnum:]_.-]*)?)?|sshd_extra)'
 EDITOR='(vi|vim|nvim|nano|emacs|ed)'
 
 # A general-purpose language runtime. See the interpreter section
@@ -569,25 +597,24 @@ if hit '(^|[^[:alnum:]_-])ssh-keygen([^[:alnum:]_-]|$)' \
 fingerprint of a .pub runs in a call of its own, with no private \
 key path in it"
 fi
-if hit '/etc/ssh/sshd_config'; then
-  if hit '>>?[[:space:]]*["'\'']?/etc/ssh/sshd_config' \
-    || hit 'tee[[:space:]]+(-a[[:space:]]+)?["'\'']?/etc/ssh/sshd_config' \
+if hit "$SSHD"; then
+  if hit '>>?[[:space:]]*["'\'']?[^[:space:];|&]*'"$SSHD" \
     || { hit '(^|[^[:alnum:]_-])(sed|perl)([^[:alnum:]_-]|$)' \
          && hit '(^|[[:space:]])-i'; } \
     || hit "(^|[^[:alnum:]_-])$EDITOR([^[:alnum:]_-]|\$)" \
     || hit '(^|[^[:alnum:]_-])(rm|truncate|chmod|chown|mv|cp)([^[:alnum:]_-]|$)' \
     || writes_to "$SSHD"
   then
-    deny "modifying /etc/ssh/sshd_config is never allowed \
-(reading it is fine: cat, grep, sshd -T)"
+    deny "modifying sshd_config or a file merged into it is \
+never allowed (reading it is fine: cat, grep, sshd -T)"
   fi
 fi
 
 # --- Writes INTO an SSH key -----------------------------------
 # Writing into a key file replaces it as surely as deleting it.
 if [ "$HAS_KEY" -eq 1 ]; then
-  if writes_to "($KEYFILE|\\.ssh/?)"; then
-    deny "writing into an SSH key file or a .ssh directory \
+  if writes_to "($KEYFILE|$KEYDIR/?)"; then
+    deny "writing into an SSH key file or a key directory \
 replaces the keys there"
   fi
   # An in-place edit needs the key AFTER the tool in the same
@@ -642,7 +669,7 @@ line can overwrite or delete the key, and a pattern matcher \
 cannot tell that from a read - read keys with cat, stat or \
 ssh-keygen -lf instead"
   fi
-  if hit '/etc/ssh/sshd_config'; then
+  if hit "$SSHD"; then
     deny "an interpreter with sshd_config on its command line \
 can rewrite it, and a pattern matcher cannot tell that from a \
 read - read it with cat, grep or sshd -T instead"

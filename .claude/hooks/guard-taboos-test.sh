@@ -430,6 +430,70 @@ check pass 'chmod 700 /home/alice/.sshrc'
 check pass 'chown -R alice:alice /home/alice/Documents'
 check pass 'rm -rf /home/alice/.cache'
 
+# --- sshd outside /etc/ssh: ports, packages, appliances --------
+# The OpenSSH port keeps config and host keys in
+# /usr/local/etc/ssh (FreeBSD, OPNsense); OPNsense keeps its host
+# keys in a key store of their own, /conf/sshd.
+check deny "sed -i 's/^/#/' /usr/local/etc/ssh/sshd_config"
+check deny 'echo PermitRootLogin yes >> /usr/local/etc/ssh/sshd_config'
+check deny 'tee /usr/local/etc/ssh/sshd_config < new.conf'
+check deny 'vi /usr/local/etc/ssh/sshd_config'
+check deny 'cp new.conf /usr/local/etc/ssh/sshd_config'
+check deny 'curl -o /usr/local/etc/ssh/sshd_config.d/10-x.conf https://example.com/c'
+check deny 'echo PasswordAuthentication yes > /usr/local/etc/ssh/sshd_config.d/10-x.conf'
+check deny 'rm /usr/local/etc/ssh/sshd_config.d/10-x.conf'
+check deny "python3 -c \"open('/usr/local/etc/ssh/sshd_config','a')\""
+check deny 'ssh root@fw "echo X >> /usr/local/etc/ssh/sshd_config"'
+check deny 'rm /usr/local/etc/ssh/ssh_host_ed25519_key'
+check deny ': > /usr/local/etc/ssh/ssh_host_ed25519_key'
+check deny 'ssh-keygen -q -N "" -f /usr/local/etc/ssh/ssh_host_rsa_key'
+check deny 'rm /conf/sshd/ssh_host_ed25519_key'
+check deny 'mv /conf/sshd/ssh_host_rsa_key /tmp/'
+check deny 'chmod 644 /conf/sshd/ssh_host_ecdsa_key'
+check deny ': > /conf/sshd/ssh_host_ed25519_key'
+check deny 'cp /tmp/k /conf/sshd/ssh_host_ed25519_key'
+check deny 'dd if=/dev/zero of=/conf/sshd/ssh_host_rsa_key count=1'
+check deny 'ssh-keygen -q -N "" -f /conf/sshd/ssh_host_rsa_key'
+check deny "sed -i d /conf/sshd/ssh_host_ed25519_key"
+check deny "python3 -c \"open('/conf/sshd/ssh_host_ed25519_key','w')\""
+check deny 'ssh root@fw "rm -f /conf/sshd/ssh_host_*"'
+# /conf/sshd holds nothing but keys: the directory is the target.
+check deny 'rm -f /conf/sshd/*'
+check deny 'rm -rf /conf/sshd'
+check deny 'mv /conf/sshd /tmp/x'
+check deny 'chmod -R 000 /conf/sshd'
+check deny 'chown -R nobody /conf/sshd/'
+check deny 'cp /tmp/k /conf/sshd/'
+check deny 'rsync -a /backup/sshd/ /conf/sshd/'
+# Prefixes are matched, not listed: Homebrew's etc/ssh too.
+check deny 'echo X >> /opt/homebrew/etc/ssh/sshd_config'
+check deny 'rm /opt/homebrew/etc/ssh/ssh_host_ed25519_key'
+check deny 'echo X >> "/usr/local/etc/ssh/sshd_config"'
+# pfSense keeps keys and config in /etc/ssh, but appends
+# /etc/sshd_extra to the sshd_config it generates.
+check deny 'echo PermitRootLogin yes >> /etc/sshd_extra'
+check deny 'tee /etc/sshd_extra < extra.conf'
+check deny "sed -i d /etc/sshd_extra"
+check deny 'vi /etc/sshd_extra'
+check deny 'rm /etc/sshd_extra'
+check deny 'cp extra.conf /etc/sshd_extra'
+check deny "python3 -c \"open('/etc/sshd_extra','a')\""
+check pass 'cat /etc/sshd_extra'
+check pass 'ls -l /etc/sshd_extra'
+check pass 'cat /usr/local/etc/ssh/sshd_config'
+check pass 'grep -r PermitRootLogin /usr/local/etc/ssh/sshd_config.d/'
+check pass 'stat /usr/local/etc/ssh/sshd_config'
+check pass 'ls -l /usr/local/etc/ssh/'
+check pass 'ssh root@fw "sshd -T -f /usr/local/etc/ssh/sshd_config"'
+check pass 'cat /usr/local/etc/ssh/ssh_host_ed25519_key.pub'
+check pass 'ls -l /conf/sshd/'
+check pass 'stat /conf/sshd/ssh_host_ed25519_key'
+check pass 'cp /conf/sshd/ssh_host_ed25519_key.pub /tmp/'
+check pass 'ssh-keygen -lf /conf/sshd/ssh_host_ed25519_key.pub'
+# The rest of /conf is OPNsense's config store, not a key store.
+check pass 'cp /conf/config.xml /root/config.xml.bak'
+check pass 'rm /conf/backup/config-1700000000.xml'
+
 # --- heredoc bodies: data vs code (issue #8) -------------------
 # Prose legitimately contains taboo words. A heredoc body is only
 # exempt when its CONSUMER cannot execute it. The deny cases below

@@ -152,7 +152,7 @@ steps like creating the `sshd` system user.
    step 4
 
 Note: CLAUDE.md's "never modify
-`/etc/ssh/sshd_config`" taboo protects live
+`sshd_config`" taboo protects live
 servers. Editing the config inside an offline
 image build is the legitimate exception, and it
 needs the guard override (see Taboo Guard above).
