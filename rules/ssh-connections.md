@@ -72,7 +72,8 @@ Use it for:
 - **Access tests.** Anything that answers "can this
   login still succeed?" — after changing
   `authorized_keys`, an account, its shell or groups,
-  PAM, host keys, or firewall rules on the SSH port,
+  PAM, host keys, host or user certificates and
+  their CA trust, or firewall rules on the SSH port,
   and the root SSH probe in
   `rules/privilege-escalation.md`. A shared master
   answers from the login **before** the change, so a

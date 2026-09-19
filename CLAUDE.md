@@ -314,6 +314,22 @@ server to others: which files the programs really
 read (`Include`, `-f`, `/usr/local/etc/ssh`), and why
 every filter on their output uses `grep -i`.
 
+## SSH Certificates
+
+Read `rules/ssh-certificates.md` when a host presents
+a host certificate, trusts a user CA, or heinzel
+logs in with a certificate; before setting up or
+maintaining an SSH CA; and whenever a login or host
+verification fails with `Certificate invalid:`.
+Host certificates and user certificates are recorded
+separately in server memory. On a first connection,
+its quick probe runs in the OS-detection call.
+
+Treat sshd's revocation list (`RevokedKeys`) like an
+SSH key: never delete, move or re-permission it —
+sshd then refuses every key login. The taboo guard
+enforces this.
+
 ## Session Start Preflight
 
 At the start of every session, quietly load
