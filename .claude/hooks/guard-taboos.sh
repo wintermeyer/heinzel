@@ -299,15 +299,16 @@ DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 # home directory as a key store. This is a backstop against the
 # everyday mistake, not a sandbox.
 #
-# KEYPRIV additionally excludes a trailing .pub or -suffix, so
+# KEYPRIV additionally excludes a trailing .pub or -cert., so
 # reading or copying a public key or a certificate beside its key
 # (ssh_host_ed25519_key-cert.pub) stays allowed while the private
-# half does not; id_ed25519-work is still caught, because the id_
-# class spans the hyphen. It stays filename-only on purpose: it
-# guards a truncating redirect and ssh-keygen -f, neither of
-# which is meaningful against a directory. KEYFILE is the same
-# set without the
-# trailing boundary, for writes_to below.
+# half does not. Any other hyphen suffix is still a private key
+# (ssh_host_rsa_key-old, id_ed25519-work): ERE has no lookahead,
+# so "-cert." is excluded letter by letter. It stays
+# filename-only on purpose: it guards a truncating redirect and
+# ssh-keygen -f, neither of which is meaningful against a
+# directory. KEYFILE is the same set without the trailing
+# boundary, for writes_to below.
 #
 # Host keys and sshd_config do not always live in /etc/ssh:
 # the OpenSSH port or package puts them in /usr/local/etc/ssh
@@ -326,7 +327,7 @@ HOSTKEY='(/etc/ssh|/conf/sshd)/ssh_host_'
 KEYDIR='(\.ssh|/conf/sshd)'
 KEY="($HOSTKEY|authorized_keys|$KEYDIR"'(/|[^[:alnum:]_.-]|$))'
 KEYFILE="($HOSTKEY"'[[:alnum:]_-]*key|\.ssh/id_[[:alnum:]_-]+|authorized_keys)'
-KEYPRIV="$KEYFILE"'([^.[:alnum:]-]|$)'
+KEYPRIV="$KEYFILE"'([^.[:alnum:]-]|$|-($|[^c]|c($|[^e])|ce($|[^r])|cer($|[^t])|cert($|[^.])))'
 
 # sshd's revocation list (RevokedKeys). Once sshd_config names
 # it, a missing or unreadable file makes sshd refuse EVERY public

@@ -149,14 +149,16 @@ printf '%s\n' "$OUT" | grep -i -e '^hostcertificate ' \
 CA=$(v trustedusercakeys)
 if [ -n "$CA" ] && [ "$CA" != none ]; then
   ssh-keygen -lf "$CA"
-  ls -l "${CA%.pub}" 2>&1
+  case $CA in *.pub) ls -l "${CA%.pub}" 2>&1 ;; esac
 fi
 RK=$(v revokedkeys)
 [ -n "$RK" ] && [ "$RK" != none ] && ls -l "$RK"
 P=$(v authorizedprincipalsfile)
-if [ -n "$P" ] && [ "$P" != none ]; then
-  grep -H . "${P%/%u}"/* 2>&1
-fi
+case $P in
+  ''|none) ;;
+  */%u) grep -H . "${P%/%u}"/* 2>&1 ;;
+  *) echo "principals per account: $P" ;;
+esac
 ```
 
 CA trust inside `authorized_keys` needs a call of its
@@ -171,15 +173,18 @@ grep -Hn 'cert-authority' /root/.ssh/authorized_keys \
 - `trustedusercakeys none` and no `cert-authority`
   line: no user CA. No `revokedkeys` line: no
   revocation list.
-- **CA signing key on the server:** the `ls` finds a
-  file named like the CA key without `.pub` (anything
-  but "No such file"). Report the path, never read
-  it: whoever holds it can log in everywhere the CA
-  is trusted.
+- **CA signing key on the server:** for a CA file
+  ending in `.pub`, the `ls` finds a file of the same
+  name without it (anything but "No such file").
+  Report the path, never read it: whoever holds it
+  can log in everywhere the CA is trusted.
 - **Principals:** `authorizedprincipalsfile none`
   means a certificate works for the account its
   principals name. With a file (`%u` is the account),
   each line is a principal allowed in as that account.
+  A path with `%u` elsewhere, or `%h` (the home), is
+  only printed: read the file of `root` and of the
+  accounts that matter by hand.
   Report which principals reach `root`. An
   `AuthorizedPrincipalsCommand` cannot be evaluated
   from outside: name the command and its user.
@@ -368,8 +373,10 @@ What each part puts at risk:
   file makes sshd refuse every public key login,
   `authorized_keys` included. Create it before the
   directive; never delete, move or re-permission it
-  (the taboo guard denies that). An empty file is a
-  valid list.
+  (the taboo guard denies that). Create it as an empty
+  KRL with `ssh-keygen -k -f <path>`: sshd accepts an
+  empty file too, but `ssh-keygen -k -u` cannot add to
+  one.
 - **`sshd_config` directives** stay an absolute taboo
   (`CLAUDE.md` → Critical Safety Rules). heinzel
   prepares everything else and hands the user the
@@ -409,7 +416,8 @@ test with the fresh-login options.
 2. Principals, if used: one file per account, one
    principal per line, root-owned, `0644`. Say which
    principals reach `root`.
-3. The revocation list, if used: `touch` it now, with
+3. The revocation list, if used: create it now as an
+   empty KRL, `ssh-keygen -k -f /etc/ssh/revoked_keys`,
    mode `0644`.
 4. Hand the user the drop-in, e.g.
    `/etc/ssh/sshd_config.d/50-user-ca.conf`:
@@ -492,14 +500,21 @@ of it.
 
 Operations:
 
-- **Revoke:** build the list **once** on the
-  workstation (as above, from the CA's public key).
-  Per server, `scp` it next to the `RevokedKeys`
-  path, then in one call `cp` it over the list (not
-  `mv`: the guard denies moving the list), and
-  compare its checksum with the local copy and run
-  `ssh-keygen -Q -f <path> <revoked cert>`. A server
-  without `RevokedKeys` cannot revoke: report it.
+- **Revoke:** one master list on the workstation,
+  built as above from the CA's public key; on a fleet,
+  revoke only there, never on a single server. Per
+  server, one call before copying: its current list's
+  checksum must equal the master copied last time. If
+  it differs, a server-local revocation would be lost:
+  stop, compare `ssh-keygen -Q -l -f` of both, and
+  merge into the master first. Then `scp` the master
+  to the SSH user's home (not `/etc/ssh`: the guard
+  would deny removing the staged copy), `cp` it over
+  the list (not `mv`), check the checksum, and list
+  the entry with `ssh-keygen -Q -l -f <path>` (or
+  `-Q -f <path> <cert>` when the certificate is at
+  hand). A server without `RevokedKeys` cannot revoke:
+  report it.
 - **Offboard a person:** revoke by key ID, remove
   their principal from every principals file
   (`grep -rl <principal> <dir>`), and have the user

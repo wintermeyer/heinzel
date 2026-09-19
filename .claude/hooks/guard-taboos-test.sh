@@ -223,6 +223,12 @@ check pass 'ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub'
 check pass 'cp /etc/ssh/ssh_host_ed25519_key-cert.pub /var/backups/heinzel/'
 check deny 'ssh-keygen -f /etc/ssh/ssh_host_ed25519_key -N ""'
 check deny 'ssh-keygen -f ~/.ssh/id_ed25519-work -N ""'
+# Only -cert. is exempt; other hyphen suffixes are key copies.
+check deny 'ssh-keygen -q -N "" -f /etc/ssh/ssh_host_rsa_key-old'
+check deny ': > /etc/ssh/ssh_host_rsa_key-2023'
+check deny 'ssh-keygen -f /etc/ssh/ssh_host_rsa_key-ce -N ""'
+check deny ': > /etc/ssh/ssh_host_rsa_key-'
+check pass 'ssh-keygen -L -f ~/.ssh/id_rsa-cert.pub'
 check deny 'rm /etc/ssh/ssh_host_ed25519_key-cert.pub'
 # CA trust and principals are ordinary maintenance (the guard
 # header says why); keep them writable.
