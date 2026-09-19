@@ -408,6 +408,10 @@ What each part puts at risk:
 - **heinzel does not sign certificates** and never
   touches a CA signing key. It hands the CA the
   public keys and installs the results.
+- **What the CA lets people get** — who receives a
+  user certificate, for which principals, for how
+  long — and a login that fails on the principal:
+  `rules/ssh-ca-issuing.md`.
 - **A certificate needs an account.** It proves who
   logs in, not that the account exists or what it may
   do. Two models, worth recording which one a host

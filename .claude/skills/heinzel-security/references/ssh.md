@@ -186,6 +186,9 @@ User CA:
 - No `RevokedKeys` → **INFO**
 - `cert-authority` lines in `authorized_keys` →
   **INFO**, list account and CA fingerprint
+- The CA's issuing rules, when the CA runs on the host
+  or the user hands them over: the findings in
+  `rules/ssh-ca-issuing.md`
 
 ## SSH Client on the Server — Linux and macOS
 
