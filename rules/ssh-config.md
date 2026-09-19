@@ -69,9 +69,8 @@ Where it runs:
 - **A server**, for root and every account that
   connects out (backups, rsync, deploys, jump hosts).
   Such accounts have a `.ssh` directory
-  (`ls -d /root/.ssh /home/*/.ssh /Users/*/.ssh`;
-  homes elsewhere, e.g. from a directory, are not
-  covered by the glob); bundle them into one call:
+  (`ls -d /root/.ssh /home/*/.ssh`); bundle them into
+  one call:
 
   ```bash
   for a in root backup; do

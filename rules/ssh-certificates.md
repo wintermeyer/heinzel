@@ -52,63 +52,29 @@ in `rules/<family>.md`. Specific to certificates:
   skills.
 - Before any work on SSH access: users, keys, host
   keys, OS replacement, dual boot — and before
-  setting up SSH from a server to others (backups,
-  rsync, deploys): see "SSH client".
+  setting up SSH from a server to others.
+- **Once per session on the workstation**, before the
+  first connection to a host with an `SSH host cert:`
+  line: see "Workstation against the fleet".
 - When a login or host verification fails with
   `Certificate invalid:` (see Failures).
 
-## Which files sshd and ssh read
-
-Never assume `sshd_config` and `sshd_config.d/*.conf`
-are all there is. `Include` can pull in any file (on
-macOS `/etc/ssh/crypto.conf`), the FreeBSD package and
-appliances use `/usr/local/etc/ssh`, and a daemon
-started with `-f` reads another file entirely. Ask the
-binaries instead:
-
-- **sshd:** `sshd -dd -G` prints every file it reads
-  (`load_server_config: filename …`) and the
-  effective values, without host keys. It needs
-  OpenSSH 9.3 or newer, and often no root, though
-  some distros keep `sshd_config` at `0600`. Older
-  OpenSSH: `sshd -dd -T` with root. A `-f` in the
-  running daemon's command line (`ps ax -o args=`,
-  lines starting with `sshd` or its path) goes on
-  both.
-- **ssh (client):** `ssh -v -G <target>` prints every
-  file it reads (`Reading configuration data …`) and
-  the effective values for that target. It reads the
-  calling account's `~/.ssh/config` too; `-F` with
-  the system file shows the system part alone.
-
-Since OpenSSH 10.4 the effective values are printed in
-mixed case (`TrustedUserCAKeys`, before
-`trustedusercakeys`). Always filter with `grep -i`.
+Which files sshd and ssh read, and why every filter
+uses `grep -i`: `rules/ssh-config.md`.
 
 ## Quick probe (no root)
 
-Certificates on disk, and the directives from every
-file sshd reads. Add `-f <file>` after `sshd` if `ps`
-shows one:
+In the same call, after the sshd probe of
+`rules/ssh-config.md` (it sets `OUT` and `F`):
 
 ```bash
-PATH=$PATH:/usr/sbin:/usr/local/sbin
-ps ax -o args= | grep -E '^[^ ]*sshd[: ]' | grep -e ' -f ' || true
 ls /etc/ssh/*-cert.pub /usr/local/etc/ssh/*-cert.pub \
   2>/dev/null
-OUT=$(sshd -dd -G 2>&1)
-F=$(printf '%s\n' "$OUT" | sed -n 's/.*load_server_config: filename //p' \
-  | tr -d '\r' | sort -u)
-echo "sshd reads:" $F
 printf '%s\n' "$OUT" | grep -i -e '^hostcertificate ' \
   -e '^trustedusercakeys ' -e '^authorizedprincipals' \
   -e '^revokedkeys '
 [ -n "$F" ] && grep -Hi '^[[:space:]]*match' $F
 ```
-
-No `sshd reads:` list (OpenSSH before 9.3, or files
-unreadable): grep the main file of both locations for
-`Include`, and read what they name.
 
 No certificate and no directive: no SSH CA on this
 host; write nothing. A hit: write the memory lines
@@ -171,15 +137,13 @@ ssh -v -o BatchMode=yes -o ConnectTimeout=5 \
 
 ## User CA (root)
 
-One call with root (`rules/privilege-escalation.md`):
-the effective config is read once, and the paths come
-from it (`-f <file>` as in the quick probe):
+One call with root (`rules/privilege-escalation.md`),
+after the sshd probe of `rules/ssh-config.md`; the
+paths come from its `OUT`:
 
 ```bash
-PATH=$PATH:/usr/sbin:/usr/local/sbin
-T=$(sshd -G 2>/dev/null || sshd -T 2>/dev/null)
-v() { printf '%s\n' "$T" | grep -i "^$1 " | cut -d' ' -f2-; }
-printf '%s\n' "$T" | grep -i -e '^hostcertificate ' \
+v() { printf '%s\n' "$OUT" | grep -i "^$1 " | cut -d' ' -f2-; }
+printf '%s\n' "$OUT" | grep -i -e '^hostcertificate ' \
   -e '^trustedusercakeys ' -e '^authorizedprincipals' \
   -e '^revokedkeys ' -e '^casignaturealgorithms '
 CA=$(v trustedusercakeys)
@@ -228,20 +192,11 @@ grep -Hn 'cert-authority' /root/.ssh/authorized_keys \
   fingerprint equal to the host certificate's
   signing CA.
 
-`sshd -T` shows the global values. When the quick
-probe found `Match` lines, evaluate them for `root`
-and each account with a principals file, in the same
-call:
-
-```bash
-sshd -T -C user=root,host=client.example.com,addr=192.0.2.10 \
-  2>/dev/null | grep -e '^trustedusercakeys ' \
-  -e '^authorizedprincipals' -e '^revokedkeys '
-```
-
-Use a real client name and address when the `Match`
-blocks test them. Older OpenSSH needs all three of
-`user`, `host` and `addr`.
+`OUT` holds the global values. When the quick probe
+found `Match` lines, evaluate them for `root` and each
+account with a principals file, in the same call
+(`sshd -T -C`, see `rules/ssh-config.md`), and filter
+for the same three keywords.
 
 ### Who logged in
 
@@ -311,58 +266,64 @@ ssh-keygen -L -f ~/.ssh/id_ed25519-cert.pub
 
 Host certificates are checked by the **client** — the
 user's workstation, and every server that opens SSH
-connections itself (backups, rsync, deploy pulls, jump
-hosts, monitoring). On a server, one `@cert-authority`
-line in the **global** known-hosts file covers every
-account on it; lines in each user's own file have to
-be kept in sync by each user, and service accounts are
-forgotten.
+connections itself. Which files and values a client
+uses: `ssh -v -G`, per `rules/ssh-config.md` → ssh.
 
-Per account that connects out (`sudo -n -u <account>`
-for service accounts), with a target it really
-connects to — `Host` and `Match` blocks differ per
-target:
+On a server, one `@cert-authority` line in the
+**global** known-hosts file covers every account on it;
+lines in each user's own file have to be kept in sync
+by each user, and service accounts are forgotten.
 
-```bash
-ssh -v -G <target> 2>&1 | grep -i -e 'Reading configuration data' \
-  -e '^globalknownhostsfile ' -e '^userknownhostsfile ' \
-  -e '^stricthostkeychecking ' -e '^hostname ' \
-  -e '^hostkeyalias ' -e '^canonicalizehostname '
-```
-
-Then, in every known-hosts file listed:
+Which CA a client trusts for a name — `ssh-keygen -F`
+matches `@cert-authority` patterns and needs no
+connection:
 
 ```bash
-grep -n -e '^@cert-authority' -e '^@revoked' <files> 2>/dev/null
+for f in <known-hosts files from ssh -G>; do
+  echo "== $f"
+  ssh-keygen -F <name> -f "$f" | grep '^@cert-authority' \
+    | cut -d' ' -f3- | ssh-keygen -lf /dev/stdin 2>/dev/null
+done
+grep -n '^@revoked' <known-hosts files> 2>/dev/null
 ```
 
-- `@cert-authority <pattern> <CA key>` trusts the CA
-  for the matching hosts. A pattern of `*` → **INFO**.
-- The fleet uses a host CA (`memory/network.md`), the
-  server connects out, and its global known-hosts
-  file has no `@cert-authority` line, or the lines
-  sit only in some users' files → **INFO**: move them
-  to the global file.
-- `stricthostkeychecking no` or a known-hosts file of
-  `/dev/null` in the system config → **WARN**: any
-  host key is accepted, CA or not. `accept-new` →
-  **INFO**.
-- The name the host certificate must list is the one
-  after `hostkeyalias`, or `hostname` after
-  canonicalization — not necessarily what was typed.
+- `<name>` is what the client verifies: `hostkeyalias`
+  if set, else `hostname` after canonicalization
+  (both from `ssh -G`), not necessarily what was
+  typed. The host certificate must list it too.
+- A pattern of `*` trusts the CA for every host.
 - `@revoked * <key>` refuses that host key or
   certificate, CA or not — the answer to a stolen
   host key: add it on every client and in every
   global known-hosts file, and give the host a new
   key and certificate.
+- Changing these lines is a trust change like the CA
+  file on the server side: ask, back up, then one
+  `ssh -o BatchMode=yes <target> true` as the account
+  that uses it.
 
-`GlobalKnownHostsFile` defaults to
-`/etc/ssh/ssh_known_hosts` (and `…2`); where the
-system config sets another path, that is the file.
-Changing its lines is a trust change like the CA file
-on the server side: ask, back up, then one
-`ssh -o BatchMode=yes <target> true` from that server,
-as the account that uses it.
+Severities: `heinzel-security` → `references/ssh.md`.
+
+### Workstation against the fleet
+
+On the workstation heinzel runs on, as its account,
+without SSH. For each host in memory with an
+`SSH host cert:` line, the loop above with that host's
+name must print the CA fingerprint that line names:
+
+- **A fingerprint, and it matches:** the workstation
+  verifies the host through the CA.
+- **None:** the workstation knows the host only by
+  its plain key, or not at all; host key changes then
+  break the connection. Offer an `@cert-authority`
+  line, in the user's or the global known-hosts file
+  (`globalknownhostsfile` from `ssh -G`; a global
+  file serves every account on the workstation).
+- **Only other ones:** the workstation trusts another
+  CA for that name — a CA rotation not finished on
+  the client, or a wrong line. Stop and tell the user
+  before connecting. During a rotation both lines
+  print; one match is enough.
 
 ## Failures
 

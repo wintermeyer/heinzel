@@ -76,8 +76,12 @@ fi
 if [ -z "$SSHD" ]; then
   echo "unknown(needs-root)"
 else
-  T=$($SSHD -T 2>/dev/null)
-  # -i: OpenSSH 10.4+ prints the names in mixed case.
+  # A -f on the running daemon, and -i on every filter:
+  # rules/ssh-config.md.
+  FOPT=$(ps ax -o args= \
+    | sed -n 's/^[^ ]*sshd[: ]\(.* \)\{0,1\}-f \([^ ]*\).*/-f \2/p' \
+    | head -n 1)
+  T=$($SSHD $FOPT -T 2>/dev/null)
   printf '%s\n' "$T" | grep -i \
     -e '^permitrootlogin ' \
     -e '^passwordauthentication ' \
@@ -120,13 +124,17 @@ for f in $(ssh -G localhost 2>/dev/null \
   | grep -i '^globalknownhostsfile ' | cut -d' ' -f2-); do
   [ -e "$f" ] || continue
   echo "globalknownhosts: $f"
-  grep '^@cert-authority' "$f" | cut -d' ' -f1-3
+  grep -e '^@cert-authority' -e '^@revoked' "$f" \
+    | while read -r m p k; do
+        fp=$(printf '%s\n' "$k" | ssh-keygen -lf /dev/stdin \
+          | cut -d' ' -f2)
+        echo "$m $p $fp"
+      done
 done
 ```
 
 Row keys: each line is `key value`; compare keys without
-regard to case (OpenSSH 10.4+ prints `PermitRootLogin`,
-older ones `permitrootlogin`). Compare column-by-
+regard to case. Compare column-by-
 column. A host whose sshd column is `unknown(needs-root)`
 is reported as such, never as "defaults".
 
@@ -152,6 +160,8 @@ Highlight as drift:
 - `globalknownhosts` trusting a different host CA, or
   none, on hosts that connect to others: every account
   there has to keep its own `@cert-authority` line.
+  An `@revoked` line missing on some hosts: a stolen
+  host key is still accepted there.
 
 Host certificate and user CA are separate rows (see
 `rules/ssh-certificates.md`): a host can have one

@@ -83,7 +83,8 @@ Read on demand, only when the relevant section applies:
   severity rules (CRITICAL / WARN / INFO).
 - `references/ssh.md` — SSH password auth, root login, weak
   algorithms, MaxAuthTries, X11Forwarding, host certificates
-  and user CA trust (Linux and macOS).
+  and user CA trust, the SSH client on the server (Linux and
+  macOS).
 - `references/firewall.md` — Linux (ufw / firewalld) and macOS
   (Application Firewall).
 - `references/user-accounts.md` — empty passwords, multiple UID

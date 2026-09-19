@@ -313,14 +313,21 @@ Read `rules/ssh-user.md`. Usernames and language
 preference are stored in `memory/user.md` — read at
 session start.
 
+## SSH Configuration
+
+Read `rules/ssh-config.md` before judging any sshd or
+ssh setting, and before setting up SSH from one
+server to others: which files the programs really
+read (`Include`, `-f`, `/usr/local/etc/ssh`), and why
+every filter on their output uses `grep -i`.
+
 ## SSH Certificates
 
 Read `rules/ssh-certificates.md` when a host presents
 a host certificate, trusts a user CA, or heinzel
 logs in with a certificate; before setting up or
-maintaining an SSH CA or SSH from one server to
-others; and whenever a login or host verification
-fails with `Certificate invalid:`.
+maintaining an SSH CA; and whenever a login or host
+verification fails with `Certificate invalid:`.
 Host certificates and user certificates are recorded
 separately in server memory.
 
