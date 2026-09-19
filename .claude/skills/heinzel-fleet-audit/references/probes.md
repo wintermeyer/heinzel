@@ -76,7 +76,7 @@ fi
 if [ -z "$SSHD" ]; then
   echo "unknown(needs-root)"
 else
-  $SSHD -T 2>/dev/null | grep \
+  $SSHD -T 2>/dev/null | grep -i \
     -e '^permitrootlogin ' \
     -e '^passwordauthentication ' \
     -e '^pubkeyauthentication ' \
@@ -91,8 +91,9 @@ else
 fi
 ```
 
-Row keys: each line is `key value`. Compare column-by-
-column. A host whose sshd column is `unknown(needs-root)`
+Row keys: each line is `key value`. Since OpenSSH 10.4
+the keys are mixed case (`PermitRootLogin`), so compare
+them without regard to case. Compare column-by-column. A host whose sshd column is `unknown(needs-root)`
 is reported as such, never as "defaults".
 
 Highlight as drift:

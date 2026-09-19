@@ -13,7 +13,9 @@ disabled.
 
 Use `sshd -T` to query the effective compiled configuration.
 This resolves Include directives, Match blocks, and defaults —
-much more reliable than parsing config files manually.
+much more reliable than parsing config files manually. Since
+OpenSSH 10.4 it prints keywords in mixed case
+(`PasswordAuthentication`), so always filter with `grep -i`.
 
 ```bash
 sshd -T 2>/dev/null | grep -i passwordauthentication
@@ -35,9 +37,12 @@ cat /etc/ssh/sshd_config 2>/dev/null
 cat /etc/ssh/sshd_config.d/*.conf 2>/dev/null
 ```
 
-Parse the files for `PasswordAuthentication`. The last matching
-directive wins (drop-ins are read in lexical order before the
-main file on most distros, but `sshd -T` is authoritative).
+Follow every `Include` line, not just `sshd_config.d/` (macOS
+also includes `/etc/ssh/crypto.conf`); the FreeBSD
+`openssh-portable` port keeps its files in `/usr/local/etc/ssh`.
+Parse the files for `PasswordAuthentication`. The first
+obtained value wins (`sshd_config(5)`), so a drop-in included
+at the top overrides the main file; `sshd -T` is authoritative.
 
 **Important:** On OpenSSH 8.8+, some distros default
 `PasswordAuthentication` to `no` via drop-in files in
@@ -100,7 +105,7 @@ grep -i "^PermitRootLogin" \
 
 ```bash
 sshd -T 2>/dev/null \
-  | grep -E "^(ciphers|macs|kexalgorithms) "
+  | grep -iE "^(ciphers|macs|kexalgorithms) "
 ```
 
 Fallback: parse `Ciphers`, `MACs`, and `KexAlgorithms` from
