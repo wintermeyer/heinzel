@@ -25,6 +25,17 @@ each direction; one CA signing both is a finding.
 Certificates are public and may be printed. The CA
 **signing keys** are secrets (`rules/secrets.md`).
 
+**Any CA software.** Certificates are an OpenSSH
+feature (since 5.4), and they look and behave the same
+whichever software issues them: plain `ssh-keygen -s`
+with a script around it, step-ca, HashiCorp Vault or
+OpenBao with their SSH secrets engine, Teleport,
+Netflix BLESS, or another. This rule works from what
+sshd, ssh and the certificate show. The software only
+tells where renewal runs and whom to ask: find it from
+the renewal job or ask the user, never assume one, and
+look up its commands in its own documentation.
+
 ## Per operating system
 
 The certificate mechanics are OpenSSH and the same
@@ -115,9 +126,10 @@ the taboo guard):
     every client
 
 **Renewal** usually runs on the host: a timer, cron or
-launchd job that calls the CA tool (`step ssh renew`,
-`vault write …/sign`, a script). No job and an
-expiring certificate is the typical outage.
+launchd job that calls the CA software (e.g.
+`step ssh renew`, `vault write …/sign` or
+`bao write …/sign`, a script). No job and an expiring
+certificate is the typical outage.
 
 **sshd serves the certificate it loaded at start or
 reload** (except macOS, see above). A renewal job
@@ -243,9 +255,9 @@ Refused certificates log `Refusing certificate ID
 ## heinzel's own login by certificate
 
 The user may log in with a certificate from their CA
-tool (`step ssh login`, Vault, Teleport, a company
-script). Which one SSH uses, and its validity and
-principals:
+software (e.g. `step ssh login`, `vault`/`bao write
+…/sign`, `tsh login`, a company script). Which one
+SSH uses, and its validity and principals:
 
 ```bash
 ssh -G <host> | grep -iE '^(user |identit|certificatefile )'
@@ -554,7 +566,7 @@ third only on servers that connect out:
 ```markdown
 - SSH host cert: ed25519, CA SHA256:Cxr4…,
   principals web1.example.com web1, valid to
-  2026-10-19, renewed by step-ssh-renew.timer
+  2026-10-19, renewed by ssh-cert-renew.timer
 - SSH user CA: /etc/ssh/user_ca.pub (CA SHA256:9fQe…),
   principals /etc/ssh/auth_principals/%u,
   RevokedKeys none
@@ -571,9 +583,9 @@ with its tool and the operations still in progress:
 
 ```markdown
 ## SSH CAs
-- User CA SHA256:9fQe… — step-ca on ca.example.com,
-  certificates 16h
-- Host CA SHA256:Cxr4… — same step-ca, host
+- User CA SHA256:9fQe… — <CA software> on
+  ca.example.com, certificates 16h
+- Host CA SHA256:Cxr4… — same CA service, host
   certificates 30d, renewed on each host
 ```
 

@@ -15,4 +15,4 @@ Default: your-username
 # Which tool issues and renews it, so a rejected
 # login points to renewal first
 # (rules/ssh-certificates.md).
-# SSH certificate: step ssh login, valid 16h
+# SSH certificate: <CA software login command>, valid 16h
