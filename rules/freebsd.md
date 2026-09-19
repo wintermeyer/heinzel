@@ -38,6 +38,9 @@ Rules for FreeBSD (all versions).
 - **Critical:** before enabling `pf`, always add a
   rule to pass SSH traffic first. A `pf` config
   without an SSH rule locks you out immediately.
+  The example below passes port 22 only: list every
+  port sshd listens on (`to port { 22 2222 }`,
+  `CLAUDE.md` → Firewall & network).
 - Minimal safe `/etc/pf.conf`:
   ```
   ext_if = "vtnet0"  # set to the real interface, see ifconfig

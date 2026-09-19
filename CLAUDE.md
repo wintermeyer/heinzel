@@ -163,7 +163,12 @@ remote connection before any other work.
   when batched into one.
 - **Firewall & network:** Be extremely careful — a
   mistake cuts off SSH access. Discuss with the user
-  first.
+  first. Before enabling or tightening a firewall,
+  read the ports sshd listens on (as root:
+  `sshd -T | grep -iE '^(port|listenaddress) '`,
+  a port in a `listenaddress` line counts too) and
+  keep every one open: `ufw allow OpenSSH` and
+  firewalld's `ssh` service cover 22 only.
 - **Never remove or block SSH port 22.** If the user
   asks, explain the risk and refuse. Offer
   alternatives (e.g. restricting to specific IPs).
