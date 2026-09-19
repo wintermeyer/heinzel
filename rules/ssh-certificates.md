@@ -416,6 +416,23 @@ What each part puts at risk:
 - **heinzel does not sign certificates** and never
   touches a CA signing key. It hands the CA the
   public keys and installs the results.
+- **A certificate needs an account.** It proves who
+  logs in, not that the account exists or what it may
+  do. Two models, worth recording which one a host
+  uses:
+  - **Role account:** everyone logs in as `root` or
+    a shared admin account; the principals decide who
+    may, and only the key ID in the log shows who it
+    was.
+  - **Personal accounts with `sudo`:** better
+    accountability and least privilege, but across a
+    fleet only with accounts from a central directory,
+    not created by hand on every host. heinzel then
+    needs passwordless `sudo` for what it runs
+    (`rules/privilege-escalation.md`).
+
+  Where accounts and `sudo` rules come from is not
+  covered here.
 
 Each change: ask, back up (`rules/backups.md`),
 `sshd -t` and reload where sshd reads the file only
