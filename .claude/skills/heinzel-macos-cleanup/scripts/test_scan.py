@@ -21,6 +21,10 @@ INV = scan.Inventory(
         "com.brave.browser",
         "com.electron.dockerdesktop",
         "io.github.someone.tool",
+        "com.openai.chat",
+        "org.swift.swiftpm",
+        "com.apple.safari",
+        "com.google.firebase.messaging",
     },
     names={
         "pastebot",
@@ -41,6 +45,15 @@ INV = scan.Inventory(
     team_ids={"9JTH7AWHE6", "UBF8T346G9"},
     tools={"ngrok", "mix"},
     apple_daemons={"tipsd", "homeenergyd"},
+    # Only an app's own id names a vendor folder. Firebase is nested.
+    apps=[
+        {"id": "com.openai.chat", "groups": set()},
+        {"id": "org.swift.swiftpm", "groups": set()},
+        {"id": "com.apple.safari", "groups": set()},
+        {"id": "com.electron.dockerdesktop", "groups": set()},
+        {"id": "com.microsoft.word", "groups": {"ubf8t346g9.ms"}},
+        {"id": "com.wipr.mac", "groups": {"group.wipr2.rules"}},
+    ],
 )
 
 
@@ -89,6 +102,11 @@ class ClassifyName(unittest.TestCase):
         self.assertEqual(cls("UBF8T346G9.Office"), "vendor")
         self.assertEqual(cls("UBF8T346G9.OfficeWordWidget"), "vendor")
 
+    def test_app_group_of_installed_app_is_installed(self):
+        # Office declares UBF8T346G9.ms in its application-groups entitlement.
+        self.assertEqual(cls("UBF8T346G9.ms"), "installed")
+        self.assertEqual(cls("group.wipr2.rules"), "installed")
+
     def test_team_prefix_of_unknown_team_is_orphan(self):
         self.assertEqual(cls("85C27NK92C.com.flexibits.fantastical2.mac"), "orphan")
         self.assertEqual(cls("TC3Q7MAJXF.com.adguard.mac"), "orphan")
@@ -128,9 +146,19 @@ class ClassifyName(unittest.TestCase):
         self.assertEqual(cls("BraveSoftware"), "vendor")
         self.assertEqual(cls("Microsoft Edge Beta"), "vendor")
 
-    def test_vendor_folder_alias(self):
-        # Firefox keeps its profile in Mozilla.
-        self.assertEqual(cls("Mozilla"), "vendor")
+    def test_folder_named_after_bundle_id_vendor_is_vendor(self):
+        # ChatGPT (com.openai.chat) keeps its data in OpenAI.
+        self.assertEqual(cls("OpenAI"), "vendor")
+
+    def test_bundle_id_vendor_must_match_the_whole_name(self):
+        self.assertEqual(cls("swift-test"), "unclear")
+
+    def test_generic_and_apple_vendors_name_no_folder(self):
+        self.assertEqual(cls("Electron"), "unclear")
+        self.assertEqual(cls("Apple"), "unclear")
+
+    def test_vendor_of_nested_framework_names_no_folder(self):
+        self.assertEqual(cls("Google"), "unclear")
 
     def test_apple_daemon_style_names(self):
         for n in ("homeenergyd", "tipsd", "SiriTTSService", "SiriEntityCache"):
@@ -285,12 +313,51 @@ class DescribeApp(TempDir):
         )
         desc = scan.describe_app(bundle)
         self.assertEqual(desc["names"], {"microsoft teams"})
+        self.assertEqual(desc["id"], "com.microsoft.teams2")
         self.assertEqual(desc["ids"], {"com.microsoft.teams2", "x.k"})
         self.assertEqual(desc["nested_names"], {"knowledge"})
 
+    def test_team_and_app_groups_come_from_one_codesign_call(self):
+        bundle = self.root / "Microsoft Word.app"
+        make_bundle(bundle, CFBundleIdentifier="com.microsoft.word")
+        groups = ["UBF8T346G9.Office", "UBF8T346G9.ms"]
+        ent = {"com.apple.security.application-groups": groups}
+        signed = subprocess.CompletedProcess(
+            [], 0, plistlib.dumps(ent).decode(), "TeamIdentifier=UBF8T346G9\n"
+        )
+        with mock.patch.object(scan, "proc", return_value=signed) as codesign:
+            desc = scan.describe_app(bundle)
+        codesign.assert_called_once()
+        self.assertEqual(desc["team"], "UBF8T346G9")
+        self.assertEqual(desc["groups"], {"ubf8t346g9.office", "ubf8t346g9.ms"})
 
-def app_entry(path, bid):
-    return {"path": path, "ids": {bid}, "names": {Path(path).stem.lower()}}
+    def test_unsigned_app_has_no_team_and_no_groups(self):
+        bundle = self.root / "Plain.app"
+        make_bundle(bundle, CFBundleIdentifier="com.plain")
+        unsigned = subprocess.CompletedProcess([], 1, "", "code object is not signed")
+        with mock.patch.object(scan, "proc", return_value=unsigned):
+            desc = scan.describe_app(bundle)
+        self.assertEqual((desc["team"], desc["groups"]), ("", set()))
+
+    def test_team_survives_a_codesign_without_xml(self):
+        # An older codesign that rejects --xml still has to yield the Team ID.
+        bundle = self.root / "Old.app"
+        make_bundle(bundle, CFBundleIdentifier="com.old")
+        refused = subprocess.CompletedProcess([], 1, "", "unrecognized option `--xml'")
+        signed = subprocess.CompletedProcess([], 0, "", "TeamIdentifier=UBF8T346G9\n")
+        with mock.patch.object(scan, "proc", side_effect=[refused, signed]):
+            desc = scan.describe_app(bundle)
+        self.assertEqual((desc["team"], desc["groups"]), ("UBF8T346G9", set()))
+
+
+def app_entry(path, bid, nested=(), groups=()):
+    return {
+        "path": path,
+        "id": bid,
+        "ids": {bid, *nested},
+        "names": {Path(path).stem.lower()},
+        "groups": set(groups),
+    }
 
 
 class ScanApp(TempDir):
@@ -317,6 +384,50 @@ class ScanApp(TempDir):
     def test_bundle_id_selects_one_app(self):
         result = self.scan_app("org.mozilla.firefox")
         self.assertEqual(result["apps"], ["/Applications/Firefox.app"])
+
+    def scan_entries(self, inv, query, *names):
+        loc = self.root / "Library"
+        for n in names:
+            (loc / n).mkdir(parents=True)
+        with no_probes(locations=[loc]):
+            result = scan.scan_app(inv, query)
+        return [Path(e["path"]).name for e in result["entries"]]
+
+    def test_vendor_folder_of_two_installed_apps_is_not_listed(self):
+        # Thunderbird still uses Mozilla when Firefox goes.
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/Applications/Firefox.app", "org.mozilla.firefox"),
+                app_entry("/Applications/Thunderbird.app", "org.mozilla.thunderbird"),
+            ]
+        )
+        self.assertEqual(self.scan_entries(inv, "Firefox", "Mozilla"), ["Firefox.app"])
+
+    def test_app_group_shared_with_other_app_is_not_listed(self):
+        group = "group.com.vendor.app"
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/Applications/A.app", "com.vendor.app", groups=[group]),
+                app_entry("/Applications/B.app", "com.vendor.appb", groups=[group]),
+            ]
+        )
+        self.assertEqual(self.scan_entries(inv, "A", group), ["A.app"])
+
+    def test_vendor_of_other_apps_nested_bundle_is_not_listed(self):
+        # The firefoxpwa runtime nests org.mozilla helpers under its own id.
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/Applications/Firefox.app", "org.mozilla.firefox"),
+                app_entry("/x/Runtime.app", "pwa.rt", ["org.mozilla.gpu-helper"]),
+            ]
+        )
+        self.assertEqual(self.scan_entries(inv, "Firefox", "Mozilla"), ["Firefox.app"])
+
+    def test_vendor_of_nested_framework_is_not_listed(self):
+        inv = scan.Inventory(
+            apps=[app_entry("/Applications/Foo.app", "com.foo.app", ["com.google.fb"])]
+        )
+        self.assertEqual(self.scan_entries(inv, "Foo", "Google"), ["Foo.app"])
 
     def test_app_inside_a_scanned_folder_is_listed_once(self):
         loc = self.root / "Application Support"
@@ -368,8 +479,10 @@ class AppMatches(unittest.TestCase):
     BRAVE_IDS = frozenset({"com.brave.browser", "com.brave.browser.helper"})
     BRAVE_NAMES = frozenset({"brave browser"})
 
-    def match(self, name, ids=BRAVE_IDS, names=BRAVE_NAMES, taken=frozenset()):
-        return scan.app_matches(Path("/x") / name, set(ids), set(names), taken)
+    def match(
+        self, name, ids=BRAVE_IDS, names=BRAVE_NAMES, taken=frozenset(), label="brave"
+    ):
+        return scan.app_matches(Path("/x") / name, set(ids), set(names), taken, label)
 
     def test_bundle_id_forms_are_exact(self):
         for n in (
@@ -395,9 +508,17 @@ class AppMatches(unittest.TestCase):
             with self.subTest(n):
                 self.assertEqual(self.match(n, {"com.foo"}, {"knowledge"}), "")
 
-    def test_vendor_alias_folder_is_name_match(self):
-        m = self.match("Mozilla", {"org.mozilla.firefox"}, {"firefox"})
+    def test_bundle_id_vendor_folder_is_name_match(self):
+        m = self.match("Mozilla", {"org.mozilla.firefox"}, {"firefox"}, label="mozilla")
         self.assertEqual(m, "name")
+        m = self.match("Flexibits", {"com.flexibits.x"}, {"x"}, label="flexibits")
+        self.assertEqual(m, "name")
+
+    def test_bundle_id_vendor_shared_with_other_app_is_no_match(self):
+        m = self.match(
+            "Mozilla", {"org.mozilla.firefox"}, {"firefox"}, {"mozilla"}, "mozilla"
+        )
+        self.assertEqual(m, "")
 
     def test_first_word_shared_with_other_app_is_no_match(self):
         m = self.match(
