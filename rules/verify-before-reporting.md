@@ -127,7 +127,24 @@ This bites hardest when a check is expected to pass:
 the canned verdict confirms the expectation, and a
 genuine regression ships as "verified".
 
-## When the finding survives all five
+### 6. Empty output from a check that must print is a finding
+
+A check that should print something and prints
+nothing did not pass. It failed, ran somewhere else,
+or did something else: find out which before you
+call the work done (`rules/activity-check.md` makes
+the same point for the journal). In issue #51 a
+check printed nothing because `->` in its echo text
+was a redirect that overwrote `/usr/bin/nvim` as
+root, and the empty output was read as "fine".
+
+A remote check prints data, not prose. Every `ssh`
+or `bash -c` level strips one layer of quotes, and
+`>`, `|`, `;` or `*` in commentary turn into shell.
+Let the raw output speak, and run the check with
+the least privilege (`rules/privilege-escalation.md`).
+
+## When the finding survives all six
 
 Then it is real. Report it plainly, with the
 evidence that makes it real, and act or escalate.

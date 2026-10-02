@@ -711,6 +711,26 @@ else
 fi
 rm -rf "$SHIM"
 
+# --- a redirect onto a computed target (issue #51) -------------
+check deny 'ssh root@h '\''bash -ic "echo sensible-editor would run: \$SELECTED_EDITOR -> \$(readlink -f \$SELECTED_EDITOR)"'\'''
+check deny 'echo editor -> $(readlink -f /usr/bin/editor)'
+check deny 'echo editor -> $SELECTED_EDITOR'
+check deny 'ssh h "echo editor ->\${EDITOR}"'
+check deny 'echo x > "$(command -v nvim)"'
+check deny 'echo x >|$(which vim)'
+check deny 'ssh h "echo x 1> \$(command -v vim)"'
+check pass 'out=$(ls /etc 2>&1); echo "$out"'
+check pass 'echo "$(date) done" > log.txt'
+check pass 'cat - > "$OUT"'
+check pass 'tar -cf - . > "$T/backup.tar"'
+check pass 'echo editor -> vim'
+check pass 'diff <(sort a) <(sort b)'
+check pass 'ls | tee >(wc -l) > list.txt'
+# Accepted false positive: quoted here, but one ssh or bash -c
+# level further in the same quotes are gone, and the guard cannot
+# count quote depth.
+check deny 'echo "editor -> $(readlink -f /usr/bin/editor)"'
+
 # --- no negated hit() may remain -------------------------------
 # A rule of the form  hit X && ! hit Y  evaluates Y against the
 # whole command string, so any unrelated flag disarms it (issue

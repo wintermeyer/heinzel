@@ -80,7 +80,7 @@ over `ProgramArguments`. A bare command name goes through `PATH`:
       prog=$(plutil -extract Program raw "$p" 2>/dev/null \
         || plutil -extract ProgramArguments.0 raw "$p" 2>/dev/null)
       case "$prog" in
-        /*) [ -e "$prog" ] || echo "$p -> $prog" ;;
-        ?*) command -v "$prog" > /dev/null || echo "$p -> $prog" ;;
+        /*) [ -e "$prog" ] || echo "$p: $prog" ;;
+        ?*) command -v "$prog" > /dev/null || echo "$p: $prog" ;;
       esac
     done

@@ -25,6 +25,9 @@
 #   - any of the last three reached through a language
 #     runtime (python/perl/ruby/node/awk ...), whose file
 #     I/O looks nothing like a shell write
+#   - a redirect onto a $( ) lookup, or an arrow onto any
+#     expansion, whose target nobody sees before it runs
+#     (issue #51)
 #
 # What it deliberately does NOT scan: the body of a heredoc that
 # is written to an ordinary file by cat or tee (issue #8). That
@@ -687,6 +690,27 @@ line can overwrite the device, which destroys everything the \
 partition table points at"
   fi
 fi
+
+# --- A redirect onto a computed target (issue #51) ------------
+# In unquoted echo text, -> is a dash plus a redirect, and the
+# next word names the file it truncates: -> $(readlink -f $E)
+# replaced /usr/bin/nvim with prose. Denied: any redirect onto a
+# $( ) lookup, and an arrow onto any expansion. A plain > "$VAR"
+# stays allowed, scripts write that way. Accepted false positive:
+# the same text in quotes, which one ssh or bash -c level further
+# in are gone; the guard cannot count quote depth.
+# Most commands hold no $ after a >, so case skips the forks.
+case "$CMD" in
+  *'>'*'$'*)
+    if printf '%s\n' "$CMD" \
+      | grep -Eq '(>[|]?[[:space:]]*["'\'']?\\?\$\(|->[[:space:]]*["'\'']?\\?\$)'
+    then
+      deny "a redirect onto a computed target overwrites whatever \
+file it names - an arrow in echo text is a redirect too, so \
+checks print data, not prose"
+    fi
+    ;;
+esac
 
 # No taboo matched: no decision, normal permission flow applies.
 exit 0

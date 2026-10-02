@@ -31,6 +31,13 @@ command -v sudo && sudo -n true
 On subsequent connections, check server memory for
 the sudo flag.
 
+A check that only reads needs no root. Run it
+without `sudo`, and over the non-root login when the
+server has one, unless it fails for lack of rights:
+a slip in it then hits "Permission denied" instead
+of a system file (`rules/verify-before-reporting.md`
+→ 6).
+
 ## Root SSH Fallback
 
 When sudo is unusable and a privileged action is
