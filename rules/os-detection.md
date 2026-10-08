@@ -19,6 +19,9 @@ its OS.
      echo "${ID}|${VERSION_ID}|${PRETTY_NAME}"
    ```
    Distro families: `debian`, `rhel`, `suse`.
+   **Unraid** (`ID=unraid-os`, also
+   `/etc/unraid-version`) is not a family: read
+   `rules/unraid.md` and skip the family mapping.
    Map the distro to a family via the os-release
    `ID` and `ID_LIKE` fields (e.g. `ubuntu` →
    `debian`; `centos`, `rocky`, `alma`, `fedora` →

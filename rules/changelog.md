@@ -30,6 +30,8 @@ Reading back:
 - macOS: `log show --predicate
   'senderImagePath CONTAINS "logger"'
   --info --last 7d | grep heinzel`
+- Unraid: `grep heinzel /var/log/syslog*` — tmpfs,
+  lost at every reboot (`rules/unraid.md`)
 
 If `logger` fails, log to the local changelog only.
 

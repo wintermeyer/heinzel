@@ -858,6 +858,7 @@ log show \
 | SUSE    | openSUSE, SLES                    | `rules/suse.md`   |
 | macOS   | macOS (Apple Silicon & Intel)     | `rules/macos.md`   |
 | FreeBSD | FreeBSD (all versions)            | `rules/freebsd.md` |
+| Unraid  | Unraid OS (observed on 7.3)       | `rules/unraid.md`  |
 
 Other distributions work too — Heinzel will apply
 general best practices and let you know which OS it
@@ -973,6 +974,8 @@ rules/                 — Upstream rule files (git-tracked)
   suse.md              — openSUSE & SLES rules
   macos.md             — macOS rules
   freebsd.md           — FreeBSD rules
+  unraid.md            — Unraid OS rules (observed
+                         behaviour, 7.3)
   efi-boot.md          — EFI boot management & dual-boot
   cloud-image.md       — Cloud image deployment
   dual-boot.md         — Dual-boot setup workflow
