@@ -18,28 +18,83 @@ moment") — don't skip.
    `rules/access-control.md`.
 2. **Read-only check.** Switch to read-only mode if
    listed. See `rules/access-control.md`.
-3. **DNS check.** New hostname (no
+3. **Path access control.** Load the host's section
+   of `memory/protected-paths.md`, if present, and
+   apply it for the rest of the session. See
+   "Path Access Control" below.
+4. **DNS check.** New hostname (no
    `memory/servers/<hostname>/` yet): run alias
    detection. Known hostname: verify the current IP
    still matches the `- IP:` field in server memory.
    See `rules/dns-aliases.md` for both.
-4. **SSH user lookup** (first connection only). See
+5. **SSH user lookup** (first connection only). See
    `rules/ssh-user.md`.
-5. **OS detection.** See `rules/os-detection.md`.
-6. **Server memory file.** Create on first
+6. **OS detection.** See `rules/os-detection.md`.
+7. **Server memory file.** Create on first
    connection, read on every subsequent connection.
    See `rules/server-memory.md`.
-7. **Activity check.** Every connection, not just
+8. **Activity check.** Every connection, not just
    the first. See `rules/activity-check.md`.
-8. **Then** execute the user's request.
+9. **Then** execute the user's request.
 
 ## Local mode
 
 In local mode (`localhost`, the user's own
-hostname), skip steps 1–4 — they are remote-only
+hostname), skip steps 1, 2, 4 and 5 — they are
+remote-only
 (see `CLAUDE.md` → How It Works → Local mode).
 Still run OS detection, server memory, and activity
 check.
+
+## Path Access Control
+
+Some paths on a server need more care than the
+server as a whole: a directory with family data that
+must not change, a file with secrets, a config that
+only the user may touch. `memory/protected-paths.md`
+lists them per server. It is personal, like
+`memory/blacklist.md`, and created on first need.
+
+One `##` section per server, matched like the
+entries in `rules/access-control.md` (hostname or
+IP, DNS aliases resolved). Each section has up to
+three lists, one glob per line; an optional leading
+`- `, `#` comments and blank lines are ignored:
+
+```markdown
+## 192.0.2.10
+
+### readonly
+- /srv/photos/**
+
+### hidden
+- **/.env
+
+### confirm
+- /etc/nginx/sites-enabled/**
+```
+
+- **`readonly`** — reading, listing and `stat` are
+  fine. Writing, deleting, moving, renaming,
+  `chmod`/`chown` and any command that changes
+  content or permissions are refused: "`<path>` is
+  marked read-only in `memory/protected-paths.md`."
+  No override in the session; carry on with the
+  rest of the task.
+- **`confirm`** — before any command that touches
+  the path, show the exact command and wait for the
+  user to reply with the word `CONFIRM`. Approving
+  the tool call is not enough.
+- **`hidden`** — the content is never read or
+  shown. See `rules/secrets.md` → "Paths Marked
+  Hidden".
+
+Precedence, strongest first: server blacklist and
+read-only list > `hidden` > `confirm` > `readonly`
+> no entry. A glob is a hint, not a sandbox: also
+treat commands that reach a protected path
+indirectly (a recursive copy of its parent, a
+`find … -delete` above it) as touching it.
 
 ## Why it's mandatory
 

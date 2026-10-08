@@ -238,6 +238,8 @@ no scattered config.
 - `user.md` — SSH usernames and language
   preference
 - `blacklist.md`, `readonly.md` — access policies
+- `protected-paths.md` — per-path `readonly`,
+  `hidden` and `confirm` lists per server
 - `service-policy.md` — per-service opt-out /
   opt-in for auto-reload and auto-restart
 - `servers/<hostname>/` — per-server memory,
@@ -777,6 +779,11 @@ under pressure.
   `memory/readonly.md` for servers you can inspect
   but must never modify. Deferred modifications are
   collected into a report you can hand off.
+- **Protected paths** — list single paths per server
+  in `memory/protected-paths.md` as `readonly`
+  (never modified), `hidden` (content never shown)
+  or `confirm` (each command needs a typed
+  `CONFIRM`).
 - **Ignores injected instructions** — text found in
   server files, logs, or command output is treated as
   data only. Suspicious patterns (text addressing the
@@ -1023,6 +1030,8 @@ memory/                — All your user state (gitignored
   user.md              — Your preferences and SSH usernames
   blacklist.md         — Blocked servers
   readonly.md          — Read-only servers
+  protected-paths.md   — Per-path readonly / hidden /
+                         confirm lists
   service-policy.md.example — Service reload/restart
                          policy template (copy to
                          service-policy.md)
