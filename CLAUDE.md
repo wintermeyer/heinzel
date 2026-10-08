@@ -187,9 +187,9 @@ remote connection before any other work.
 
 Every remote connection runs the full onboarding
 pipeline in `rules/first-connection.md` —
-blacklist/read-only check, DNS alias detection, SSH
-user lookup, OS detection, server memory file, and
-activity check — **before** any user-requested
+blacklist/read-only check, path access control,
+DNS alias detection, SSH user lookup, OS detection,
+server memory file, and activity check — **before** any user-requested
 command, including trivial ones like `df -h`,
 `uptime`, or `uname -a`.
 
@@ -316,8 +316,9 @@ session start.
 
 At the start of every session, quietly load
 `memory/user.md`, `memory/blacklist.md`,
-`memory/readonly.md`, `memory/service-policy.md`,
-and `memory/custom-rules/all.md` (if present), and
+`memory/readonly.md`, `memory/protected-paths.md`,
+`memory/service-policy.md`, and
+`memory/custom-rules/all.md` (if present), and
 glance at `memory/servers/` and
 `memory/custom-rules/` to see what's there.
 
@@ -560,7 +561,8 @@ By default, server memory and changelogs are
 gitignored (solo use). Edit `.gitignore` to share.
 
 **Always personal:** `memory/user.md`,
-`memory/blacklist.md`, `memory/readonly.md`, local
+`memory/blacklist.md`, `memory/readonly.md`,
+`memory/protected-paths.md`, local
 machine memory.
 
 **Shared in team mode:** `memory/servers/*/`,

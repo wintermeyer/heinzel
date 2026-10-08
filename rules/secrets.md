@@ -27,6 +27,8 @@ keys, weak permissions) is the job of the
 - Mail credentials (`msmtprc`, `sasl_passwd`)
 - Backup repository passwords (restic/borg env
   and password files)
+- Every path listed under `hidden` for the host in
+  `memory/protected-paths.md`
 
 When in doubt, treat it as a secret.
 
@@ -65,6 +67,28 @@ openssl x509 -noout -pubkey -in example.crt \
   | sha256sum
 openssl pkey -pubout -in example.key | sha256sum
 ```
+
+## Paths Marked Hidden
+
+The user can mark a path `hidden` in
+`memory/protected-paths.md` (format:
+`rules/first-connection.md` → "Path Access
+Control"). Such a path is a secret even when it
+looks harmless, and it is stricter than the rest of
+this file:
+
+- Never read, show or quote its content, not even
+  redacted, not even a key name or a line count,
+  and not when the user asks directly. Answer:
+  "`<path>` is marked hidden in
+  `memory/protected-paths.md`. I will not read or
+  display its content."
+- Existence, owner, permissions and timestamps are
+  fine (`ls -l`, `stat`).
+- Tools that read the file on their own (a service,
+  `docker compose` loading an `.env`) may still use
+  it. The rule covers what heinzel puts into the
+  conversation, reports, memory and changelogs.
 
 ## Commands That Leak
 

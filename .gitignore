@@ -32,6 +32,7 @@ memory/custom-rules/*
 # always personal and must NEVER be shared.
 # !memory/blacklist.md
 # !memory/readonly.md
+# !memory/protected-paths.md
 # !memory/service-policy.md
 # !memory/housekeeping.md
 # !memory/network.md
