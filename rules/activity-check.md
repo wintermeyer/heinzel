@@ -57,6 +57,19 @@ Two details that are not optional here:
 matches more broadly; `process == "logger"` is the
 narrower predicate.
 
+**Unraid** (no journal, `/var/log` is tmpfs — see
+`rules/unraid.md`):
+
+```
+grep -h heinzel /var/log/syslog* 2>/dev/null \
+  | tail -20
+```
+
+The syslog starts empty at every boot. After a
+recent reboot an empty result says nothing about
+earlier activity — tell the user, and rely on the
+local changelog.
+
 **FreeBSD:**
 
 ```
