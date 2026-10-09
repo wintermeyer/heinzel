@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.26.0 — 2026-10-09
+
+- **Unraid OS has its own rule file.** Unraid has no
+  package manager, no systemd and a tmpfs `/var/log`,
+  so the activity check and the `logger` changelog
+  did not work there. `rules/unraid.md` describes
+  what survives a reboot, how to check plugin
+  updates, why `rc.docker restart` from an SSH
+  session breaks every health check, and the tmpfs
+  copies behind the User Scripts and Unassigned
+  Devices plugins. `rules/os-detection.md` routes
+  `ID=unraid-os` to it. Observed on 7.3.2 and 7.3.3.
+  Contributed by IMyselfandWe (#54, #56).
+- **Paths on a server can be protected one by one.**
+  `memory/protected-paths.md` lists paths per server
+  as `readonly` (never modified), `hidden` (content
+  never shown, not even on request) or `confirm`
+  (each command needs a typed `CONFIRM`). It is a
+  rule, loaded in the first-connection pipeline, not
+  a guard: the guard sees a remote path only as text
+  inside the SSH command. Contributed by
+  IMyselfandWe (#55, #57).
+
 ## 2.25.0 — 2026-10-08
 
 - **macOS cleanup knows app groups and vendor
