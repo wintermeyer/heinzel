@@ -74,7 +74,9 @@ Each trap came up on a real machine.
   or `.bundle` do not count. All other nested ids do. Firebase
   brings `com.google.*` ids, but `com.google.Chrome` stays an
   `orphan`. Viscosity ships a `com.sparklabs.*` system
-  extension, so `com.sparklabs.ViscosityHelper` is `vendor`.
+  extension, so `com.sparklabs.ViscosityHelper` is `vendor`. The
+  uninstall mode ignores library ids as well: a Sparkle id is no
+  `exact` match for one app.
 - **A similar bundle id is not the same app.** Teams classic
   left `com.microsoft.teams`. The installed Teams is
   `com.microsoft.teams2`.

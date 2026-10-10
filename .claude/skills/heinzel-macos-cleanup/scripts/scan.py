@@ -626,10 +626,11 @@ def scan_app(inv: Inventory, query: str) -> dict:
             "candidates": sorted(a["path"] for a in targets),
         }
     target = targets[0]
-    app_path, ids, names = target["path"], target["ids"], target["names"]
+    # Library ids belong to every app that embeds the library.
+    app_path, ids, names = target["path"], target["own_ids"], target["names"]
     others = [a for a in inv.apps if a is not target]
     taken = {first_word(n) for a in others for n in a["names"]}
-    taken |= {vendor_label(b) for a in others for b in a["ids"]}
+    taken |= {vendor_label(b) for a in others for b in a["own_ids"]}
     shared = {g for a in others for g in a["groups"]}
     label = vendor_label(target["id"])
 

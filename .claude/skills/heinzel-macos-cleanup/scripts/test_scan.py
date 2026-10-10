@@ -455,6 +455,28 @@ class ScanApp(TempDir):
         )
         self.assertEqual(self.scan_entries(inv, "Foo", "Google"), ["Foo.app"])
 
+    def test_library_id_of_the_app_is_no_exact_match(self):
+        # Sparkle belongs to every app that embeds it.
+        lib = "org.sparkle-project.sparkle"
+        inv = scan.Inventory(apps=[app_entry("/A/Foo.app", "com.foo", libs=[lib])])
+        loc = self.root / "Library"
+        (loc / "org.sparkle-project.Sparkle").mkdir(parents=True)
+        with no_probes(locations=[loc], receipts=[lib + ".pkg"]):
+            result = scan.scan_app(inv, "Foo")
+        self.assertEqual([e["match"] for e in result["entries"]], ["exact"])
+        self.assertEqual(result["receipts"], [])
+
+    def test_library_vendor_of_other_app_does_not_hide_vendor_folder(self):
+        # Folder Preview embeds org.mozilla.universalchardet.
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/Applications/Firefox.app", "org.mozilla.firefox"),
+                app_entry("/Applications/FP.app", "ltd.fp", libs=["org.mozilla.u"]),
+            ]
+        )
+        found = self.scan_entries(inv, "Firefox", "Mozilla")
+        self.assertEqual(found, ["Firefox.app", "Mozilla"])
+
     def test_app_inside_a_scanned_folder_is_listed_once(self):
         loc = self.root / "Application Support"
         bundle = loc / "Firefox.app"
