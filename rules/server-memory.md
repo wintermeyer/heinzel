@@ -32,3 +32,10 @@ outdated entries, merge related items.
 
 Memory files never hold credential values — see
 `rules/secrets.md`.
+
+Edit memory files with the agent's file-edit tool.
+Never edit them through an interpreter (`python3 -`,
+`perl -e`). Memory often names `sshd_config` and key
+paths.
+The taboo guard blocks an interpreter command that
+contains them.
