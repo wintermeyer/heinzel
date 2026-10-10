@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.28.1 — 2026-10-10
+
+- **The README opens with a trailer and is less
+  than half as long.** The 6.5 MB screen recording
+  is replaced by a scripted GIF under 500 KB that
+  shows a diagnosis, a guided fix, a database fix,
+  a security audit, an unattended upgrade and a
+  blocked command. `assets/trailer/make-trailer.py`
+  rebuilds it. The README drops from 1,102 to 409
+  lines: repeated sections are merged, and the
+  macOS cleanup skill is now listed everywhere the
+  other skills are (#61).
+
 ## 2.28.0 — 2026-10-10
 
 - **The macOS cleanup no longer mistakes libraries
