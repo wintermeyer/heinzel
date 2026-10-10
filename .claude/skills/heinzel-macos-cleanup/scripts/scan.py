@@ -91,6 +91,9 @@ BUNDLE_SUFFIXES = {
     ".saver",
 }
 
+# Libraries nested in an app. Their bundle ids do not name a vendor.
+LIBRARY_SUFFIXES = (".framework", ".bundle")
+
 NAME_SUFFIXES = (".plist", ".savedState", ".binarycookies", ".lockfile")
 
 GROUP_PREFIXES = ("systemgroup.", "groups.", "group.")
@@ -192,14 +195,16 @@ class Inventory:
 
     # Computed once, after collect_inventory() filled the fields.
     @cached_property
+    def own_ids(self) -> set[str]:
+        return {b for a in self.apps for b in a["own_ids"]}
+
+    @cached_property
     def vendors(self) -> set[str]:
-        prefixes = {".".join(b.split(".")[:2]) for b in self.bundle_ids if "." in b}
-        return prefixes - GENERIC_VENDORS
+        return {vendor_prefix(b) for b in self.own_ids if "." in b} - GENERIC_VENDORS
 
     @cached_property
     def vendor_labels(self) -> set[str]:
-        # Only the app's own id. Nested frameworks carry other vendors.
-        return {vendor_label(a["id"]) for a in self.apps} - {""}
+        return {vendor_label(b) for b in self.own_ids} - {""}
 
     @cached_property
     def app_groups(self) -> set[str]:
@@ -224,6 +229,10 @@ def first_word(name: str) -> str:
     return word if len(word) >= 4 else ""
 
 
+def vendor_prefix(bid: str) -> str:
+    return ".".join(bid.split(".")[:2])
+
+
 def vendor_label(bid: str) -> str:
     """Return the squashed vendor of a bundle id: org.mozilla.firefox → mozilla.
 
@@ -232,7 +241,7 @@ def vendor_label(bid: str) -> str:
     parts = bid.split(".")
     if len(parts) < 3 or bid.startswith(APPLE_PREFIXES):
         return ""
-    if ".".join(parts[:2]) in GENERIC_VENDORS:
+    if vendor_prefix(bid) in GENERIC_VENDORS:
         return ""
     label = squash(parts[1])
     return label if len(label) >= 4 else ""
@@ -295,7 +304,7 @@ def classify_name(name: str, inv: Inventory) -> tuple[str, str]:
             return "installed", "bundle id of an installed app"
         if team and team in inv.team_ids:
             return "vendor", f"team {team} has another app installed"
-        vendor = ".".join(bid.split(".")[:2])
+        vendor = vendor_prefix(bid)
         if vendor in inv.vendors:
             return "vendor", f"{vendor} has another app installed"
         return "orphan", "no installed app with this bundle id"
@@ -397,17 +406,19 @@ def app_matches(
     taken: set[str] = frozenset(),
     label: str = "",
     shared: set[str] = frozenset(),
+    groups: set[str] = frozenset(),
 ) -> str:
     """Return "exact", "name" or "" for an entry and one app.
 
     `label` is the app's vendor label. `taken` holds first words and
-    vendor labels of other apps, `shared` their app groups.
+    vendor labels of other apps, `shared` their app groups. `groups`
+    holds the app groups that count as exact.
     """
     low = strip_suffix(path.name).lower()
     _, bid = split_id(path.name)
     if apple_reason(low, bid) or low in shared:
         return ""
-    if owned_by(bid, app_ids):
+    if owned_by(bid, app_ids) or low in groups:
         return "exact"
     norm = squash(low)
     if label and norm == label and norm not in taken:
@@ -485,21 +496,31 @@ def bundle_names(info: dict) -> set[str]:
 def describe_app(root: Path) -> dict:
     """Bundle ids and names of an app. Nested names stay apart."""
     top: dict = {}
-    ids, nested = set(), set()
+    ids, own, libs, nested = set(), set(), set(), set()
     for folder, info in bundle_infos(root):
         bid = info.get("CFBundleIdentifier")
         if isinstance(bid, str):
-            ids.add(bid.lower())
+            bid = bid.lower()
+            ids.add(bid)
+            parts = folder.relative_to(root).parts
+            is_lib = any(p.endswith(LIBRARY_SUFFIXES) for p in parts)
+            (libs if is_lib else own).add(bid)
         if folder == root / "Contents":
             top = info
         else:
             nested |= bundle_names(info)
     team, groups = signature(root)
     main = top.get("CFBundleIdentifier")
+    main = main.lower() if isinstance(main, str) else ""
+    # A library under the app's own vendor prefix is part of the app.
+    vendor = vendor_prefix(main)
+    if "." in main and vendor not in GENERIC_VENDORS:
+        own |= {b for b in libs if vendor_prefix(b) == vendor}
     return {
         "path": str(root),
-        "id": main.lower() if isinstance(main, str) else "",
+        "id": main,
         "ids": ids,
+        "own_ids": own,
         "names": {root.stem.lower()} | bundle_names(top),
         "nested_names": nested,
         "team": team,
@@ -615,11 +636,17 @@ def scan_app(inv: Inventory, query: str) -> dict:
             "candidates": sorted(a["path"] for a in targets),
         }
     target = targets[0]
-    app_path, ids, names = target["path"], target["ids"], target["names"]
+    # Library ids belong to every app that embeds the library.
+    app_path, ids, names = target["path"], target["own_ids"], target["names"]
     others = [a for a in inv.apps if a is not target]
     taken = {first_word(n) for a in others for n in a["names"]}
-    taken |= {vendor_label(b) for a in others for b in a["ids"]}
+    taken |= {vendor_label(b) for a in others for b in a["own_ids"]}
     shared = {g for a in others for g in a["groups"]}
+    # Nested bundles of the team's other apps may declare the same groups.
+    # An empty team counts as a different team.
+    team = target["team"]
+    team_apps = bool(team) and any(a["team"] == team for a in others)
+    groups = set() if team_apps else target["groups"]
     label = vendor_label(target["id"])
 
     unreadable: list[str] = []
@@ -627,7 +654,7 @@ def scan_app(inv: Inventory, query: str) -> dict:
     for path in entries(unreadable):
         if str(path) == app_path:
             continue
-        m = app_matches(path, ids, names, taken, label, shared)
+        m = app_matches(path, ids, names, taken, label, shared, groups)
         program = launchd_program(path) if is_launchd_plist(path) else ""
         if not m and program.startswith(app_path + "/"):
             m = "exact"

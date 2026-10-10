@@ -25,9 +25,9 @@ and the commands on `PATH`.
 `orphans` hides `apple` and `installed`. Pass `--all` to see them.
 
 In the uninstall mode each entry carries `match`: `exact` for the
-app's bundle ids, `name` for folders named after the app or its
-vendor. Propose `exact` entries as a group. List `name` entries
-separately and confirm each.
+app's bundle ids and app groups, `name` for folders named after
+the app or its vendor. Propose `exact` entries as a group. List
+`name` entries separately and confirm each.
 
 ## Verify before proposing
 
@@ -65,11 +65,28 @@ Each trap came up on a real machine.
   reads `com.apple.security.application-groups` from the
   entitlements of each app. A listed group is `installed`. Only
   the app itself is read, not its nested bundles. The uninstall
-  mode skips a group another installed app declares.
+  mode skips a group another installed app declares. A group is
+  `exact` when no other installed app has the same Team ID. An
+  app without a Team ID shares its team with no other app. Only
+  apps of one team can share a group prefixed with that Team ID.
+  Nested helpers may declare such a group unread. Wipr's groups
+  are `exact`. Word's groups are not while Excel or AutoUpdate
+  is installed.
 - **The same vendor is not the same app.** Pastebot 3
   (`com.tapbots.Pastebot3Mac`) is installed. The containers of
   Ivory and of Pastebot 2 are still leftovers. The scanner
   reports them as `vendor`, not `installed`.
+- **Libraries do not name a vendor.** Ids inside a `.framework`
+  or `.bundle` do not count. All other nested ids do. A library
+  id counts when it shares the two-part prefix of the app's main
+  id, unless that prefix is generic like `com.electron`.
+  GoogleUpdater ships `com.google.Keystone` in a `.bundle`, so
+  Keystone counts as its own. Firebase brings `com.google.*` ids
+  to other apps, but `com.google.Chrome` stays an `orphan`.
+  Viscosity ships a `com.sparklabs.*` system extension, so
+  `com.sparklabs.ViscosityHelper` is `vendor`. The uninstall mode
+  ignores other library ids as well: a Sparkle id is no `exact`
+  match for one app.
 - **A similar bundle id is not the same app.** Teams classic
   left `com.microsoft.teams`. The installed Teams is
   `com.microsoft.teams2`.
