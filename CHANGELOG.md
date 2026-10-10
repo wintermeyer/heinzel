@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.27.0 — 2026-10-10
+
+- **A server's SSH port is remembered.** A host off
+  port 22 worked only if `~/.ssh/config` carried the
+  port. It now goes into server memory as
+  `- SSH port:`, shared with the team like the rest,
+  and onto every call as `-o Port=`. On a new host
+  whose port 22 refuses, heinzel checks
+  `known_hosts`, tries the ports you list as
+  `Alternative SSH ports:` in `memory/user.md`, then
+  asks. It never scans and keeps no list of common
+  ports. See `rules/ssh-port.md`. Contributed by
+  Julian Pawlowski (#15, #32).
+
 ## 2.26.1 — 2026-10-10
 
 - **SSH options are written inline on every call.**
