@@ -4,10 +4,12 @@ All SSH usernames are stored in `memory/user.md` —
 never in server memory files. Read this file at the
 start of every session.
 
-The file has two parts:
+The file has three parts:
 - **Default** — the fallback username.
 - **Per-server overrides** — `- hostname: username`
   entries.
+- **Alternative SSH ports** — optional; see
+  `rules/ssh-port.md`.
 
 ## Interview format
 

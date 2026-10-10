@@ -34,6 +34,8 @@ block alive.
 2. If that fails too, stop. Wait several minutes
    before the next attempt, and never wrap SSH in an
    automatic retry.
+3. Never try another port in its place
+   (`rules/ssh-port.md`).
 
 ## Target or path?
 

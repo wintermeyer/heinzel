@@ -14,6 +14,11 @@ moment") — don't skip.
 
 ## Order
 
+A target written with a port (`host:2222`,
+`ssh://user@host:2222`) is split first: every step
+below uses the bare hostname, and step 5 takes the
+port (`rules/ssh-port.md` → Known port).
+
 1. **Blacklist check.** Refuse if listed. See
    `rules/access-control.md`.
 2. **Read-only check.** Switch to read-only mode if
@@ -27,8 +32,11 @@ moment") — don't skip.
    detection. Known hostname: verify the current IP
    still matches the `- IP:` field in server memory.
    See `rules/dns-aliases.md` for both.
-5. **SSH user lookup** (first connection only). See
-   `rules/ssh-user.md`.
+5. **SSH user and port lookup.** User: first
+   connection only, see `rules/ssh-user.md`. Port:
+   the one the user named, else `- SSH port:` from
+   the memory read in step 4; a new host without one
+   goes through `rules/ssh-port.md` → first contact.
 6. **OS detection.** See `rules/os-detection.md`.
 7. **Server memory file.** Create on first
    connection, read on every subsequent connection.

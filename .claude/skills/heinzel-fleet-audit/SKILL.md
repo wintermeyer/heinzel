@@ -56,7 +56,8 @@ servers" — that maps to single-host housekeeping.
 3. **Probe in parallel.** For each in-scope host, run the
    probes from `references/probes.md` in a single batched
    SSH command, with the standard options from `CLAUDE.md` →
-   SSH Options.
+   SSH Options and the port from `- SSH port:` in the host's
+   `memory.md`.
    Hosts that time out or refuse the connection go on a
    "skipped: unreachable" list.
 

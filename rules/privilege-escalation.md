@@ -52,6 +52,11 @@ ssh -o BatchMode=yes -o ConnectTimeout=5 \
   root@hostname "id" 2>&1
 ```
 
+On a host with a stored port, add `-o Port=<port>`
+(`rules/ssh-port.md`): a probe sent to port 22 is
+refused there and would be recorded as
+`- Root SSH: unavailable`.
+
 - **Works:** record `- Root SSH: available`.
 - **Fails:** keep the recorded sudo line, add the
   following, and enter unprivileged mode:
