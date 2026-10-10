@@ -91,6 +91,9 @@ BUNDLE_SUFFIXES = {
     ".saver",
 }
 
+# Libraries nested in an app. Their bundle ids do not name a vendor.
+LIBRARY_SUFFIXES = (".framework", ".bundle")
+
 NAME_SUFFIXES = (".plist", ".savedState", ".binarycookies", ".lockfile")
 
 GROUP_PREFIXES = ("systemgroup.", "groups.", "group.")
@@ -192,14 +195,17 @@ class Inventory:
 
     # Computed once, after collect_inventory() filled the fields.
     @cached_property
+    def own_ids(self) -> set[str]:
+        return {b for a in self.apps for b in a["own_ids"]}
+
+    @cached_property
     def vendors(self) -> set[str]:
-        prefixes = {".".join(b.split(".")[:2]) for b in self.bundle_ids if "." in b}
+        prefixes = {".".join(b.split(".")[:2]) for b in self.own_ids if "." in b}
         return prefixes - GENERIC_VENDORS
 
     @cached_property
     def vendor_labels(self) -> set[str]:
-        # Only the app's own id. Nested frameworks carry other vendors.
-        return {vendor_label(a["id"]) for a in self.apps} - {""}
+        return {vendor_label(b) for b in self.own_ids} - {""}
 
     @cached_property
     def app_groups(self) -> set[str]:
@@ -485,11 +491,15 @@ def bundle_names(info: dict) -> set[str]:
 def describe_app(root: Path) -> dict:
     """Bundle ids and names of an app. Nested names stay apart."""
     top: dict = {}
-    ids, nested = set(), set()
+    ids, own, nested = set(), set(), set()
     for folder, info in bundle_infos(root):
         bid = info.get("CFBundleIdentifier")
         if isinstance(bid, str):
-            ids.add(bid.lower())
+            bid = bid.lower()
+            ids.add(bid)
+            parts = folder.relative_to(root).parts
+            if not any(p.endswith(LIBRARY_SUFFIXES) for p in parts):
+                own.add(bid)
         if folder == root / "Contents":
             top = info
         else:
@@ -500,6 +510,7 @@ def describe_app(root: Path) -> dict:
         "path": str(root),
         "id": main.lower() if isinstance(main, str) else "",
         "ids": ids,
+        "own_ids": own,
         "names": {root.stem.lower()} | bundle_names(top),
         "nested_names": nested,
         "team": team,

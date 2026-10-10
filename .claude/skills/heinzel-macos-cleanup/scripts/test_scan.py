@@ -10,6 +10,24 @@ from unittest import mock
 
 import scan
 
+
+def app_entry(path, bid, nested=(), groups=(), libs=(), team=""):
+    """`nested` holds the app's own nested ids, `libs` those of its libraries."""
+    return {
+        "path": path,
+        "id": bid,
+        "ids": {bid, *nested, *libs},
+        "own_ids": {bid, *nested},
+        "names": {Path(path).stem.lower()},
+        "team": team,
+        "groups": set(groups),
+    }
+
+
+def own(bid, nested=(), groups=()):
+    return app_entry("/Applications/X.app", bid, nested, groups)
+
+
 INV = scan.Inventory(
     bundle_ids={
         "com.tapbots.pastebot2mac",
@@ -45,14 +63,16 @@ INV = scan.Inventory(
     team_ids={"9JTH7AWHE6", "UBF8T346G9"},
     tools={"ngrok", "mix"},
     apple_daemons={"tipsd", "homeenergyd"},
-    # Only an app's own id names a vendor folder. Firebase is nested.
+    # Only an app's own ids name a vendor. Firebase is a nested framework.
     apps=[
-        {"id": "com.openai.chat", "groups": set()},
-        {"id": "org.swift.swiftpm", "groups": set()},
-        {"id": "com.apple.safari", "groups": set()},
-        {"id": "com.electron.dockerdesktop", "groups": set()},
-        {"id": "com.microsoft.word", "groups": {"ubf8t346g9.ms"}},
-        {"id": "com.wipr.mac", "groups": {"group.wipr2.rules"}},
+        own("com.tapbots.pastebot2mac"),
+        own("com.openai.chat"),
+        own("org.swift.swiftpm"),
+        own("com.apple.safari"),
+        own("com.electron.dockerdesktop"),
+        own("com.microsoft.word", groups=["ubf8t346g9.ms"]),
+        own("com.viscosityvpn.viscosity", ["com.sparklabs.viscosity.networkextension"]),
+        own("com.wipr.mac", groups=["group.wipr2.rules"]),
     ],
 )
 
@@ -75,6 +95,14 @@ class ClassifyName(unittest.TestCase):
         # Ivory is gone, Pastebot from the same vendor is installed.
         self.assertEqual(cls("com.tapbots.Ivory"), "vendor")
         self.assertEqual(cls("group.com.tapbots.Ivory"), "vendor")
+
+    def test_vendor_of_nested_framework_is_no_vendor(self):
+        # Firebase is nested. Chrome is gone.
+        self.assertEqual(cls("com.google.Chrome"), "orphan")
+
+    def test_vendor_of_own_extension_is_vendor(self):
+        # Viscosity ships its network extension under its old vendor id.
+        self.assertEqual(cls("com.sparklabs.ViscosityHelper"), "vendor")
 
     def test_generic_prefix_is_no_vendor(self):
         # Electron apps default to com.electron.<name>.
@@ -149,6 +177,9 @@ class ClassifyName(unittest.TestCase):
     def test_folder_named_after_bundle_id_vendor_is_vendor(self):
         # ChatGPT (com.openai.chat) keeps its data in OpenAI.
         self.assertEqual(cls("OpenAI"), "vendor")
+
+    def test_folder_named_after_own_extension_vendor_is_vendor(self):
+        self.assertEqual(cls("SparkLabs"), "vendor")
 
     def test_bundle_id_vendor_must_match_the_whole_name(self):
         self.assertEqual(cls("swift-test"), "unclear")
@@ -317,6 +348,21 @@ class DescribeApp(TempDir):
         self.assertEqual(desc["ids"], {"com.microsoft.teams2", "x.k"})
         self.assertEqual(desc["nested_names"], {"knowledge"})
 
+    def test_own_ids_skip_frameworks_and_resource_bundles(self):
+        bundle = self.root / "Viscosity.app"
+        make_bundle(bundle, CFBundleIdentifier="com.viscosityvpn.Viscosity")
+        sysext = "Contents/Library/SystemExtensions/N.systemextension"
+        make_bundle(bundle / sysext, CFBundleIdentifier="com.sparklabs.N")
+        fw = bundle / "Contents/Frameworks/Sparkle.framework"
+        fw_info = fw / "Versions/B/Resources/Info.plist"
+        write_plist(fw_info, {"CFBundleIdentifier": "org.s"})
+        make_bundle(fw / "XPCServices/D.xpc", CFBundleIdentifier="org.s.D")
+        res = bundle / "Contents/Resources/Pkg_Pkg.bundle"
+        make_bundle(res, CFBundleIdentifier="pkg.pkg.resources")
+        desc = scan.describe_app(bundle)
+        own_ids = {"com.viscosityvpn.viscosity", "com.sparklabs.n"}
+        self.assertEqual(desc["own_ids"], own_ids)
+
     def test_team_and_app_groups_come_from_one_codesign_call(self):
         bundle = self.root / "Microsoft Word.app"
         make_bundle(bundle, CFBundleIdentifier="com.microsoft.word")
@@ -348,16 +394,6 @@ class DescribeApp(TempDir):
         with mock.patch.object(scan, "proc", side_effect=[refused, signed]):
             desc = scan.describe_app(bundle)
         self.assertEqual((desc["team"], desc["groups"]), ("UBF8T346G9", set()))
-
-
-def app_entry(path, bid, nested=(), groups=()):
-    return {
-        "path": path,
-        "id": bid,
-        "ids": {bid, *nested},
-        "names": {Path(path).stem.lower()},
-        "groups": set(groups),
-    }
 
 
 class ScanApp(TempDir):
@@ -413,19 +449,9 @@ class ScanApp(TempDir):
         )
         self.assertEqual(self.scan_entries(inv, "A", group), ["A.app"])
 
-    def test_vendor_of_other_apps_nested_bundle_is_not_listed(self):
-        # The firefoxpwa runtime nests org.mozilla helpers under its own id.
-        inv = scan.Inventory(
-            apps=[
-                app_entry("/Applications/Firefox.app", "org.mozilla.firefox"),
-                app_entry("/x/Runtime.app", "pwa.rt", ["org.mozilla.gpu-helper"]),
-            ]
-        )
-        self.assertEqual(self.scan_entries(inv, "Firefox", "Mozilla"), ["Firefox.app"])
-
     def test_vendor_of_nested_framework_is_not_listed(self):
         inv = scan.Inventory(
-            apps=[app_entry("/Applications/Foo.app", "com.foo.app", ["com.google.fb"])]
+            apps=[app_entry("/A/Foo.app", "com.foo.app", libs=["com.google.fb"])]
         )
         self.assertEqual(self.scan_entries(inv, "Foo", "Google"), ["Foo.app"])
 

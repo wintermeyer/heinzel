@@ -70,6 +70,11 @@ Each trap came up on a real machine.
   (`com.tapbots.Pastebot3Mac`) is installed. The containers of
   Ivory and of Pastebot 2 are still leftovers. The scanner
   reports them as `vendor`, not `installed`.
+- **Libraries do not name a vendor.** Ids inside a `.framework`
+  or `.bundle` do not count. All other nested ids do. Firebase
+  brings `com.google.*` ids, but `com.google.Chrome` stays an
+  `orphan`. Viscosity ships a `com.sparklabs.*` system
+  extension, so `com.sparklabs.ViscosityHelper` is `vendor`.
 - **A similar bundle id is not the same app.** Teams classic
   left `com.microsoft.teams`. The installed Teams is
   `com.microsoft.teams2`.
