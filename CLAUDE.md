@@ -90,9 +90,10 @@ Use them **instead of** the standard options, never
 appended to them: for a repeated option, SSH keeps
 the first value it sees.
 
-**Non-standard port:** when server memory holds
-`- SSH port: <port>`, add `-o Port=<port>` to either
-set on every call. New host or 22 refused: read
+**Non-standard port:** when the host has a port
+(named by the user, else `- SSH port:` in server
+memory), add `-o Port=<port>` to either set on
+every call. New host or 22 refused: read
 `rules/ssh-port.md`. Never scan for a port.
 
 Rate limits count connections, fail2ban counts
