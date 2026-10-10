@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.27.1 — 2026-10-10
+
+- **A port you name counts from the first call.**
+  The port paragraph in `CLAUDE.md` looked at server
+  memory only. On a first connection that file does
+  not exist yet, so a port given as `host:2222` was
+  carried by `rules/ssh-port.md` alone. `CLAUDE.md`
+  now names both sources.
+
 ## 2.27.0 — 2026-10-10
 
 - **A server's SSH port is remembered.** A host off
