@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.26.1 — 2026-10-10
+
+- **SSH options are written inline on every call.**
+  Agents shortened the option chain into a shell
+  variable (`S="ssh -o …"; $S host`). zsh does not
+  word-split it, so the call failed locally and was
+  repeated inline. `CLAUDE.md` now says so under
+  "SSH Options". Reported by bb (#58).
+
 ## 2.26.0 — 2026-10-09
 
 - **Unraid OS has its own rule file.** Unraid has no
