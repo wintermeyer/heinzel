@@ -407,12 +407,15 @@ def app_matches(
     label: str = "",
     shared: set[str] = frozenset(),
     groups: set[str] = frozenset(),
+    loose: set[str] = frozenset(),
+    loose_ids: set[str] = frozenset(),
 ) -> str:
     """Return "exact", "name" or "" for an entry and one app.
 
     `label` is the app's vendor label. `taken` holds first words and
     vendor labels of other apps, `shared` their app groups. `groups`
-    holds the app groups that count as exact.
+    holds the app groups that count as exact. `loose` and `loose_ids`
+    hold the groups and bundle ids that need a confirmation.
     """
     low = strip_suffix(path.name).lower()
     _, bid = split_id(path.name)
@@ -420,6 +423,8 @@ def app_matches(
         return ""
     if owned_by(bid, app_ids) or low in groups:
         return "exact"
+    if low in loose or owned_by(bid, loose_ids):
+        return "name"
     norm = squash(low)
     if label and norm == label and norm not in taken:
         return "name"
@@ -514,13 +519,15 @@ def describe_app(root: Path) -> dict:
     main = main.lower() if isinstance(main, str) else ""
     # A library under the app's own vendor prefix is part of the app.
     vendor = vendor_prefix(main)
+    adopted = set()
     if "." in main and vendor not in GENERIC_VENDORS:
-        own |= {b for b in libs if vendor_prefix(b) == vendor}
+        adopted = {b for b in libs if vendor_prefix(b) == vendor} - own
     return {
         "path": str(root),
         "id": main,
         "ids": ids,
-        "own_ids": own,
+        "own_ids": own | adopted,
+        "adopted_ids": adopted,
         "names": {root.stem.lower()} | bundle_names(top),
         "nested_names": nested,
         "team": team,
@@ -636,17 +643,26 @@ def scan_app(inv: Inventory, query: str) -> dict:
             "candidates": sorted(a["path"] for a in targets),
         }
     target = targets[0]
-    # Library ids belong to every app that embeds the library.
-    app_path, ids, names = target["path"], target["own_ids"], target["names"]
+    app_path, names = target["path"], target["names"]
     others = [a for a in inv.apps if a is not target]
+    # Library ids belong to every app that embeds the library. That holds
+    # for an adopted one too while another installed app owns it: gone when
+    # it is the other app's own, to confirm when both adopted it.
+    theirs = {b for a in others for b in a["own_ids"]}
+    contested = target["adopted_ids"] & theirs
+    ids = target["own_ids"] - contested
+    loose_ids = contested - {b for a in others for b in a["own_ids"] - a["adopted_ids"]}
     taken = {first_word(n) for a in others for n in a["names"]}
-    taken |= {vendor_label(b) for a in others for b in a["own_ids"]}
+    taken |= {vendor_label(b) for b in theirs}
     shared = {g for a in others for g in a["groups"]}
     # Nested bundles of the team's other apps may declare the same groups.
     # An empty team counts as a different team.
     team = target["team"]
     team_apps = bool(team) and any(a["team"] == team for a in others)
-    groups = set() if team_apps else target["groups"]
+    # Only the Team ID prefix closes a group to the apps of other teams.
+    mine = set() if team_apps else target["groups"]
+    groups = {g for g in mine if team and g.startswith(f"{team.lower()}.")}
+    loose = mine - groups
     label = vendor_label(target["id"])
 
     unreadable: list[str] = []
@@ -654,7 +670,9 @@ def scan_app(inv: Inventory, query: str) -> dict:
     for path in entries(unreadable):
         if str(path) == app_path:
             continue
-        m = app_matches(path, ids, names, taken, label, shared, groups)
+        m = app_matches(
+            path, ids, names, taken, label, shared, groups, loose, loose_ids
+        )
         program = launchd_program(path) if is_launchd_plist(path) else ""
         if not m and program.startswith(app_path + "/"):
             m = "exact"

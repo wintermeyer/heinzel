@@ -11,13 +11,17 @@ from unittest import mock
 import scan
 
 
-def app_entry(path, bid, nested=(), groups=(), libs=(), team=""):
-    """`nested` holds the app's own nested ids, `libs` those of its libraries."""
+def app_entry(path, bid, nested=(), groups=(), libs=(), team="", adopted=()):
+    """`nested` holds the app's own nested ids, `libs` those of its libraries.
+
+    `adopted` holds the library ids under the vendor prefix of the main id.
+    """
     return {
         "path": path,
         "id": bid,
-        "ids": {bid, *nested, *libs},
-        "own_ids": {bid, *nested},
+        "ids": {bid, *nested, *libs, *adopted},
+        "own_ids": {bid, *nested, *adopted},
+        "adopted_ids": set(adopted),
         "names": {Path(path).stem.lower()},
         "team": team,
         "groups": set(groups),
@@ -374,6 +378,7 @@ class DescribeApp(TempDir):
         desc = scan.describe_app(bundle)
         own_ids = {"com.google.googleupdater", "com.google.keystone"}
         self.assertEqual(desc["own_ids"], own_ids)
+        self.assertEqual(desc["adopted_ids"], {"com.google.keystone"})
 
     def test_library_id_with_a_generic_prefix_is_not_own(self):
         bundle = self.root / "Foo.app"
@@ -441,13 +446,20 @@ class ScanApp(TempDir):
         result = self.scan_app("org.mozilla.firefox")
         self.assertEqual(result["apps"], ["/Applications/Firefox.app"])
 
-    def scan_entries(self, inv, query, *names):
+    def scan_found(self, inv, query, *names):
+        """Return (name, match) of each entry, the app itself first."""
         loc = self.root / "Library"
         for n in names:
             (loc / n).mkdir(parents=True)
         with no_probes(locations=[loc]):
             result = scan.scan_app(inv, query)
-        return [Path(e["path"]).name for e in result["entries"]]
+        return [(Path(e["path"]).name, e["match"]) for e in result["entries"]]
+
+    def scan_entries(self, inv, query, *names):
+        return [name for name, _ in self.scan_found(inv, query, *names)]
+
+    def scan_matches(self, inv, query, *names):
+        return dict(self.scan_found(inv, query, *names)[1:])
 
     def test_vendor_folder_of_two_installed_apps_is_not_listed(self):
         # Thunderbird still uses Mozilla when Firefox goes.
@@ -470,24 +482,35 @@ class ScanApp(TempDir):
         self.assertEqual(self.scan_entries(inv, "A", group), ["A.app"])
 
     def test_app_group_of_the_only_app_of_its_team_is_exact(self):
-        # Wipr declares group.wipr2.rules. No other app of its team is installed.
+        # LocalSend declares 3W7H4PYMCV.localsend.shared_group. No other
+        # app of its team is installed.
         inv = scan.Inventory(
             apps=[
-                app_entry("/A/Wipr.app", "com.wipr", groups=["g.w"], team="W"),
+                app_entry("/A/LocalSend.app", "org.ls", groups=["w.g"], team="W"),
                 app_entry("/A/Other.app", "com.other.app", team="O"),
             ]
         )
-        self.assertEqual(self.scan_entries(inv, "Wipr", "g.w"), ["Wipr.app", "g.w"])
+        found = self.scan_matches(inv, "LocalSend", "W.g")
+        self.assertEqual(found, {"W.g": "exact"})
 
-    def test_app_group_of_an_app_without_team_is_exact(self):
-        # Another app without a team does not share the target's team.
+    def test_app_group_without_the_team_id_prefix_is_a_name_match(self):
+        # WhatsApp declares group.com.facebook.family. Apps of other teams
+        # can declare it too, in helpers the scanner does not read.
+        inv = scan.Inventory(
+            apps=[app_entry("/A/Foo.app", "com.foo", groups=["group.x.y"], team="W")]
+        )
+        found = self.scan_matches(inv, "Foo", "group.x.y")
+        self.assertEqual(found, {"group.x.y": "name"})
+
+    def test_app_group_of_an_app_without_team_is_a_name_match(self):
+        # No Team ID, no prefix that closes the group to other apps.
         inv = scan.Inventory(
             apps=[
-                app_entry("/A/Wipr.app", "com.wipr", groups=["g.w"]),
+                app_entry("/A/Foo.app", "com.foo", groups=["g.w"]),
                 app_entry("/A/Other.app", "com.other.app"),
             ]
         )
-        self.assertEqual(self.scan_entries(inv, "Wipr", "g.w"), ["Wipr.app", "g.w"])
+        self.assertEqual(self.scan_matches(inv, "Foo", "g.w"), {"g.w": "name"})
 
     def test_app_group_with_another_app_of_its_team_is_not_exact(self):
         # A nested helper of AutoUpdate declares UBF8T346G9.Office too.
@@ -526,6 +549,52 @@ class ScanApp(TempDir):
             result = scan.scan_app(inv, "Foo")
         self.assertEqual([e["match"] for e in result["entries"]], ["exact"])
         self.assertEqual(result["receipts"], [])
+
+    GOOGLE = [
+        app_entry(
+            "/A/Chrome.app",
+            "com.google.chrome",
+            adopted=["com.google.googleupdater", "com.google.keystone"],
+        ),
+        app_entry(
+            "/A/GoogleUpdater.app",
+            "com.google.googleupdater",
+            adopted=["com.google.keystone"],
+        ),
+    ]
+    GOOGLE_ENTRIES = (
+        "com.google.Chrome",
+        "com.google.GoogleUpdater",
+        "com.google.Keystone.Agent.plist",
+    )
+
+    def test_library_id_another_installed_app_owns_is_no_exact_match(self):
+        # Chrome embeds the updater. GoogleUpdater stays installed and keeps
+        # its main id. Both ship Keystone as a library.
+        found = self.scan_matches(
+            scan.Inventory(apps=self.GOOGLE), "Chrome", *self.GOOGLE_ENTRIES
+        )
+        expected = {
+            "com.google.Chrome": "exact",
+            "com.google.Keystone.Agent.plist": "name",
+        }
+        self.assertEqual(found, expected)
+
+    def test_main_id_stays_exact_when_another_app_embeds_it(self):
+        found = self.scan_matches(
+            scan.Inventory(apps=self.GOOGLE), "GoogleUpdater", *self.GOOGLE_ENTRIES
+        )
+        expected = {
+            "com.google.GoogleUpdater": "exact",
+            "com.google.Keystone.Agent.plist": "name",
+        }
+        self.assertEqual(found, expected)
+
+    def test_library_id_no_other_installed_app_owns_is_exact(self):
+        found = self.scan_matches(
+            scan.Inventory(apps=self.GOOGLE[1:]), "GoogleUpdater", *self.GOOGLE_ENTRIES
+        )
+        self.assertEqual(found, dict.fromkeys(self.GOOGLE_ENTRIES[1:], "exact"))
 
     def test_library_vendor_of_other_app_does_not_hide_vendor_folder(self):
         # Folder Preview embeds org.mozilla.universalchardet.

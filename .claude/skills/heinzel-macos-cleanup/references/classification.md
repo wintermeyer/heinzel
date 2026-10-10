@@ -26,8 +26,9 @@ and the commands on `PATH`.
 
 In the uninstall mode each entry carries `match`: `exact` for the
 app's bundle ids and app groups, `name` for folders named after
-the app or its vendor. Propose `exact` entries as a group. List
-`name` entries separately and confirm each.
+the app or its vendor and for ids and groups another app may
+share. Propose `exact` entries as a group. List `name` entries
+separately and confirm each.
 
 ## Verify before proposing
 
@@ -65,13 +66,16 @@ Each trap came up on a real machine.
   reads `com.apple.security.application-groups` from the
   entitlements of each app. A listed group is `installed`. Only
   the app itself is read, not its nested bundles. The uninstall
-  mode skips a group another installed app declares. A group is
-  `exact` when no other installed app has the same Team ID. An
-  app without a Team ID shares its team with no other app. Only
-  apps of one team can share a group prefixed with that Team ID.
-  Nested helpers may declare such a group unread. Wipr's groups
-  are `exact`. Word's groups are not while Excel or AutoUpdate
-  is installed.
+  mode skips a group another installed app declares. A group
+  prefixed with the app's Team ID is `exact` when no other
+  installed app has the same Team ID. Only apps of one team can
+  share such a group, and their nested helpers may declare it
+  unread. LocalSend's `3W7H4PYMCV.localsend.shared_group` is
+  `exact`. Word's groups are not while Excel or AutoUpdate is
+  installed. Any other group is a `name` match, and so is every
+  group of an app without a Team ID: WhatsApp declares
+  `group.com.facebook.family`, which apps of another team can
+  declare too.
 - **The same vendor is not the same app.** Pastebot 3
   (`com.tapbots.Pastebot3Mac`) is installed. The containers of
   Ivory and of Pastebot 2 are still leftovers. The scanner
@@ -87,6 +91,11 @@ Each trap came up on a real machine.
   `com.sparklabs.ViscosityHelper` is `vendor`. The uninstall mode
   ignores other library ids as well: a Sparkle id is no `exact`
   match for one app.
+- **Two installed apps can ship the same library id.** Chrome
+  embeds GoogleUpdater. Uninstalling Chrome does not list
+  `com.google.GoogleUpdater`, the main id of an installed app.
+  `com.google.Keystone` is a library in both, so its entries are
+  `name` matches for either until one of the two is gone.
 - **A similar bundle id is not the same app.** Teams classic
   left `com.microsoft.teams`. The installed Teams is
   `com.microsoft.teams2`.
