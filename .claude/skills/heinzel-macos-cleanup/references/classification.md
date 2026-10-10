@@ -25,9 +25,9 @@ and the commands on `PATH`.
 `orphans` hides `apple` and `installed`. Pass `--all` to see them.
 
 In the uninstall mode each entry carries `match`: `exact` for the
-app's bundle ids, `name` for folders named after the app or its
-vendor. Propose `exact` entries as a group. List `name` entries
-separately and confirm each.
+app's bundle ids and app groups, `name` for folders named after
+the app or its vendor. Propose `exact` entries as a group. List
+`name` entries separately and confirm each.
 
 ## Verify before proposing
 
@@ -65,7 +65,11 @@ Each trap came up on a real machine.
   reads `com.apple.security.application-groups` from the
   entitlements of each app. A listed group is `installed`. Only
   the app itself is read, not its nested bundles. The uninstall
-  mode skips a group another installed app declares.
+  mode skips a group another installed app declares. A group is
+  `exact` when no other installed app has the same Team ID. Only
+  apps of one team can share a group, and nested helpers may
+  declare it unread. Wipr's groups are `exact`. Word's groups are
+  not while Excel or AutoUpdate is installed.
 - **The same vendor is not the same app.** Pastebot 3
   (`com.tapbots.Pastebot3Mac`) is installed. The containers of
   Ivory and of Pastebot 2 are still leftovers. The scanner

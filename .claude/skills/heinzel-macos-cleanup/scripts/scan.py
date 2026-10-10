@@ -403,17 +403,19 @@ def app_matches(
     taken: set[str] = frozenset(),
     label: str = "",
     shared: set[str] = frozenset(),
+    groups: set[str] = frozenset(),
 ) -> str:
     """Return "exact", "name" or "" for an entry and one app.
 
     `label` is the app's vendor label. `taken` holds first words and
-    vendor labels of other apps, `shared` their app groups.
+    vendor labels of other apps, `shared` their app groups. `groups`
+    holds the app groups that count as exact.
     """
     low = strip_suffix(path.name).lower()
     _, bid = split_id(path.name)
     if apple_reason(low, bid) or low in shared:
         return ""
-    if owned_by(bid, app_ids):
+    if owned_by(bid, app_ids) or low in groups:
         return "exact"
     norm = squash(low)
     if label and norm == label and norm not in taken:
@@ -632,6 +634,9 @@ def scan_app(inv: Inventory, query: str) -> dict:
     taken = {first_word(n) for a in others for n in a["names"]}
     taken |= {vendor_label(b) for a in others for b in a["own_ids"]}
     shared = {g for a in others for g in a["groups"]}
+    # Nested bundles of the team's other apps may declare the same groups.
+    team_apps = any(a["team"] == target["team"] for a in others)
+    groups = set() if team_apps else target["groups"]
     label = vendor_label(target["id"])
 
     unreadable: list[str] = []
@@ -639,7 +644,7 @@ def scan_app(inv: Inventory, query: str) -> dict:
     for path in entries(unreadable):
         if str(path) == app_path:
             continue
-        m = app_matches(path, ids, names, taken, label, shared)
+        m = app_matches(path, ids, names, taken, label, shared, groups)
         program = launchd_program(path) if is_launchd_plist(path) else ""
         if not m and program.startswith(app_path + "/"):
             m = "exact"

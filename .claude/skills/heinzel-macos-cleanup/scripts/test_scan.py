@@ -449,6 +449,37 @@ class ScanApp(TempDir):
         )
         self.assertEqual(self.scan_entries(inv, "A", group), ["A.app"])
 
+    def test_app_group_of_the_only_app_of_its_team_is_exact(self):
+        # Wipr declares group.wipr2.rules. No other app of its team is installed.
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/A/Wipr.app", "com.wipr", groups=["g.w"], team="W"),
+                app_entry("/A/Other.app", "com.other.app", team="O"),
+            ]
+        )
+        self.assertEqual(self.scan_entries(inv, "Wipr", "g.w"), ["Wipr.app", "g.w"])
+
+    def test_app_group_with_another_app_of_its_team_is_not_exact(self):
+        # A nested helper of AutoUpdate declares UBF8T346G9.Office too.
+        # The scanner reads only top-level entitlements.
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/A/Word.app", "com.ms.word", groups=["t.o"], team="T"),
+                app_entry("/A/AutoUpdate.app", "com.ms.mau", team="T"),
+            ]
+        )
+        self.assertEqual(self.scan_entries(inv, "Word", "T.o"), ["Word.app"])
+
+    def test_vendor_of_other_apps_nested_bundle_is_not_listed(self):
+        # The firefoxpwa runtime nests org.mozilla helpers under its own id.
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/Applications/Firefox.app", "org.mozilla.firefox"),
+                app_entry("/x/Runtime.app", "pwa.rt", ["org.mozilla.gpu-helper"]),
+            ]
+        )
+        self.assertEqual(self.scan_entries(inv, "Firefox", "Mozilla"), ["Firefox.app"])
+
     def test_vendor_of_nested_framework_is_not_listed(self):
         inv = scan.Inventory(
             apps=[app_entry("/A/Foo.app", "com.foo.app", libs=["com.google.fb"])]
