@@ -363,6 +363,26 @@ class DescribeApp(TempDir):
         own_ids = {"com.viscosityvpn.viscosity", "com.sparklabs.n"}
         self.assertEqual(desc["own_ids"], own_ids)
 
+    def test_library_id_with_the_main_id_prefix_is_own(self):
+        # GoogleUpdater ships Keystone as Helpers/GoogleSoftwareUpdate.bundle.
+        bundle = self.root / "GoogleUpdater.app"
+        make_bundle(bundle, CFBundleIdentifier="com.google.GoogleUpdater")
+        lib = bundle / "Contents/Helpers/GoogleSoftwareUpdate.bundle"
+        make_bundle(lib, CFBundleIdentifier="com.google.Keystone")
+        fw = bundle / "Contents/Frameworks/Sparkle.framework"
+        make_bundle(fw, CFBundleIdentifier="org.sparkle-project.Sparkle")
+        desc = scan.describe_app(bundle)
+        own_ids = {"com.google.googleupdater", "com.google.keystone"}
+        self.assertEqual(desc["own_ids"], own_ids)
+
+    def test_library_id_with_a_generic_prefix_is_not_own(self):
+        bundle = self.root / "Foo.app"
+        make_bundle(bundle, CFBundleIdentifier="com.electron.foo")
+        fw = bundle / "Contents/Frameworks/Bar.framework"
+        make_bundle(fw, CFBundleIdentifier="com.electron.bar")
+        desc = scan.describe_app(bundle)
+        self.assertEqual(desc["own_ids"], {"com.electron.foo"})
+
     def test_team_and_app_groups_come_from_one_codesign_call(self):
         bundle = self.root / "Microsoft Word.app"
         make_bundle(bundle, CFBundleIdentifier="com.microsoft.word")
@@ -455,6 +475,16 @@ class ScanApp(TempDir):
             apps=[
                 app_entry("/A/Wipr.app", "com.wipr", groups=["g.w"], team="W"),
                 app_entry("/A/Other.app", "com.other.app", team="O"),
+            ]
+        )
+        self.assertEqual(self.scan_entries(inv, "Wipr", "g.w"), ["Wipr.app", "g.w"])
+
+    def test_app_group_of_an_app_without_team_is_exact(self):
+        # Another app without a team does not share the target's team.
+        inv = scan.Inventory(
+            apps=[
+                app_entry("/A/Wipr.app", "com.wipr", groups=["g.w"]),
+                app_entry("/A/Other.app", "com.other.app"),
             ]
         )
         self.assertEqual(self.scan_entries(inv, "Wipr", "g.w"), ["Wipr.app", "g.w"])
