@@ -75,6 +75,11 @@ across calls. A SessionStart hook creates the socket
 directory; where hooks do not run (OpenCode), run
 `mkdir -p -m 700 ~/.cache/heinzel` first.
 
+Write the options inline on every call. Never store
+them in a shell variable (`S="ssh -o …"; $S host`):
+zsh does not word-split it, and shell state does not
+persist between calls anyway.
+
 **Fresh-login options** — for access tests and the
 single retry after a hanging call:
 
