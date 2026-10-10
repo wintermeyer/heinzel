@@ -1,703 +1,219 @@
 # Heinzel — System Administration with Safety Guardrails
 
-Heinzel is a set of rules that turns an AI coding
-assistant into a cautious, methodical sysadmin. It
-works with
+Heinzel is a set of rules that turns an AI coding assistant
+into a cautious, methodical sysadmin. Describe what you need
+in plain English. Heinzel works out the right commands for
+your OS, explains each one, and waits for your approval. It
+backs up configs, tests before applying, and remembers every
+server it has worked on.
+
+It manages Linux, FreeBSD and macOS, remote over SSH or on
+the local machine, and runs in
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code),
-[OpenCode](https://opencode.ai), or any other
-terminal-based AI tool that can read project files
-and run shell commands. It manages Linux, FreeBSD,
-and macOS targets — remote servers over SSH and the
-local machine alike — and runs on any workstation
-where your AI tool runs, including Windows (via WSL
-or natively).
+[OpenCode](https://opencode.ai) or any terminal AI tool that
+reads project files and runs shell commands.
 
-Describe what you need in plain English, and Heinzel
-figures out the right commands for your OS, proposes
-each one with an explanation, and waits for your
-approval before running anything. It backs up configs,
-tests commands before real execution, remembers every
-server it has worked on, and gives you a detailed
-report when it's finished.
+![Trailer: Heinzel at work](assets/heinzel-trailer.gif)
 
-Using it feels like pair-programming with a colleague
-who always checks the docs first and never skips a
-step because he's in a hurry. The bigger the network,
-the more it pays off — Heinzel remembers every server's
-OS, services, and quirks so you don't have to. Not
-sure yet? Ask Heinzel to plan first before making
-changes — no changes until you say go.
+The trailer is scripted, not recorded. To change it, see
+[`assets/trailer/`](assets/trailer/README.md).
 
-## Screencast: Debug and fix some webserver problems
+Screencasts on YouTube:
 
-![Screencast: Debug and fix some webserver problems](assets/webshop-bugfix-example.gif)
-
-### Other Screencasts on YouTube
-
-- [Debug and fix a misconfigured nginx and firewall on a remote server](https://www.youtube.com/watch?v=_uenftahbJI) (1 min)
+- [Debug and fix a misconfigured nginx and firewall](https://www.youtube.com/watch?v=_uenftahbJI) (1 min)
 - [Install the latest stable Ruby and Ruby on Rails](https://www.youtube.com/watch?v=QVvm29eABKY) (1 min)
-- [Install a firewall, upgrade the Linux distribution and setup automatic daily security updates](https://www.youtube.com/watch?v=ve_TFyJy_uU) (2 min)
+- [Install a firewall, upgrade the distribution, set up daily security updates](https://www.youtube.com/watch?v=ve_TFyJy_uU) (2 min)
 
-## Press
+Press:
+[German article about Heinzel on heise.de](https://www.heise.de/ratgeber/KI-Assistent-Heinzel-fuer-die-Server-Administration-im-Ueberblick-11244463.html)
 
-- [German Artikel about Heinzel on heise.de](https://www.heise.de/ratgeber/KI-Assistent-Heinzel-fuer-die-Server-Administration-im-Ueberblick-11244463.html)
+## Install
 
-## How to Install
+You need:
 
-### Prerequisites
+- **An AI coding assistant in the terminal**, e.g. Claude
+  Code or OpenCode.
+- **SSH access to the server** as a normal user or as root,
+  with a key that does not ask for a passphrase. Not needed
+  for the local machine. New to SSH keys? See the
+  [Arch wiki guide](https://wiki.archlinux.org/title/SSH_keys).
+- **A workstation** running Linux, macOS, FreeBSD or Windows.
+  On Windows use
+  [WSL](https://learn.microsoft.com/windows/wsl/), or start
+  the AI tool from the Git Bash of
+  [Git for Windows](https://gitforwindows.org/). PowerShell
+  and `cmd.exe` are not supported.
 
-- **An AI coding assistant** that runs in the
-  terminal — e.g.
-  [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-  or [OpenCode](https://opencode.ai).
-- **SSH access** to the target server — either as a
-  normal user or as root. The SSH connection must
-  not prompt for a password or passphrase (use
-  key-based authentication without a passphrase).
-  This is not needed for local administration
-  (localhost / your own machine).
-
-  Heinzel shares one SSH connection per host and
-  keeps it open for 10 minutes after the last call.
-  The sockets live in `~/.cache/heinzel` (mode 0700),
-  so any process of your local user can use an open
-  connection without asking for the key again.
-
-  Quick setup: generate a key with `ssh-keygen`,
-  copy it to the server with `ssh-copy-id user@host`,
-  and test with `ssh user@host`. See the
-  [Arch wiki SSH keys guide](https://wiki.archlinux.org/title/SSH_keys)
-  for details.
-
-- Linux (any distribution), FreeBSD, or macOS on the
-  target machines. All supported systems can also be
-  managed locally without SSH.
-- **Workstation:** Heinzel itself runs wherever
-  your AI tool runs — Linux, macOS, FreeBSD, or
-  Windows. On Windows, the recommended path is
-  [WSL](https://learn.microsoft.com/windows/wsl/)
-  (full Linux environment). You can also run
-  natively via
-  [Git for Windows](https://gitforwindows.org/) —
-  launch Claude Code or OpenCode from the bundled
-  Git Bash terminal so the SessionStart
-  auto-update hook and `bin/heinzel-*` scripts can
-  execute. PowerShell and `cmd.exe` are not
-  supported as the launch shell.
-
-### Steps
-
-1. **Clone the repo and start heinzel**
-   ```
-   git clone https://github.com/wintermeyer/heinzel.git
-   cd heinzel
-   claude
-   ```
-   Or use `opencode` to launch OpenCode.
-2. **Describe what you need in plain English**
-   ```
-   ❯ Install postgresql on server1.example.com
-   ```
-3. **Answer a few questions on the first connection**
-   The first time Heinzel connects to a new server,
-   it may ask for details it can't detect on its own
-   — most commonly which SSH user to log in as. Your
-   answers are stored in `memory/user.md` and the
-   per-server memory file, so Heinzel won't ask again
-   on future sessions. You can also pre-fill
-   `memory/user.md` by copying `memory/user.md.example`
-   and editing it — this is also where you set a
-   preferred language (e.g. `Language: German`).
-4. **Review and approve each command before it runs**
-   Heinzel proposes every SSH command, explains what
-   it does and why, and waits for your approval.
-   Nothing runs without your say-so.
-
-### Team setup
-
-Heinzel supports team use where multiple people share
-server state via git while keeping SSH usernames
-personal.
-
-1. Each team member copies `memory/user.md.example`
-   to `memory/user.md` and sets their own SSH
-   usernames. This file is always gitignored.
-2. Edit `.gitignore` to track server memory — the
-   comments in the file explain which lines to
-   comment out.
-3. If any team member uses heinzel locally (on their
-   own machine), add their machine's hostname
-   directory to `.gitignore` (e.g.
-   `memory/servers/stefans-mbp/`).
-4. Commit server memory changes after sessions so the
-   team stays in sync.
-
-## Updates & Versioning
-
-Heinzel uses [semantic versioning](https://semver.org).
-The current version is in the `VERSION` file; changes
-are listed in `CHANGELOG.md`.
-
-**Auto-update (Claude Code):** On every session start,
-a hook runs `git pull` and reports version changes.
-No action needed. Auto-update is skipped when pinned
-to a tag (see below), when on a non-`main` branch, or
-when `HEINZEL_NO_UPDATE=1` is set.
-
-**Manual update (OpenCode / any tool):**
-
-```bash
-bin/heinzel-update           # pull latest
-bin/heinzel-update --check   # check without pulling
-```
-
-**Pin to a stable version** (skip auto-updates):
-
-```bash
-bin/heinzel-update --pin v1.0.0   # pin
-bin/heinzel-update --unpin        # back to main
-```
-
-**Opt out of auto-update** without pinning:
-
-```bash
-export HEINZEL_NO_UPDATE=1
-```
-
-### Upgrading from 1.x to 2.0.0
-
-2.0.0 consolidates all user state under `memory/`.
-Under 1.x, custom rules lived in `rules/custom/`
-and the OpenCode config lived at the repo root.
-The upgrade moves them automatically — no manual
-work in the common case.
-
-**Automatic (recommended).** Let the Claude Code
-session-start hook run on your next session, or run
-the update manually:
-
-```bash
-bin/heinzel-update
-```
-
-The hook detects the old layout and migrates:
+Then:
 
 ```
-rules/custom/*        →  memory/custom-rules/
-opencode.json         →  memory/opencode.json
-opencode.json.example →  memory/opencode.json.example
-```
-
-You'll see a one-time notice listing what moved.
-Re-running the hook is a no-op.
-
-**Manual** (if you're pinned to a 1.x tag or don't
-use the Claude Code hook). First unpin, then pull:
-
-```bash
-bin/heinzel-update --unpin
-bin/heinzel-update
-```
-
-Or move the files yourself:
-
-```bash
-mkdir -p memory/custom-rules
-[ -d rules/custom ] && \
-  mv rules/custom/* memory/custom-rules/ 2>/dev/null || true
-[ -f opencode.json ] && \
-  mv opencode.json memory/opencode.json
-[ -f opencode.json.example ] && \
-  mv opencode.json.example memory/opencode.json.example
-```
-
-**After upgrading**, review:
-
-- Any personal scripts or cron jobs that reference
-  the old paths.
-- Your `.gitignore` if you edited it for team mode
-  — the new defaults are re-organized around
-  `memory/` (see the comments in the file).
-- Take a fresh backup right after upgrading:
-  `bin/heinzel-backup`.
-
-**Rollback** if something goes wrong: restore your
-pre-upgrade backup, or pin back to the last 1.x
-release with `bin/heinzel-update --pin v1.0.6`.
-
-## Backup & Restore
-
-Heinzel keeps all your personal state under a
-single directory — `memory/` — so backups are one
-`tar` command. The tree is text and typically well
-under a megabyte. No database, no hidden dotfiles,
-no scattered config.
-
-### What lives in `memory/`
-
-- `user.md` — SSH usernames and language
-  preference
-- `blacklist.md`, `readonly.md` — access policies
-- `protected-paths.md` — per-path `readonly`,
-  `hidden` and `confirm` lists per server
-- `service-policy.md` — per-service opt-out /
-  opt-in for auto-reload and auto-restart
-- `servers/<hostname>/` — per-server memory,
-  changelog, todo, and per-server rule overrides
-- `custom-rules/` — your global rule overrides
-- `opencode.json` — your OpenCode config
-- `network.md`, `housekeeping.md` — cross-server
-  facts and custom checks
-
-### Back up
-
-```bash
-bin/heinzel-backup
-```
-
-Writes
-`heinzel-backup-<hostname>-<timestamp>.tar.gz` to
-the current directory. Use `--list` for a dry run,
-`-o <path>` to write somewhere specific.
-
-### Restore
-
-```bash
-bin/heinzel-backup --restore <file.tar.gz>
-```
-
-Refuses to overwrite existing `memory/` content
-unless `--force` is passed. The archive is validated
-before any files are written: all entries must live
-under `memory/`, and symlink or hardlink entries are
-rejected.
-
-### Team mode note
-
-In team mode, `memory/servers/`, `memory/network.md`,
-`memory/housekeeping.md`, and
-`memory/custom-rules/` are shared via git already.
-But `memory/user.md`, `memory/blacklist.md`,
-`memory/readonly.md`, and `memory/opencode.json`
-are always personal and still need this backup.
-
-## Features
-
-### Auto OS-detection
-
-The first time you point Heinzel at any machine, it
-detects the OS, gathers hardware info, and remembers
-everything for future sessions.
-
-### DNS alias detection
-
-When multiple DNS names point to the same server,
-Heinzel detects this automatically by comparing IP
-addresses. The first hostname becomes the canonical
-name; additional names become symlinks that share the
-same memory. Each alias can have its own SSH user.
-
-### Non-standard SSH ports
-
-A server whose sshd is not on port 22 gets its port
-in server memory, from `host:2222` or the first
-successful login. List the ports you use yourself as
-`Alternative SSH ports:` in `memory/user.md`; on a
-new host whose port 22 refuses, Heinzel tries those
-before it asks. It never scans for a port.
-
-### Memory across sessions
-
-After working on a machine, Heinzel remembers it.
-Next week you start a new session and type:
-
-```
- ❯ Check on web1.example.com.
-```
-
-It reads
-`memory/servers/web1.example.com/memory.md`, already
-knows it's Debian 12 with nginx and PostgreSQL,
-checks the local changelog, and picks up right where
-it left off.
-
-### Session to-do list
-
-When a multi-step task gets interrupted — connection
-drop, conversation ends, laptop closes — Heinzel
-keeps a to-do list in
-`memory/servers/<hostname>/todo.md` with checkboxes
-for each step. On reconnection it shows what's still
-pending and asks whether to continue or start fresh.
-
-### Housekeeping checks
-
-Run routine health inspections on any server:
-
-```
- ❯ Run housekeeping on app.example.com
-```
-
-Heinzel checks disk, memory, load, pending updates,
-firewall, SSL certificates, failed services, and
-server-specific services. Problems are highlighted
-at the top of a concise report.
-
-### Security audit
-
-Check security configuration on any server:
-
-```
- ❯ Run a security audit on app.example.com
-```
-
-Heinzel checks SSH password authentication settings,
-firewall status, and reports issues by severity.
-
-### Fleet audit
-
-Compare key policies across every server Heinzel knows about:
-
-```
- ❯ Run a fleet audit
- ❯ Vergleiche die Policies auf allen Servern
-```
-
-Heinzel probes unattended-upgrades, sshd effective config,
-firewall posture, MTA, time sync, and auto-reboot behaviour
-on each host in `memory/servers/`, then renders a
-side-by-side table that highlights where servers disagree.
-It makes no configuration changes on any host (it only
-writes one audit-trail line to each journal). Use it after
-fixing a config bug on one server to find which others
-carry the same bug, or as a periodic consistency check.
-
-### macOS cleanup
-
-Find leftovers of apps you removed, or uninstall an app
-with all its files:
-
-```
- ❯ Clean up leftovers of old apps on this Mac
- ❯ Uninstall Brave Browser completely
-```
-
-A read-only scanner matches `~/Library` and `/Library`
-against the installed apps, Team IDs and launchd jobs.
-Heinzel verifies each hit, groups them by app, and moves
-only what you approve to the Trash. The scanner needs the
-Command Line Tools (`xcode-select --install`). Without
-them, Heinzel falls back to manual probes.
-
-### Email reports
-
-Send ad-hoc text or files by email about a managed server:
-
-```
- ❯ Email me the output of "df -h" from app.example.com
- ❯ Mail /var/log/auth.log to ops@example.com
-```
-
-The first email per host asks once where to send from
-(local workstation or the server itself) and remembers the
-answer. On the remote path Heinzel prefers an existing MTA
-(postfix, sendmail, msmtp, mail/mailx) and asks before
-installing one. Sends as a non-root user when possible.
-Attachments check sender readability, file size, and offer
-a content preview before sending.
-
-Every message closes with a two-line greeting from Heinzel
-(`Viele Grüße / Heinzel`) followed by a short signature
-naming Heinzel, the project URL, and the operator who
-requested the send. The operator name comes from
-`Operator name:` in `memory/user.md` (with a sensible
-fallback chain to git config and the system full name).
-Set it once; edit it any time. Both lines are
-overridable: a `Greeting:` line in `memory/user.md` or
-`memory/servers/<host>/memory.md` replaces the default
-wording.
-
-Every Heinzel email also carries the RFC 3834
-`Auto-Submitted: auto-generated` header plus
-`Precedence: bulk` and `X-Auto-Response-Suppress: OOF,
-AutoReply`, so out-of-office and vacation auto-replies
-do not fan back at the operator.
-
-### Plan mode (Claude Code)
-
-For complex or unfamiliar tasks, switch to plan mode
-before touching anything:
-
-```
- ❯ /plan Migrate the database from MySQL to
-   PostgreSQL on db.example.com
-```
-
-Heinzel explores the server, checks what's running,
-reads configs, and drafts a step-by-step plan — but
-makes no changes. You discuss the approach, adjust
-it, and only when you approve does execution begin.
-
-> **Note:** The `/plan` command is a Claude Code
-> feature. OpenCode does not have an equivalent —
-> simply ask Heinzel to plan before acting.
-
-### Local administration
-
-Heinzel also works on the local machine — no SSH
-needed, commands run directly. The same safety rules,
-memory, and guardrails apply whether the target is a
-remote server or your own laptop.
-
-This works on both Linux and macOS:
-
-```
- ❯ Update all Homebrew packages on this Mac
+git clone https://github.com/wintermeyer/heinzel.git
+cd heinzel
+claude        # or: opencode
 ```
 
 ```
- ❯ Check if the firewall is configured on
-   this machine
+❯ Install postgresql on server1.example.com
 ```
 
-## Supported AI Tools
+On the first connection Heinzel may ask what it cannot
+detect, usually the SSH user. The answer goes to
+`memory/user.md`, so it asks once. You can pre-fill that file
+from `memory/user.md.example`. It also holds your language
+(`Language: German`).
 
-Heinzel works with Claude Code and OpenCode out of the
-box. Both read `CLAUDE.md` (OpenCode via its
-Claude-Code-compat fallback) and both auto-discover
-skills at `.claude/skills/*/SKILL.md`. The `rules/`
-directory is picked up via prose references in
-`CLAUDE.md`, so any other terminal AI tool that reads
-project files and runs shell commands will also handle
-the rule layer — only the on-demand skills
-(housekeeping, security audit, email reports, fleet
-audit) need Skills-aware tooling.
+Heinzel proposes every command, says what it does and why,
+and waits for your approval.
 
-OpenCode note: if you've set
-`OPENCODE_DISABLE_CLAUDE_CODE=1`, OpenCode stops
-reading both `CLAUDE.md` and `.claude/skills/`. Leave
-that variable unset (the default) for heinzel to work.
+Heinzel shares one SSH connection per host and keeps it open
+for 10 minutes after the last call. The sockets live in
+`~/.cache/heinzel` (mode 0700), so any process of your local
+user can use an open connection without the key.
 
-### Claude Code
+## What you can ask
 
-[Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-is Anthropic's CLI for Claude. It natively reads
-`CLAUDE.md` and is the primary tool Heinzel was
-developed with.
+- `Check on web1.example.com`: reads the server's memory file
+  and recent changes, then picks up where the last session
+  ended.
+- `Run housekeeping on app.example.com`: a health report on
+  disk, memory, load, updates, firewall, certificates and
+  failed services. Problems come first.
+- `Run a security audit on app.example.com`: SSH, firewall,
+  accounts, open ports and kernel settings, by severity.
+- `Run a fleet audit`: compares update, sshd, firewall, mail
+  and time-sync policies across all known servers and shows
+  where they disagree. Changes nothing.
+- `Email me the output of "df -h" from app.example.com`:
+  sends text or files by mail, from your workstation or from
+  the server.
+- `Clean up leftovers of old apps on this Mac`: finds what
+  removed apps left in `~/Library` and `/Library`. Only what
+  you approve goes to the Trash.
+- `Update all Homebrew packages on this Mac`: local mode, no
+  SSH, same rules.
+- `/plan Migrate the database on db.example.com`: explores
+  and drafts a plan, changes nothing until you approve.
+  `/plan` is Claude Code. In OpenCode, ask Heinzel to plan
+  first.
 
-```
-claude
-```
+More that happens without asking:
 
-### OpenCode with Ollama
+- **OS detection.** On first contact Heinzel detects the OS
+  and hardware and loads the rule file for that platform.
+- **Memory.** Each server gets a folder under
+  `memory/servers/` with its state, a changelog and an open
+  to-do list. An interrupted job shows up as pending on the
+  next connection.
+- **DNS aliases.** Several names for the same IP share one
+  memory. Each alias can have its own SSH user.
+- **SSH ports.** A port other than 22 is stored per server.
+  List the ports you use as `Alternative SSH ports:` in
+  `memory/user.md`. Heinzel tries those and never scans.
+- **Email details.** Mails carry a short signature with the
+  operator's name (`Operator name:` in `memory/user.md`) and
+  headers that keep out-of-office replies away. The first
+  mail per host asks where to send from. Heinzel uses an
+  existing MTA and asks before installing one.
 
-[OpenCode](https://opencode.ai) is an open-source
-terminal AI tool that supports many providers,
-including local free models via
-[Ollama](https://ollama.com). This lets you run
-Heinzel entirely on your own hardware — no cloud
-API required.
+The macOS cleanup scanner needs the Command Line Tools
+(`xcode-select --install`).
 
-**1. Install Ollama and pull a model**
+## Safety & guardrails
 
-```bash
-ollama pull qwen3.5:9b
-```
+The safety rules are part of every session.
 
-**2. Expand the context window**
+- **Asks before acting.** Destructive commands, firewall
+  changes, reboots and service restarts need your approval.
+  Reloads run on their own when the config test passes
+  (`rules/service-reload.md`, `memory/service-policy.md`).
+- **Hard guardrails (Claude Code).** A PreToolUse hook
+  (`.claude/hooks/guard-taboos.sh`) blocks the absolute
+  taboos in every permission mode, even
+  `--dangerously-skip-permissions`: halt and poweroff,
+  `mkfs`, partition-table writers, deleting or overwriting
+  SSH keys, writes to `sshd_config`. It also catches them
+  inside `ssh host "…"` or behind `python3 -c`. Read-only
+  forms (`fdisk -l`) stay allowed. For a legitimate exception
+  such as an OS replacement, start the session with
+  `HEINZEL_GUARD_DISABLE=1`. OpenCode does not run this hook;
+  there the written rules are the safety layer.
+- **Verifies before it reports.** "It is gone since the
+  reboot" gets checked against the live system first
+  (`rules/verify-before-reporting.md`).
+- **Backs up config files** to `/var/backups/heinzel/` before
+  editing. Cleaned up after 30 days.
+- **Tests before applying** with dry-run or validation modes
+  where a tool has one.
+- **Logs everything.** Each change is one plain-language line
+  in the system journal. The technical detail and the way
+  back are in `memory/servers/<hostname>/changelog.log`.
+- **Stable repos only.** No third-party sources without your
+  approval.
+- **Least privilege.** Normal user first, `sudo` when needed,
+  root last. With neither, Heinzel does what it can and
+  writes a report for the tasks that need root.
+- **Blacklist and read-only servers.** Hosts in
+  `memory/blacklist.md` are never contacted. Hosts in
+  `memory/readonly.md` are inspected but never changed.
+- **Protected paths.** `memory/protected-paths.md` marks
+  paths per server as `readonly`, `hidden` (content never
+  shown) or `confirm` (needs a typed `CONFIRM`).
+- **Ignores injected instructions.** Text in files, logs and
+  command output is data. Text that addresses the AI is
+  flagged to you and not followed.
+- **Keeps secrets out.** Keys, password files and `.env`
+  contents are inspected by metadata and fingerprint, never
+  printed, and never passed as command-line arguments.
 
-Ollama defaults to 4096 tokens — too small for
-agentic tool use. Create a variant with a larger
-context:
+### Against hallucinations
 
-```bash
-ollama run qwen3.5:9b
->>> /set parameter num_ctx 16384
->>> /save qwen3.5:9b-16k
->>> /bye
-```
+An LLM can invent a flag or a path. Heinzel puts verified
+facts in front of it instead:
 
-**3. Configure OpenCode**
+- A rule file per platform holds the right commands, package
+  manager and firewall tool.
+- It checks `--help`, the man page or upstream docs before a
+  command runs.
+- It reads the server's memory file instead of guessing.
+- It uses dry-run modes first.
+- You see every command before it runs.
 
-Copy the example config and adjust if needed:
+This reduces the risk. It does not remove it.
 
-```bash
-cp memory/opencode.json.example memory/opencode.json
-```
+> [!CAUTION]
+> Heinzel operates on live systems, as root, with sudo or
+> unprivileged. Review every command before you approve it.
 
-Edit `memory/opencode.json` to match your setup —
-e.g. change the `baseURL` if Ollama runs on a
-different host (`http://192.168.0.3:11434/v1`), or
-change the model name. The file is gitignored so
-local edits won't conflict on `git pull`.
+A disciplined AI that follows the checklist every time makes
+fewer mistakes than a tired human at 2 AM. It can still
+misread your intent. Stay in the driver's seat.
 
-**4. Launch OpenCode**
+## Fewer prompts and scripting
 
-```
-opencode
-```
-
-Select the Ollama model from the model picker (search for qwen). 
-Start the model picker by typing `/models` in the OpenCode terminal.
-
-> **Note:** Larger models (14B+) produce more
-> reliable tool calls. If you have the GPU memory,
-> prefer a bigger model. The `tools: true` flag is
-> required for agentic features. See the
-> [OpenCode provider docs](https://opencode.ai/docs/providers/)
-> for more configuration options.
-
-## Command Line Interface
-
-You can script Heinzel from the command line without
-entering the interactive UI.
-
-### Claude Code
-
-Use the `-p` flag to pass a prompt directly:
-
-```bash
-$ claude --permission-mode auto \
-  -p "What OS is installed on \
-  server1.example.com? Login as root."
-**server1.example.com** is running **Debian 11
-(Bullseye)** on an aarch64 (ARM64) system with
-4 CPU cores, 3.8 GB RAM, and a 15 GB root disk
-(15% used).
-
-Note: Debian 11 reached end of life in August
-2024 and only receives long-term support (LTS)
-until August 2026. You may want to plan an
-upgrade to Debian 12 (Bookworm) before then.
-$ claude --permission-mode auto \
-  -p "Upgrade server1.example.com to Debian 12. \
-  I have a backup. Don't ask me any questions. \
-  Just do it. Give me a report afterwards."
----
-
-## Upgrade Report: server1.example.com
-
-**Debian 11 (Bullseye) -> Debian 12 (Bookworm)**
-— completed successfully.
-
-### What was done
-
-1. **Verified Debian 11.11 was fully up to date**
-   before starting
-2. **Updated `/etc/apt/sources.list`** from
-   `bullseye` to `bookworm` (backed up first)
-3. **Ran `apt-get upgrade`** — installed packages
-   that could upgrade without removals
-4. **Ran `apt-get full-upgrade`** — completed the
-   full dist-upgrade
-5. **Cleaned up** — `autoremove` removed 28
-   obsolete packages (410 MB freed)
-6. **Rebooted** into the new kernel
-   6.1.0-43-arm64
-7. **Removed old kernel** 5.10.0-38-arm64
-   (257 MB freed)
-8. **Reinstalled `unattended-upgrades`** — it was
-   dropped during the dist-upgrade
-
-### Current state
-
-|                         |                               |
-| ----------------------- | ----------------------------- |
-| **OS**                  | Debian 12.13 (Bookworm)       |
-| **Kernel**              | 6.1.0-43-arm64                |
-| **Disk**                | 15 GB, 19% used               |
-| **nginx**               | running                       |
-| **ufw**                 | active, default deny incoming |
-| **unattended-upgrades** | installed and enabled         |
-```
-
-### OpenCode
-
-Use the `run` command to pass a prompt directly:
-
-```bash
-opencode run "What OS is installed on \
-  server1.example.com?"
-```
-
-Useful flags for scripting:
-
-- `--format json` — machine-readable JSON output
-- `-m provider/model` — override the model
-- `-f file.txt` — attach files to the prompt
-- `-c` — continue the previous session
-
-For repeated calls without startup overhead, use the
-headless server:
-
-```bash
-opencode serve
-opencode run --attach http://localhost:4096 \
-  "Check disk usage on web1.example.com"
-```
-
-## Fewer Prompts: Auto Mode (Claude Code)
-
-By default Claude Code asks for your approval before
-every tool call — every SSH command, every file read,
-every write. That's the safest setting and the right
-one when you're learning. But for batch work it gets
-impractical: you can't sit and approve 200 prompts
-during an unattended upgrade.
-
-For that, use **auto mode**
-(`--permission-mode auto`). Instead of asking you
-about everything, a background safety check reviews
-each action: routine commands run without a prompt,
-risky ones still stop and ask. Press Shift+Tab in the
-interactive UI to cycle modes, or pass the flag for
-scripted use:
+By default Claude Code asks before every tool call. For
+batch work use **auto mode**: a background check lets routine
+commands through and still stops on risky ones. Press
+Shift+Tab to cycle modes, or pass the flag:
 
 ```bash
 claude --permission-mode auto \
   -p "Run housekeeping on server1.example.com"
 ```
 
-(Auto mode is a newer Claude Code feature — on
-Team/Enterprise plans an admin may need to enable
-it. See the
-[permission modes docs](https://code.claude.com/docs/en/permission-modes)
-for details and alternatives.)
+`-p` runs one prompt without the interactive UI. In OpenCode
+that is `opencode run "…"`.
 
-For locked-down scripting and CI, the strictest
-option is an explicit allowlist:
-`--permission-mode dontAsk` combined with
-`--allowedTools` or `permissions.allow` rules in
-`.claude/settings.json` — only pre-approved commands
-run, everything else is denied.
+- For CI, the strictest setup is `--permission-mode dontAsk`
+  with an allowlist (`--allowedTools` or `permissions.allow`
+  in `.claude/settings.json`).
+- `--dangerously-skip-permissions` removes all review,
+  including the protection against malicious text in server
+  output. Use it in disposable environments only.
+- Whatever the mode, Heinzel's own rules still apply. See
+  the [permission modes docs](https://code.claude.com/docs/en/permission-modes)
+  for details.
 
-The old `--dangerously-skip-permissions` flag still
-exists, but the name says it all: it removes *all*
-review with no safety check in its place — including
-any protection against malicious text in server
-output. If you use it at all, use it only in
-disposable environments (dev VMs, containers), never
-on production servers.
-
-**When to stay with the default ask-everything mode:**
-
-- First time working on a production server
-- When you don't trust Heinzel or don't understand it
-- Any time you want to understand what's happening
-  step by step
-
-Whatever mode you pick, Heinzel's own safety rules
-still apply — Heinzel still backs up configs, tests
-before applying, asks before destructive actions, and
-follows least privilege. Permission modes only change
-how often *you* are asked, not the built-in
-guardrails.
-
-### Scheduled housekeeping
-
-Auto mode makes recurring, unattended health checks
-practical — a nightly housekeeping run that emails
-you the report:
+A nightly health check by cron:
 
 ```
 17 6 * * * cd /path/to/heinzel && flock -n \
@@ -707,235 +223,61 @@ you the report:
 email me the report" >> ~/heinzel-cron.log 2>&1
 ```
 
-Two rules: run the exact prompt **interactively
-once** first, so the email recipient, sending path,
-and other one-time questions are answered and stored
-in memory (unattended runs can't answer pickers) —
-and **never use `--dangerously-skip-permissions` in
-cron**. Details, systemd-timer variant, and cron
-pitfalls: `rules/scheduled-housekeeping.md`.
+Run the exact prompt interactively once first, so one-time
+questions are answered and stored. Details and a systemd
+timer variant: `rules/scheduled-housekeeping.md`.
 
-## Safety & Guardrails
+## Your data: `memory/`
 
-Heinzel's safety rules are not optional — they're
-baked into every session. Heinzel follows them
-consistently, even when a human might skip steps
-under pressure.
+All your state is plain text in one directory:
 
-- **Asks before acting** — destructive commands,
-  firewall changes, reboots, and service restarts
-  all require your explicit approval. Config reloads
-  (`systemctl reload`) auto-proceed when the
-  service's config test passes — see
-  `rules/service-reload.md` and the
-  `memory/service-policy.md` opt-out / opt-in
-  config.
-- **Hard guardrails (Claude Code)** — a shipped
-  PreToolUse hook (`.claude/hooks/guard-taboos.sh`)
-  mechanically blocks the absolute taboos — halt/
-  poweroff, `mkfs`, partition-table writers, deleting
-  or overwriting SSH keys, writes to `sshd_config` —
-  in **every**
-  permission mode, even
-  `--dangerously-skip-permissions`, and even when the
-  command hides inside an `ssh host "…"` wrapper or
-  behind a language runtime (`python3 -c "open(…)"`).
-  Read-only forms (`fdisk -l`, `gpart show`, …) stay
-  allowed. For legitimate exceptions (OS
-  replacement), launch the session with
-  `HEINZEL_GUARD_DISABLE=1`. OpenCode does not read
-  Claude Code hooks — there the prose rules remain
-  the safety layer.
-- **Verifies before it reports** — a finding that
-  something is missing, broken, or "gone since the
-  reboot" gets confirmed against the live system
-  (real path from config, proof of absence, cause
-  actually shown) before Heinzel reports or
-  escalates it, so a stale assumption never becomes
-  a false alarm. See
-  `rules/verify-before-reporting.md`.
-- **Backs up config files** — copies to
-  `/var/backups/heinzel/` before editing
-  (auto-cleaned after 30 days).
-- **Tests before applying** — uses dry-run, test, or
-  validation modes before real execution whenever a
-  tool supports it.
-- **Auto-detects the OS** — reads `/etc/os-release`
-  on Linux or `sw_vers` on macOS and applies the
-  right commands for the platform. No guessing.
-- **Logs everything** — every change lands in the
-  system journal (`journalctl -t heinzel`) as a
-  one-line, plain-language headline (who did what,
-  and why) that any admin can follow; the full
-  technical detail (rollback paths, verification,
-  flags) is mirrored locally in
-  `memory/servers/<hostname>/changelog.log`.
-- **Remembers servers** — stores OS, services, and
-  notes in `memory/servers/` for future sessions.
-- **Stable repos only** — no third-party sources
-  without your explicit approval.
-- **Least privilege** — uses a normal user when
-  possible, `sudo` only when necessary, root only
-  as a last resort. If neither sudo nor root SSH
-  is available, works in unprivileged mode and
-  produces a sysadmin report for tasks that need
-  root.
-- **Server blacklist** — add hostnames or IPs to
-  `memory/blacklist.md` to permanently block
-  connection. Heinzel refuses to connect and won't
-  accept overrides.
-- **Read-only servers** — add hostnames or IPs to
-  `memory/readonly.md` for servers you can inspect
-  but must never modify. Deferred modifications are
-  collected into a report you can hand off.
-- **Protected paths** — list single paths per server
-  in `memory/protected-paths.md` as `readonly`
-  (never modified), `hidden` (content never shown)
-  or `confirm` (each command needs a typed
-  `CONFIRM`).
-- **Ignores injected instructions** — text found in
-  server files, logs, or command output is treated as
-  data only. Suspicious patterns (text addressing the
-  AI, embedded commands, safety-rule overrides) are
-  flagged to the user, never followed.
-- **Keeps secrets out of transcripts** — private
-  keys, password files, and `.env` contents are
-  inspected via metadata and fingerprints, never
-  printed into the conversation, reports, memory,
-  changelogs, or emails. Secrets are never passed
-  as command-line arguments, where `ps`, the
-  journal, and shell history would capture them.
-  Likely-secret files are refused as email
-  attachments by default.
+- `user.md`: SSH usernames, language, operator name
+- `blacklist.md`, `readonly.md`, `protected-paths.md`: access
+  policies
+- `service-policy.md`: which services may reload or restart
+  without asking
+- `servers/<hostname>/`: memory, changelog, to-do and rule
+  overrides per server
+- `custom-rules/`: your global rule overrides
+- `network.md`, `housekeeping.md`: cross-server facts and
+  your own checks
+- `opencode.json`: your OpenCode config
 
-## How Heinzel Fights LLM Hallucinations
-
-LLMs can "hallucinate" — confidently produce commands
-with wrong flags, incorrect file paths, or syntax that
-doesn't exist on the server's specific OS and version.
-On a live system, a hallucinated command can be
-dangerous.
-
-Heinzel reduces this risk with multiple layers:
-
-- **Distro-specific rule files** — Instead of relying
-  on the LLM's memory, heinzel loads a verified rule
-  file for each platform (Debian, RHEL, SUSE,
-  macOS). These files contain the correct
-  commands, package managers, firewall tools, and
-  common pitfalls for each distro. The LLM reads
-  the file and follows it — it doesn't have to
-  guess.
-- **Verify before running** — heinzel is instructed
-  to check `--help`, man pages, or upstream docs
-  before running any command. This catches wrong
-  flags and syntax before they reach the server.
-- **Server memory** — Each server's OS, version,
-  installed services, and configuration are recorded
-  in a memory file. On subsequent connections, the
-  LLM reads facts instead of guessing.
-- **Test before apply** — Commands with a dry-run,
-  test, or validation mode are checked that way first.
-- **Human review** — Every command is shown to you
-  before it runs. You are the final safeguard.
-
-No approach eliminates hallucinations entirely. The
-goal is to minimize what the LLM needs to recall
-from training data by putting verified facts in front
-of it at every step.
-
-## Accessing Logs
-
-Heinzel logs every action to the system journal on
-each server. To query the log:
+### Backup and restore
 
 ```bash
-# All entries
-journalctl -t heinzel
-
-# Filter by date
-journalctl -t heinzel --since "2026-02-01"
-
-# Last 20 entries
-journalctl -t heinzel -n 20
-
-# macOS
-log show \
-  --predicate 'senderImagePath CONTAINS "logger"' \
-  --info --last 7d | grep heinzel
+bin/heinzel-backup                        # writes a .tar.gz
+bin/heinzel-backup -o <path>              # to a given path
+bin/heinzel-backup --list                 # dry run
+bin/heinzel-backup --restore <file.tar.gz>
 ```
 
-## Supported Distributions
+Restore refuses to overwrite existing content without
+`--force` and validates the archive before writing.
 
-| Family  | Distributions                     | Rule file          |
-| ------- | --------------------------------- | ------------------ |
-| Debian  | Debian, Ubuntu                    | `rules/debian.md`  |
-| RHEL    | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`   |
-| SUSE    | openSUSE, SLES                    | `rules/suse.md`   |
-| macOS   | macOS (Apple Silicon & Intel)     | `rules/macos.md`   |
-| FreeBSD | FreeBSD (all versions)            | `rules/freebsd.md` |
-| Unraid  | Unraid OS (observed on 7.3)       | `rules/unraid.md`  |
+### Team setup
 
-Other distributions work too — Heinzel will apply
-general best practices and let you know which OS it
-detected.
+`memory/` is gitignored by default. To share server state:
 
-## Risks & Responsibilities
+1. Everyone copies `memory/user.md.example` to
+   `memory/user.md`. This file always stays personal.
+2. Edit `.gitignore` to track server memory. The comments in
+   the file say which lines to change.
+3. Keep each member's own machine out of git, e.g.
+   `memory/servers/stefans-mbp/`.
+4. Commit server memory after sessions.
 
-> [!CAUTION]
-> Heinzel operates on live servers and local machines
-> — as root, with sudo, or in unprivileged mode.
-> Always review every command before approving it.
+`user.md`, `blacklist.md`, `readonly.md` and `opencode.json`
+are never shared and still need the backup.
 
-Heinzel is for anyone willing to stay in the
-driver's seat and review every command — from
-newcomers learning Linux to veterans running fleets.
-In fact, Heinzel can be an especially good teacher:
-each proposed command comes with an explanation of
-*what* it does and *why*, so you learn the real
-sysadmin reasoning instead of copy-pasting Stack
-Overflow answers.
+## Rule customization
 
-We built Heinzel to be a help for everybody. By
-design, it follows the safety checklist every single
-time: it always backs up before editing, always
-dry-runs when it can, always checks the OS before
-assuming commands. A disciplined AI makes far fewer
-mistakes than a tired human at 2 AM during an
-outage. But we can't guarantee it won't ever make
-one — LLMs can hallucinate, misread intent, or
-produce a command with unintended side effects.
+Change behaviour without editing the upstream rule files.
+Three layers, later wins:
 
-The question isn't whether Heinzel is risk-free —
-it isn't. The question is whether a disciplined AI
-that follows every safety rule every time, with a
-human reviewing every command, produces fewer
-disasters than a human working alone under
-real-world conditions.
-
-Stay in the driver's seat. Review every command. Do
-not blindly approve.
-
-## Rule Customization
-
-Heinzel supports layered rule overrides so you can
-customize behavior without editing the upstream rule
-files (which would cause merge conflicts on
-`git pull`).
-
-Three layers, read in order (later wins):
-
-1. **Base** — `rules/<name>.md` (upstream,
-   git-tracked)
-2. **Global custom** —
-   `memory/custom-rules/<name>.md`
-   (gitignored by default, opt-in team sharing)
-3. **Per-server** —
-   `memory/servers/<hostname>/rules.md`
-   (gitignored with server memory)
-
-Custom files use heading prefixes to control how
-they interact with the base rules:
+1. `rules/<name>.md` (upstream)
+2. `memory/custom-rules/<name>.md` (yours, all servers)
+3. `memory/servers/<hostname>/rules.md` (one server)
 
 ```markdown
 ## Add: Docker cleanup
@@ -948,154 +290,119 @@ Replaces the matching base section entirely.
 Skip this base section.
 ```
 
-Sections without a prefix are treated as additions.
-A special `memory/custom-rules/all.md` applies to
-every server. Per-server overrides win over global custom
-when both touch the same section.
+A section without a prefix is an addition.
+`memory/custom-rules/all.md` applies to every server. Skills
+follow the same chain, e.g.
+`memory/custom-rules/heinzel-housekeeping.md`.
 
-## Project Structure
+## Updates
 
-```
-VERSION                — Current version number (semver)
-CHANGELOG.md           — Release history
-CLAUDE.md              — Main instructions (read by Claude Code
-                         and OpenCode)
-bin/
-  heinzel-update       — Update, pin, or check heinzel version
-  heinzel-backup       — Back up / restore your memory/ tree
-  heinzel-migrate      — One-shot 1.x→2.0 user-state migration
-                         (called automatically on update)
-.claude/               — Shared by Claude Code and OpenCode
-  settings.json        — Project-level Claude Code settings
-  hooks/
-    check-updates.sh   — Auto-check for repo updates and
-                         auto-migrate on session start
-    guard-taboos.sh    — PreToolUse hook that blocks taboo
-                         commands in every permission mode
-    guard-taboos-test.sh — Dev-only fixture matrix for the
-                         guard (run manually)
-  skills/              — On-demand skills (progressive disclosure)
-    heinzel-housekeeping/  — Routine server inspection workflow
-                         (SKILL.md + references/)
-    heinzel-security/  — Security audit workflow
-                         (SKILL.md + references/)
-    heinzel-email/     — Send ad-hoc text or files by email
-                         from a server (SKILL.md)
-    heinzel-fleet-audit/   — Cross-server policy drift audit
-                         (SKILL.md + references/)
-rules/                 — Upstream rule files (git-tracked)
-  debian.md            — Debian & Ubuntu rules
-  rhel.md              — RHEL, CentOS, Fedora, Rocky,
-                         Alma rules
-  suse.md              — openSUSE & SLES rules
-  macos.md             — macOS rules
-  freebsd.md           — FreeBSD rules
-  unraid.md            — Unraid OS rules (observed
-                         behaviour, 7.3)
-  efi-boot.md          — EFI boot management & dual-boot
-  cloud-image.md       — Cloud image deployment
-  dual-boot.md         — Dual-boot setup workflow
-  os-replacement.md    — OS wipe-and-replace workflow
-  partition-staging.md — Swap reclaim & hot-migrate for
-                         repartitioning
-  mise.md              — Language runtime manager (mise)
-  privilege-escalation.md — Sudo, root SSH, unprivileged mode
-  os-detection.md      — OS detection procedure
-  ssh-user.md          — SSH username & language management
-  ssh-connections.md   — Bundled, shared SSH connections;
-                         avoiding failed logins
-  ssh-unreachable.md   — No retry loops; blocked path vs
-                         broken host
-  server-memory.md     — Server memory file format
-  changelog.md         — Session logging procedure
-  activity-check.md    — Recent-activity summary on connect
-  first-connection.md  — Mandatory onboarding checklist
-                         (no "quick question" shortcuts)
-  access-control.md    — Blacklist & read-only server rules
-  anomaly-detection.md — Prompt injection & anomaly detection
-  verify-before-reporting.md — Verify a finding
-                         against the live system before
-                         reporting or escalating it
-  dns-aliases.md       — DNS alias detection & management
-  backups.md           — Config file backup procedure
-  best-practices.md    — Common anti-patterns to review
-                         before risky actions
-  deployment.md        — CI/CD deployment user rules
-  directory-copy.md    — Cross-server directory copy checks
-  port-check.md        — Port conflict detection before
-                         starting services
-  service-class-check.md — One web server / database /
-                         MTA per host unless approved
-  secrets.md           — Secrets hygiene: never print
-                         keys/passwords, metadata only
-  service-reload.md    — Service reload/restart policy
-                         (auto-proceed rules + opt-out)
-  scheduled-housekeeping.md — Recurring housekeeping via
-                         cron/systemd timer + claude -p
-  version-check.md     — Proactive stable version checking
-                         and upgrade nudges
-memory/                — All your user state (gitignored
-                         by default; single-directory backup)
-  MEMORY.md            — Index for server memory
-  user.md.example      — SSH username template (copy to
-                         user.md)
-  user.md              — Your preferences and SSH usernames
-  blacklist.md         — Blocked servers
-  readonly.md          — Read-only servers
-  protected-paths.md   — Per-path readonly / hidden /
-                         confirm lists
-  service-policy.md.example — Service reload/restart
-                         policy template (copy to
-                         service-policy.md)
-  service-policy.md    — Your per-service opt-out /
-                         opt-in for reload/restart
-  housekeeping.md      — User-added custom checks
-  network.md           — Cross-server network facts
-  opencode.json.example — OpenCode config template (copy to
-                         opencode.json)
-  opencode.json        — Your local OpenCode config
-  custom-rules/        — Your rule overrides that layer on
-                         top of rules/*.md
-  servers/<hostname>/
-    memory.md          — Server state snapshot
-    changelog.log      — Local change history
-    todo.md            — Session task list
-    rules.md           — Per-server rule overrides
+The version is in `VERSION`, the changes in `CHANGELOG.md`.
+Claude Code updates Heinzel at session start with a
+`git pull`, unless you are pinned, on another branch, or have
+set `HEINZEL_NO_UPDATE=1`. Elsewhere:
+
+```bash
+bin/heinzel-update              # pull latest
+bin/heinzel-update --check      # check only
+bin/heinzel-update --pin v2.28.0
+bin/heinzel-update --unpin
 ```
 
-## Why the Name Heinzel?
+Coming from 1.x? The update moves `rules/custom/` and
+`opencode.json` into `memory/` by itself. If you are pinned
+to a 1.x tag, run `bin/heinzel-update --unpin` first.
 
-The name comes from the
+## Supported systems
+
+| Family  | Distributions                     | Rule file          |
+| ------- | --------------------------------- | ------------------ |
+| Debian  | Debian, Ubuntu                    | `rules/debian.md`  |
+| RHEL    | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`    |
+| SUSE    | openSUSE, SLES                    | `rules/suse.md`    |
+| macOS   | Apple Silicon and Intel           | `rules/macos.md`   |
+| FreeBSD | all versions                      | `rules/freebsd.md` |
+| Unraid  | observed on 7.3                   | `rules/unraid.md`  |
+
+Other distributions work with general best practices.
+
+### AI tools
+
+Claude Code is the tool Heinzel is developed with. OpenCode
+reads the same `CLAUDE.md` and `.claude/skills/`, as long as
+`OPENCODE_DISABLE_CLAUDE_CODE` is unset. Any other tool that
+reads project files gets the rule layer. The skills
+(housekeeping, security audit, email, fleet audit, macOS
+cleanup) need a tool that supports Skills.
+
+### OpenCode with a local model
+
+Heinzel can run on your own hardware with
+[Ollama](https://ollama.com):
+
+```bash
+ollama pull qwen3.5:9b
+ollama run qwen3.5:9b
+>>> /set parameter num_ctx 16384
+>>> /save qwen3.5:9b-16k
+>>> /bye
+cp memory/opencode.json.example memory/opencode.json
+opencode
+```
+
+Ollama's default context of 4096 tokens is too small for
+tool use, hence the larger variant. Adjust `baseURL` and the
+model name in `memory/opencode.json`, then pick the model
+with `/models`. Larger models (14B and up) make more reliable
+tool calls. See the
+[OpenCode provider docs](https://opencode.ai/docs/providers/)
+for more.
+
+## Logs
+
+Every change is logged on the server:
+
+```bash
+journalctl -t heinzel
+journalctl -t heinzel --since "2026-02-01"
+
+# macOS
+log show \
+  --predicate 'senderImagePath CONTAINS "logger"' \
+  --info --last 7d | grep heinzel
+```
+
+## Project structure
+
+```
+CLAUDE.md        main instructions for the AI tool
+rules/           rule files per platform and topic
+.claude/skills/  housekeeping, security, email, fleet audit,
+                 macOS cleanup
+.claude/hooks/   update check and the taboo guard
+bin/             heinzel-update, heinzel-backup,
+                 heinzel-migrate
+memory/          your state (gitignored)
+assets/trailer/  script that renders the README trailer
+```
+
+## Why the name?
+
+The
 [Heinzelmännchen](https://en.wikipedia.org/wiki/Heinzelm%C3%A4nnchen)
-— the helpful gnomes of Cologne from German folklore.
-Every night, while the people of Cologne slept, the
-Heinzelmännchen crept out and did all the work: baking
-bread, building houses, finishing whatever was left
-undone. An invisible helper that quietly takes care of
-things — a fitting name for a system administration
-tool that handles the tedious work while you review
-and approve.
+are the helpful gnomes of Cologne. At night, while the city
+slept, they did the work that was left undone.
 
-## Professional Support
+## Professional support
 
-Need help setting this up for your infrastructure, or
-want a team to manage your infrastructure with
-AI-assisted tooling?
-
-**[Wintermeyer Consulting](https://wintermeyer-consulting.de)**
-offers consulting and hands-on support for heinzel
-deployments — from initial setup to ongoing system
-management.
-
-Contact the project founder Stefan Wintermeyer and
-his team: **sw@wintermeyer-consulting.de**
+[Wintermeyer Consulting](https://wintermeyer-consulting.de)
+offers consulting and hands-on support for Heinzel, from
+setup to ongoing system management. Contact Stefan
+Wintermeyer: **sw@wintermeyer-consulting.de**
 
 ## Contributing
 
-Bug reports, feature requests, and pull requests are
-very welcome! If you have ideas for better guardrails,
-new distro support, or improvements to the safety
-rules — please open an issue or submit a PR.
+Bug reports, feature requests and pull requests are welcome.
 
 ## License
 
