@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.28.0 — 2026-10-10
+
+- **The macOS cleanup no longer mistakes libraries
+  for apps.** Bundle ids inside a `.framework` or
+  `.bundle` named vendors that were never installed,
+  and a Sparkle preference was an `exact` match for
+  every app embedding Sparkle. The scanner now works
+  from an app's own ids. Contributed by Oliver
+  Andrich (#59).
+- **Uninstalling an app finds its group
+  containers.** A group prefixed with the app's Team
+  ID is an `exact` match when no other installed app
+  of that team remains. Any other group the app
+  declares is listed for a confirmation.
+- **Uninstalling Chrome leaves GoogleUpdater
+  alone.** A library id that another installed app
+  owns is no longer proposed for removal (#60).
+
 ## 2.27.1 — 2026-10-10
 
 - **A port you name counts from the first call.**
