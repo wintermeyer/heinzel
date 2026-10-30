@@ -99,8 +99,9 @@ More that happens without asking:
   and hardware and loads the rule file for that platform.
 - **Memory.** Each server gets a folder under
   `memory/servers/` with its state, a changelog and an open
-  to-do list. An interrupted job shows up as pending on the
-  next connection.
+  to-do list, plus one file per SSH login for what differs
+  between accounts (home, sudo, runtimes). An interrupted
+  job shows up as pending on the next connection.
 - **Long jobs.** A command that can take more than a
   minute runs as a job on the host, output and exit
   status in files, and is read back later, after a

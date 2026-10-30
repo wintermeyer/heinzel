@@ -65,7 +65,8 @@ its OS.
 Subsequent connections run the same pipeline as the
 first (see `rules/first-connection.md`), including
 the blacklist and read-only checks. Specific to
-known servers: read the memory file, changelog, and
+known servers: read the memory file, the login's
+`user-<login>.md`, changelog, and
 `todo.md` (if present) before any work, read the
 matching rule file, and verify the OS version is
 still current — update memory if it changed.

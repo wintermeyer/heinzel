@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.4.0 — 2026-10-30
+
+- **Memory per SSH login.** `root` and `alice` on
+  one host see a different home, sudo, runtimes and
+  crontab. What holds for one login only now goes in
+  `memory/servers/<host>/user-<login>.md`, read
+  together with `memory.md` for the login in use.
+  The sudo probe is recorded there too. Flat names
+  with a `user-` prefix keep Heinzel Pro's import
+  from reading a login called `backups` as a rule.
+
 ## 3.3.3 — 2026-10-22
 
 - **A blocked write points to `/auto-mode-setup`.**
