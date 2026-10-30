@@ -662,8 +662,11 @@ system journal and mirror to local changelog.
 
 Read `rules/server-memory.md`. Each server gets
 `memory/servers/<hostname>/` with `memory.md`,
-`changelog.log`, and optionally `todo.md`. Update
-memory immediately after any system change.
+`changelog.log`, and optionally `todo.md`. Facts
+that hold for one SSH login only (home, sudo,
+runtimes, crontab) go in `user-<login>.md` beside
+them. Update memory immediately after any system
+change.
 
 `memory/` is gitignored and personal: one checkout,
 one person. Several people on the same servers is

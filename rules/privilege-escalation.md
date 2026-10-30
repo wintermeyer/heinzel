@@ -19,7 +19,9 @@ command -v sudo && sudo -n true
   `- Sudo: unavailable (not installed)`.
   Proceed to root SSH fallback.
 - **Probe exits 0** -> sudo works. Record
-  `- Sudo: passwordless` in server memory.
+  `- Sudo: passwordless` in the login's
+  `user-<login>.md` (`rules/server-memory.md`):
+  sudo rights belong to the account, not the host.
 - **Probe non-0** -> read the error message to
   tell the cases apart and record the accurate
   reason: `- Sudo: requires password (unusable)`
@@ -28,8 +30,9 @@ command -v sudo && sudo -n true
   "not in the sudoers file" error.
   Proceed to root SSH fallback.
 
-On subsequent connections, check server memory for
-the sudo flag.
+On subsequent connections, check the login's user
+file for the sudo flag; an older entry in
+`memory.md` counts until it moves there.
 
 A check that only reads needs no root. Run it
 without `sudo`, and over the non-root login when the
