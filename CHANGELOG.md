@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.4.1 — 2026-11-01
+
+- **A check exits 0 when it ran.** Whether a file
+  exists goes in the output (`test -e … && echo
+  yes || echo no`), not in the exit code of `ls`.
+  An expected miss no longer marks a correct check
+  as failed, and a `;` chain no longer hides a real
+  failure behind its last command.
+
 ## 3.4.0 — 2026-10-30
 
 - **Memory per SSH login.** `root` and `alice` on

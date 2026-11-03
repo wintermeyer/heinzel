@@ -160,7 +160,28 @@ again" is a guess, and for `useradd`, `cp` or a
 migration it is a second change on top of the
 first.
 
-## When the finding survives all seven
+### 8. A check exits 0 when it ran, whatever it found
+
+Whether a file exists is the answer, so it belongs
+in the output, not in the exit code. `ls`, `cat` or
+`stat` on a path that may be missing exits non-zero
+when it is missing: the correct answer "no flag"
+reads as a failed command, and a harness that keeps
+exit codes (Heinzel Pro does) marks the step failed
+and alerts on it. Test and print instead:
+
+    test -e /var/run/reboot-required \
+      && echo "reboot-required=yes" \
+      || echo "reboot-required=no"
+
+`grep` exits 1 on no match; catch it as in 5. A
+`;` chain reports the status of its last command
+only: an expected miss at the end turns the whole
+check red, and a real failure earlier goes
+unnoticed. Keep a part that can fail in its own
+call, or give every part its own verdict.
+
+## When the finding survives all eight
 
 Then it is real. Report it plainly, with the
 evidence that makes it real, and act or escalate.
