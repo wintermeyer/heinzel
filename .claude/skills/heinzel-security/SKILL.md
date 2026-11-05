@@ -9,7 +9,7 @@ description: Run a heinzel security audit on a server — SSH
   "security review", "hardening check", or to "audit security on
   <host>". Do NOT auto-invoke on generic phrases like "check
   server <host>". Covers Linux (Debian, Ubuntu, RHEL, CentOS,
-  Fedora, SUSE) and macOS (SIP, FileVault, Gatekeeper).
+  Fedora, SUSE, Arch, CachyOS) and macOS (SIP, FileVault, Gatekeeper).
 ---
 
 # heinzel-security
@@ -57,7 +57,8 @@ applies before any of this runs.
 
 ## Scope and limits
 
-- Linux (Debian, Ubuntu, RHEL, CentOS, Fedora, SUSE) and
+- Linux (Debian, Ubuntu, RHEL, CentOS, Fedora, SUSE, Arch,
+  CachyOS) and
   macOS are fully covered by the references below.
 - FreeBSD baselines are not yet covered. On a FreeBSD host,
   do not silently skip: run the closest equivalent checks

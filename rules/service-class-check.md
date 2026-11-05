@@ -99,6 +99,23 @@ dpkg-query -W \
 Then, for the firewall class:
 `systemctl is-enabled nftables 2>/dev/null`.
 
+**Arch / CachyOS**
+
+```bash
+pacman -Qq apache nginx caddy lighttpd \
+       postgresql mariadb \
+       postfix exim opensmtpd msmtp-mta nullmailer \
+       chrony ntp openntpd \
+       unbound bind dnsmasq powerdns-recursor \
+       knot-resolver \
+       ufw firewalld \
+       docker podman containerd \
+       2>/dev/null
+```
+
+Then, for the firewall class:
+`systemctl is-enabled nftables 2>/dev/null`.
+
 **RHEL / Fedora / SUSE**
 
 ```bash
@@ -202,6 +219,12 @@ dnf install --assumeno <pkg> 2>&1 \
 
 ```bash
 zypper --non-interactive install --dry-run <pkg>
+```
+
+**Arch / CachyOS**
+
+```bash
+pacman -S --print --print-format '%n' <pkg>
 ```
 
 **FreeBSD**

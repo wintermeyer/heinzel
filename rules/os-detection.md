@@ -19,15 +19,17 @@ its OS.
    . /etc/os-release && \
      echo "${ID}|${VERSION_ID}|${PRETTY_NAME}"
    ```
-   Distro families: `debian`, `rhel`, `suse`.
+   Distro families: `debian`, `rhel`, `suse`,
+   `arch`.
    **Unraid** (`ID=unraid-os`, also
    `/etc/unraid-version`) is not a family: read
    `rules/unraid.md` and skip the family mapping.
    Map the distro to a family via the os-release
    `ID` and `ID_LIKE` fields (e.g. `ubuntu` →
    `debian`; `centos`, `rocky`, `alma`, `fedora` →
-   `rhel`; `opensuse*` variants → `suse`). If no
-   family file matches (e.g. Alpine, Arch), tell
+   `rhel`; `opensuse*` variants → `suse`; `arch`,
+   `cachyos`, `endeavouros` → `arch`). If no
+   family file matches (e.g. Alpine), tell
    the user, proceed cautiously with generic
    commands, and apply extra verify-before-running
    care.

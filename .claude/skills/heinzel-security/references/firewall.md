@@ -29,6 +29,11 @@ ufw status verbose
   default incoming policy is not deny"
 - Active and default deny → OK
 
+On Arch and CachyOS, `ufw.service` must also be enabled
+(`systemctl is-enabled ufw`); active but not enabled →
+**WARN** "ufw rules lost at next reboot". Arch installs no
+firewall, CachyOS enables ufw (`rules/arch.md`).
+
 ### RHEL/Fedora/SUSE (firewalld)
 
 ```bash
