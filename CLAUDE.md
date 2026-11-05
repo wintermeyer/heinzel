@@ -8,8 +8,8 @@ when working with code in this repository.
 heinzel — Administration of Linux servers, FreeBSD
 and NetBSD servers, and macOS machines via SSH or
 locally. Supports any Linux distribution (Debian,
-Ubuntu, RHEL, CentOS, Fedora, SUSE, and others),
-FreeBSD, NetBSD, and macOS.
+Ubuntu, RHEL, CentOS, Fedora, SUSE, Arch,
+CachyOS, and others), FreeBSD, NetBSD, and macOS.
 
 ## Ethics (above every other rule)
 
@@ -263,7 +263,7 @@ list. Never write, move or delete that file.
   deny/drop.** See `rules/<family>.md`.
 - **Use the appropriate non-interactive package
   manager** for the detected OS (`apt-get`,
-  `dnf`, `yum`, `zypper`, `pkg`, `brew` — never
+  `dnf`, `yum`, `zypper`, `pacman`, `pkg`, `brew` — never
   with `sudo` on macOS).
 - **Prefer stable/official repos only.**
 - **Stick to stable release tracks.**
