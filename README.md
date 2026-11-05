@@ -380,6 +380,7 @@ to a 1.x tag, run `bin/heinzel-update --unpin` first.
 | Debian  | Debian, Ubuntu                    | `rules/debian.md`  |
 | RHEL    | RHEL, CentOS, Fedora, Rocky, Alma | `rules/rhel.md`    |
 | SUSE    | openSUSE, SLES                    | `rules/suse.md`    |
+| Arch    | Arch Linux, CachyOS, EndeavourOS  | `rules/arch.md`    |
 | macOS   | Apple Silicon and Intel           | `rules/macos.md`   |
 | FreeBSD | all versions                      | `rules/freebsd.md` |
 | NetBSD  | 10.x and 11.x                     | `rules/netbsd.md`  |

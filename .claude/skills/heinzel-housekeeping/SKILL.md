@@ -9,7 +9,7 @@ description: Run a heinzel housekeeping (health) inspection on a
   <host>", or "do routine inspection". Do NOT auto-invoke for
   ambiguous requests like "check server <host>" — that's
   reserved for quick queries. Covers Linux (Debian, Ubuntu, RHEL,
-  CentOS, Fedora, SUSE) and macOS.
+  CentOS, Fedora, SUSE, Arch, CachyOS) and macOS.
 ---
 
 # heinzel-housekeeping
@@ -78,7 +78,8 @@ Read on demand, only when the relevant section applies:
 
 ## Scope and limits
 
-- Linux (Debian, Ubuntu, RHEL, CentOS, Fedora, SUSE) and
+- Linux (Debian, Ubuntu, RHEL, CentOS, Fedora, SUSE, Arch,
+  CachyOS) and
   macOS are fully covered by the baseline references above.
 - FreeBSD baselines are not yet covered. On a FreeBSD host,
   do not silently skip: run the closest equivalent checks

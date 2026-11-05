@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.5.0 — 2026-11-05
+
+- **Arch Linux and CachyOS.** A new family file,
+  `rules/arch.md`, covers every host with
+  `ID_LIKE=arch`. It forbids partial upgrades,
+  counts known-vulnerable packages with
+  `arch-audit`, finds `.pacnew` files and spots the
+  pending reboot after a kernel upgrade, whose
+  modules pacman removes at once. Housekeeping
+  reports the age of the last full upgrade instead
+  of asking for unattended updates, which Arch does
+  not support.
+
 ## 3.4.1 — 2026-11-01
 
 - **A check exits 0 when it ran.** Whether a file

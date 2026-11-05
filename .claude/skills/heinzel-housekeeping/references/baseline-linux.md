@@ -106,6 +106,21 @@ zypper --quiet list-updates 2>/dev/null \
 zypper list-patches --category security 2>/dev/null
 ```
 
+**Arch/CachyOS** (`rules/arch.md`; never `pacman -Sy`):
+
+```bash
+# Total pending updates. checkupdates syncs a private
+# copy of the database; exit 2 means none pending.
+checkupdates 2>/dev/null | wc -l
+
+# Known-vulnerable packages with a fix in the repos.
+arch-audit -u 2>/dev/null | wc -l
+```
+
+`checkupdates` needs `pacman-contrib`, `arch-audit` its own
+package. If one is missing, say so in the report instead of
+reporting zero.
+
 - **WARN** if any security updates are pending
 - Report both counts (total pending and security-only)
 
@@ -197,6 +212,21 @@ systemctl is-active dnf-automatic.timer 2>/dev/null \
 Check if `zypper-patch` or equivalent auto-update timer is
 configured.
 
+**Arch/CachyOS:** no auto-update is expected
+(`rules/arch.md`). Report the age of the last full upgrade
+instead:
+
+```bash
+grep 'starting full system upgrade' /var/log/pacman.log \
+  | tail -1
+systemctl is-enabled pacman-offline-prepare.timer \
+  pacman-offline-reboot.timer 2>/dev/null
+```
+
+- **WARN** if the last full upgrade is older than 30 days
+- Report the CachyOS offline-update timers as INFO, either
+  state
+
 - **WARN** if auto-update mechanism is not active
 
 ## Firewall Status
@@ -220,6 +250,16 @@ firewall-cmd --state
 ```bash
 firewall-cmd --state
 ```
+
+**Arch/CachyOS:** ufw (CachyOS default), firewalld or native
+nftables, whichever is active; Arch installs none.
+
+```bash
+ufw status 2>/dev/null; systemctl is-enabled ufw 2>/dev/null
+```
+
+- **WARN** if ufw reports active but `ufw.service` is not
+  enabled: the rules are gone after the next reboot
 
 **Native nftables** (Debian installs it, with its unit
 off; check it when neither ufw nor firewalld is active;
@@ -352,8 +392,20 @@ echo "Running: $running"
 echo "Installed: $installed"
 ```
 
+**Arch/CachyOS:** the kernel package deletes the running
+kernel's modules on upgrade.
+
+```bash
+uname -r
+[ -d "/usr/lib/modules/$(uname -r)" ] \
+  || echo "running kernel's modules removed"
+```
+
 - **INFO** if running kernel differs from installed (reboot
   recommended)
+- **WARN** on Arch/CachyOS if the running kernel's module
+  directory is gone: hardware not yet in use fails until the
+  reboot
 
 ## Critical Services: Running Binary vs Installed Package
 
