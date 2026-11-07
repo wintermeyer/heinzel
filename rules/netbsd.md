@@ -76,6 +76,7 @@ without it.
   }
   group default {
       block all
+      pass stateful in proto tcp to any port ssh   # tunnels
       pass on lo0 all
       pass in family inet4 proto udp from any port bootps to any port bootpc
       pass family inet6 proto ipv6-icmp all
@@ -89,7 +90,10 @@ without it.
   `wg*`) included, lands in `group default`. A pass
   for a tunnel peer in `group default` is therefore
   no duplicate of the SSH pass in an interface
-  group (npf.conf(5)).
+  group (npf.conf(5)). Without the SSH pass in
+  `group default`, a login through a tunnel
+  (Heinzel's `wg*` or `tun*`) is cut off the moment
+  the rules load.
 - `npfctl show` prints the loaded ruleset, in its
   own syntax: compare it with `/etc/npf.conf` to
   see whether the file on disk is what runs.

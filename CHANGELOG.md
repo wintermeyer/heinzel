@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.5.2 — 2026-11-07
+
+- **SSH through the tunnel stays open on BSD.** The
+  minimal `pf.conf` passed SSH only on the external
+  interface, and the npf example only in its
+  interface group, so a host Heinzel reaches
+  through WireGuard locked Heinzel out the moment
+  the rules loaded. The pf pass names no interface
+  now, and the npf example passes SSH in
+  `group default` too.
+
 ## 3.5.1 — 2026-11-07
 
 - **Journal lines are ASCII.** BSD syslogd escapes
