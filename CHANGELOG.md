@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.5.1 — 2026-11-07
+
+- **Journal lines are ASCII.** BSD syslogd escapes
+  every non-ASCII byte, so `für` landed as
+  `f<U+fc>r`. The entry format is now
+  `<what>; because <why>`, with umlauts
+  transliterated.
+- **npf groups on NetBSD.** A pass rule for a
+  tunnel peer in `group default` is no duplicate of
+  the SSH pass in an interface group: tunnel
+  traffic never reaches that group.
+
 ## 3.5.0 — 2026-11-05
 
 - **Arch Linux and CachyOS.** A new family file,

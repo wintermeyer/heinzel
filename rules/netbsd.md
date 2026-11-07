@@ -84,6 +84,16 @@ without it.
   ```
   Without the DHCP line the host loses its lease;
   without ICMPv6 it loses IPv6 neighbours.
+- `group "<name>" on <ifname>` takes only traffic
+  on that interface; everything else, tunnels (`tun*`,
+  `wg*`) included, lands in `group default`. A pass
+  for a tunnel peer in `group default` is therefore
+  no duplicate of the SSH pass in an interface
+  group (npf.conf(5)).
+- `npfctl show` prints the loaded ruleset, in its
+  own syntax: compare it with `/etc/npf.conf` to
+  see whether the file on disk is what runs.
+  `npfctl validate` checks a file without loading.
 - `npfctl start` may warn that it cannot load the
   `bpfjit` module. The filter still works.
 - NetBSD 11 renamed blacklistd to **blocklistd**
