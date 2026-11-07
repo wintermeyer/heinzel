@@ -41,13 +41,13 @@ One sentence, written for a sysadmin who has never
 heard of heinzel and was not part of the session:
 
     [<operator> as <unix-user>] <what changed, in
-    plain language> — because <why>
+    plain language>; because <why>
 
 ```
 logger -t heinzel "[alice as root] app.example.com \
 now deploys via two alternating app slots \
 (blue/green), so new releases go live without \
-dropping requests — because deploys used to restart \
+dropping requests; because deploys used to restart \
 the app and interrupt visitors"
 ```
 
@@ -61,7 +61,7 @@ the app and interrupt visitors"
   effect an outsider can understand. No abbreviation
   soup, no command lines, no flag dumps. A version
   or path may appear when it *is* the news
-  ("upgraded nginx 1.26.3-3+deb13u2 → u5").
+  ("upgraded nginx 1.26.3-3+deb13u2 to u5").
 - **One sentence, ~250 characters max.** If you are
   tempted to write more, the overflow belongs in the
   local changelog, not in the journal.
@@ -69,10 +69,16 @@ the app and interrupt visitors"
   commands that together set up one backup job log
   one entry. Unrelated changes log separately.
 - **Include the why** in the single fixed shape
-  `— because <reason>` whenever the reason is known
+  `; because <reason>` whenever the reason is known
   (from the user's request or the surrounding
   context). If the reason is not known, omit it —
   never invent one.
+- **ASCII only.** BSD syslogd stores every
+  non-ASCII byte as an escape (`für` lands as
+  `f<U+fc>r`). Write `ae oe ue ss` for `ä ö ü ß`,
+  `-` for a dash, `->` for an arrow, straight
+  quotes only. Same on every host, so one habit
+  fits all.
 - **Flags for other admins get their own entry.** A
   constraint a colleague must know ("database
   migrations must now stay backward-compatible")
@@ -81,8 +87,8 @@ the app and interrupt visitors"
 
 Other rule files and skills show example message
 *bodies* (e.g. `Reloaded <svc> (auto, policy)`); the
-envelope above — identity prefix and `— because` —
-always applies on top of them.
+envelope above — identity prefix and `; because`,
+ASCII only, always applies on top of them.
 
 ### What stays out of the journal
 
@@ -106,8 +112,8 @@ full `[YYYY-MM-DD HH:MM]` timestamp, then indent the
 technical detail the journal omitted:
 
     [2026-06-11 09:50] [alice as root]
-    app.example.com now deploys blue/green …
-    — because deploys interrupted visitors
+    app.example.com now deploys blue/green ...;
+    because deploys interrupted visitors
       Detail: templated app@.service (blue :4003,
       green :4005); nginx upstream moved to
       /etc/nginx/snippets/app-upstream.conf; sudoers
