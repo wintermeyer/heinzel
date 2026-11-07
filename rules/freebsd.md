@@ -43,12 +43,18 @@ Rules for FreeBSD (all versions).
   `CLAUDE.md` → Firewall & network).
 - Minimal safe `/etc/pf.conf`:
   ```
-  ext_if = "vtnet0"  # set to the real interface, see ifconfig
   set skip on lo0
   block in all
   pass out all keep state
-  pass in on $ext_if proto tcp to port 22
+  pass in proto tcp to port 22
   ```
+- The SSH pass names no interface on purpose. A
+  login that arrives through a tunnel (Heinzel's
+  WireGuard interface `heinzel`, any `wg*` or
+  `tun*`) needs it there too; `pass in on $ext_if`
+  locks that login out the moment the rules load.
+  `$SSH_CONNECTION` shows the address this session
+  came in on.
 - Do **not** rely on the `egress` interface group in
   rules unless `ifconfig -g egress` shows it is
   populated on this host. If the group is missing or
