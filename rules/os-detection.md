@@ -11,8 +11,21 @@ its OS.
    (see `rules/dns-aliases.md`). If the hostname is
    an alias for a known server, skip OS detection.
 
-1. Determine Linux, macOS, FreeBSD or NetBSD:
-   `uname -s`
+1. Determine the OS: `uname -s`
+
+   | `uname -s` | Read                              |
+   |------------|-----------------------------------|
+   | `Linux`    | `rules/linux.md` and step 2       |
+   | `Darwin`   | `rules/macos.md`                  |
+   | `FreeBSD`  | `rules/bsd.md`, `rules/freebsd.md` |
+   | `NetBSD`   | `rules/bsd.md`, `rules/netbsd.md` |
+   | `OpenBSD`  | `rules/bsd.md`, `rules/openbsd.md` |
+
+   On NetBSD read the rule file before the next
+   command: over SSH `PATH` lacks `/sbin` and
+   `/usr/sbin` there. Anything else: tell the user,
+   proceed cautiously with generic commands, and
+   apply extra verify-before-running care.
 
 2. **If Linux** — detect distro and version:
    ```
@@ -33,34 +46,22 @@ its OS.
    the user, proceed cautiously with generic
    commands, and apply extra verify-before-running
    care.
-   Read `rules/<family>.md`. Gather hardware info
-   (`lscpu`, `free -h`, `df -h`).
+   Read `rules/<family>.md`.
 
-3. **If macOS** — detect version and arch:
-   ```
-   sw_vers -productVersion && uname -m
-   ```
-   Read `rules/macos.md`. Gather hardware info
-   (`sysctl` for CPU/RAM, `df -h`).
+3. Detect version and architecture, and gather
+   hardware info, with the commands under **Version
+   Detection** in the files just read.
 
-4. **If FreeBSD** — detect version and arch:
-   ```
-   freebsd-version && uname -m
-   ```
-   Read `rules/freebsd.md`. Gather hardware info
-   (`sysctl` for CPU/RAM, `df -h`,
-   `zpool status` if ZFS).
+4. Create a server memory file.
 
-5. **If NetBSD** — detect version and arch:
-   ```
-   uname -r && uname -p
-   ```
-   Read `rules/netbsd.md` first: commands over SSH
-   lack `/sbin` and `/usr/sbin` in `PATH`. Gather
-   hardware info (`sysctl hw.model hw.ncpu
-   hw.physmem64`, `df -h`).
-
-6. Create a server memory file.
+Every OS file has the same sections (Version
+Detection, Package Manager, Firewall, Automatic
+Security Updates, Service Manager, Service Classes,
+Listening Ports, Journal, Rollback Timer, Common
+Pitfalls), in the file itself or in `rules/linux.md`
+/ `rules/bsd.md`. The other rule files point to them
+by name. `bin/heinzel-lint-rules` checks that none
+is missing.
 
 ## On subsequent connections
 

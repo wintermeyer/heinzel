@@ -30,6 +30,14 @@ command -v sudo && sudo -n true
   "not in the sudoers file" error.
   Proceed to root SSH fallback.
 
+**OpenBSD** has `doas` instead, and no `sudo` unless
+the package is installed. Probe `doas -n true` and
+use `doas <command>` where it exits 0; record
+`- Doas: passwordless` or the reason it fails
+(`doas: doas is not enabled, /etc/doas.conf: No
+such file or directory` after a fresh install). The
+rest of this file applies unchanged.
+
 On subsequent connections, check the login's user
 file for the sudo flag; an older entry in
 `memory.md` counts until it moves there.

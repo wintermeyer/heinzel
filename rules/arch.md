@@ -4,7 +4,9 @@ Rules for Arch Linux and distributions with
 `ID_LIKE=arch` in `/etc/os-release` (CachyOS,
 EndeavourOS and others). Derivatives add their own
 repos to `/etc/pacman.conf`; read it on first
-contact.
+contact. Read `rules/linux.md` with it: systemd, the
+journal, listening ports and the rollback timer are
+there.
 
 ## Rolling Release
 
@@ -115,10 +117,8 @@ waits for a terminal.
   `nftables.service` with it locks you out. Read the
   file and the sshd ports (`CLAUDE.md` → Firewall &
   network) before enabling it.
-- Over SSH, arm a rollback timer before any firewall
-  or network change (`rules/rollback-timer.md`).
 
-## Automatic Updates
+## Automatic Security Updates
 
 Arch ships no unattended upgrade and does not expect
 one: an upgrade can need a manual step from the news.
@@ -159,10 +159,34 @@ use the binary-vs-process check from
 
 ## Service Manager
 
-- `systemctl` (systemd). SSH daemon: `sshd.service`.
-- Logs: `journalctl -u <service>`
-  (`rules/log-queries.md`).
-- Reload vs restart: `rules/service-reload.md`.
+- systemd, as in `rules/linux.md`. SSH daemon:
+  `sshd.service`.
+
+## Service Classes
+
+Installed members (`rules/service-class-check.md`,
+phase 1):
+
+```bash
+pacman -Qq apache nginx caddy lighttpd \
+       postgresql mariadb \
+       postfix exim opensmtpd msmtp-mta nullmailer \
+       chrony ntp openntpd \
+       unbound bind dnsmasq powerdns-recursor \
+       knot-resolver \
+       ufw firewalld \
+       docker podman containerd \
+       2>/dev/null
+```
+
+Then, for the firewall class:
+`systemctl is-enabled nftables 2>/dev/null`.
+
+Install dry run (phase 2):
+
+```bash
+pacman -S --print --print-format '%n' <pkg>
+```
 
 ## Directory Conventions
 

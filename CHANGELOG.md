@@ -1,5 +1,42 @@
 # Changelog
 
+## 3.6.0 — 2026-11-11
+
+- **OpenBSD.** A new rule file, `rules/openbsd.md`,
+  written against an OpenBSD 8.0 host. It covers
+  `pkg_add`, `syspatch`, `rcctl`, `doas` and pf,
+  and three traps: the stock `pf.conf` passes every
+  inbound connection although pf is enabled,
+  `sysupgrade` reboots on its own, and `pkill` has
+  no `-F`, so the rollback timer is disarmed with
+  `kill` there.
+- **Every OS file has the same sections.** Listening
+  ports, journal read-back, the rollback timer
+  commands and the service class probes moved out
+  of `port-check.md`, `activity-check.md`,
+  `rollback-timer.md` and `service-class-check.md`
+  into the OS files; those four now point to the
+  section by name. A new OS is one file instead of
+  a branch in ten. `bin/heinzel-lint-rules` fails
+  when a section is missing.
+- **`rules/linux.md` and `rules/bsd.md`** hold what
+  the Linux families and the three BSDs share:
+  systemd, the journal and `ss` on one side, base
+  against packages and the firewall order on the
+  other.
+- **NetBSD has a service class probe.** It had none,
+  so the check found nothing there.
+- **The guard knows the BSD disk and boot tools.**
+  `disklabel` and `bsdlabel` in a write form,
+  `installboot`, every write to `/etc/doas.conf`,
+  `rmuser`, `user del` and a redirect onto
+  `/dev/rsd0c` or `/dev/wd0c` are denied. All of
+  them passed before.
+- **`fdisk -l` followed by a number is no
+  listing.** On OpenBSD `-l` takes a block count,
+  so `fdisk -iy -l 20000 sd0` rewrote the partition
+  table past the guard's read-only exemption.
+
 ## 3.5.2 — 2026-11-07
 
 - **SSH through the tunnel stays open on BSD.** The

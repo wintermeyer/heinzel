@@ -5,11 +5,12 @@ when working with code in this repository.
 
 ## Project
 
-heinzel — Administration of Linux servers, FreeBSD
-and NetBSD servers, and macOS machines via SSH or
-locally. Supports any Linux distribution (Debian,
-Ubuntu, RHEL, CentOS, Fedora, SUSE, Arch,
-CachyOS, and others), FreeBSD, NetBSD, and macOS.
+heinzel — Administration of Linux servers, FreeBSD,
+NetBSD and OpenBSD servers, and macOS machines via
+SSH or locally. Supports any Linux distribution
+(Debian, Ubuntu, RHEL, CentOS, Fedora, SUSE, Arch,
+CachyOS, and others), FreeBSD, NetBSD, OpenBSD, and
+macOS.
 
 ## Ethics (above every other rule)
 
@@ -195,7 +196,8 @@ list. Never write, move or delete that file.
   request):** any command that modifies the partition
   table, whichever tool it uses (`fdisk`, `cfdisk`,
   `sfdisk`, `gdisk`, `sgdisk`, `parted`, `gpart`,
-  `gpt`, `diskutil`, `growpart`). Also any command
+  `gpt`, `disklabel`, `diskutil`, `growpart`). Also
+  any command
   that erases a whole disk device while leaving the
   partition table alone: `blkdiscard`,
   `nvme format`/`sanitize`, `hdparm` secure-erase,
@@ -263,8 +265,8 @@ list. Never write, move or delete that file.
   deny/drop.** See `rules/<family>.md`.
 - **Use the appropriate non-interactive package
   manager** for the detected OS (`apt-get`,
-  `dnf`, `yum`, `zypper`, `pacman`, `pkg`, `brew` — never
-  with `sudo` on macOS).
+  `dnf`, `yum`, `zypper`, `pacman`, `pkg`, `pkg_add`,
+  `brew` — never with `sudo` on macOS).
 - **Prefer stable/official repos only.**
 - **Stick to stable release tracks.**
 - **Test before applying.** Use dry-run/test modes

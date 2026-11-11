@@ -1,0 +1,88 @@
+#!/bin/sh
+# heinzel-lint-rules — dev-only check that every OS rule file
+# carries the sections the other rule files point to by name.
+# Run before committing a change under rules/:
+#   sh bin/heinzel-lint-rules [repo-root]
+#
+# port-check.md, activity-check.md, rollback-timer.md and
+# service-class-check.md no longer hold one branch per OS. They
+# say "the Listening Ports section of the host's OS file". An OS
+# file without that section leaves heinzel with no command at
+# all on such a host, and nothing else would notice.
+#
+# A section counts when the OS file has it or the shared file it
+# builds on has it (rules/linux.md, rules/bsd.md).
+
+ROOT=${1:-$(cd "$(dirname "$0")/.." && pwd)}
+RULES="$ROOT/rules"
+FAIL=0
+
+# <os file>:<shared file or ->
+OS_FILES="debian:linux rhel:linux suse:linux arch:linux
+freebsd:bsd netbsd:bsd openbsd:bsd macos:-"
+
+has_section() {
+  # $1 file, $2 heading text
+  [ -f "$1" ] && grep -qx "## $2" "$1"
+}
+
+check_section() {
+  # $1 os, $2 parent, $3 heading
+  has_section "$RULES/$1.md" "$3" && return 0
+  [ "$2" != "-" ] && has_section "$RULES/$2.md" "$3" && return 0
+  FAIL=$((FAIL + 1))
+  if [ "$2" = "-" ]; then
+    echo "FAIL: rules/$1.md has no section '## $3'"
+  else
+    echo "FAIL: neither rules/$1.md nor rules/$2.md has a" \
+      "section '## $3'"
+  fi
+}
+
+for ENTRY in $OS_FILES; do
+  OS=${ENTRY%%:*}
+  PARENT=${ENTRY##*:}
+  if [ ! -f "$RULES/$OS.md" ]; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL: rules/$OS.md is missing"
+    continue
+  fi
+  if [ "$PARENT" != "-" ] && [ ! -f "$RULES/$PARENT.md" ]; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL: rules/$PARENT.md is missing"
+  fi
+  check_section "$OS" "$PARENT" "Version Detection"
+  check_section "$OS" "$PARENT" "Package Manager"
+  check_section "$OS" "$PARENT" "Firewall"
+  check_section "$OS" "$PARENT" "Automatic Security Updates"
+  check_section "$OS" "$PARENT" "Service Manager"
+  check_section "$OS" "$PARENT" "Service Classes"
+  check_section "$OS" "$PARENT" "Listening Ports"
+  check_section "$OS" "$PARENT" "Journal"
+  check_section "$OS" "$PARENT" "Rollback Timer"
+  check_section "$OS" "$PARENT" "Common Pitfalls"
+
+  # The OS file must be reachable: OS detection routes to it
+  # (Linux families by their name, the rest by path), and the
+  # README lists it.
+  if [ "$PARENT" = "linux" ]; then
+    PATTERN="\`$OS\`"
+  else
+    PATTERN="rules/$OS\\.md"
+  fi
+  if ! grep -q "$PATTERN" "$RULES/os-detection.md" 2>/dev/null; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL: rules/os-detection.md does not route to $OS"
+  fi
+  if ! grep -q "rules/$OS\\.md" "$ROOT/README.md" 2>/dev/null; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL: README.md does not list rules/$OS.md"
+  fi
+done
+
+if [ "$FAIL" -eq 0 ]; then
+  echo "heinzel-lint-rules: all OS rule files complete"
+else
+  echo "heinzel-lint-rules: $FAIL problem(s)"
+fi
+[ "$FAIL" -eq 0 ]

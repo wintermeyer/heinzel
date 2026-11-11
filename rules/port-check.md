@@ -78,54 +78,17 @@ instead, port selection is not needed.
 
 ## Check Commands
 
-Run the appropriate command for the detected OS.
-Replace `<port>` with the target port number.
+Run the command from the **Listening Ports** section
+of the host's OS file (`rules/linux.md` for every
+Linux family, else `rules/freebsd.md`,
+`rules/netbsd.md`, `rules/openbsd.md`,
+`rules/macos.md`). Replace `<port>` with the target
+port number.
 
 **Never match with a bare `grep :<port>`** — it
 also matches longer port numbers (`:300` hits
-`:3000`). Use ss's native filter or anchor the
-grep with a word boundary, as shown below.
-
-### Linux
-
-```bash
-ss -tulnp 'sport = :<port>'
-```
-
-The `-p` flag requires root to show process names.
-Unprivileged fallback:
-
-```bash
-ss -tuln 'sport = :<port>'
-```
-
-### FreeBSD
-
-```bash
-sockstat -4 -6 -l | grep -E ':<port>\b'
-```
-
-No root needed. Shows user, command, PID, protocol,
-and local address.
-
-### NetBSD
-
-```bash
-sockstat -n -4 -6 -l | grep -E '\.<port> '
-```
-
-`-n` is required: without it NetBSD prints service
-names (`*.ssh`). The port follows a dot, not a
-colon.
-
-### macOS
-
-```bash
-lsof -iTCP:<port> -sTCP:LISTEN -P -n
-```
-
-Shows command, PID, and user. Use `sudo` to see
-processes owned by other users.
+`:3000`). Use the tool's native filter or an
+anchored pattern, as the OS file shows.
 
 ## If the Port Is Occupied
 

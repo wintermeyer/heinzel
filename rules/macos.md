@@ -31,6 +31,10 @@ Rules for macOS (Apple Silicon and Intel).
 - Product name: `sw_vers -productName` (e.g. `macOS`)
 - Architecture: `uname -m` (`arm64` or `x86_64`)
 - There is no `/etc/os-release` on macOS.
+- Hardware: `sysctl` for CPU and RAM (see Notes),
+  `df -h`.
+- Lifecycle: Apple typically supports the current
+  and the two prior major versions.
 
 ## Firewall
 
@@ -113,6 +117,76 @@ Rules for macOS (Apple Silicon and Intel).
   - Load: `sudo launchctl load <plist>`
   - Unload: `sudo launchctl unload <plist>`
   - List running: `launchctl list`
+
+## Service Classes
+
+Installed members (`rules/service-class-check.md`,
+phase 1), best-effort:
+
+```bash
+members=(httpd nginx caddy lighttpd
+         postgresql mariadb mysql
+         postfix exim opensmtpd msmtp
+         chrony unbound bind dnsmasq
+         podman containerd)
+brew list --formula \
+  | grep -Fxf <(printf '%s\n' "${members[@]}")
+```
+
+macOS installs are user-scoped rather than
+system-wide, so this phase is advisory on macOS.
+Still run it; still warn.
+
+Install dry run (phase 2):
+
+```bash
+brew deps --include-build <pkg>
+```
+
+## Listening Ports
+
+```bash
+lsof -iTCP:<port> -sTCP:LISTEN -P -n
+```
+
+Shows command, PID, and user. Use `sudo` to see
+processes owned by other users.
+
+## Journal
+
+```
+/usr/bin/log show --last 7d \
+  --predicate 'process == "logger"' --info 2>&1 \
+  | grep heinzel
+```
+
+Two details that are not optional here:
+
+- **Call `/usr/bin/log` by absolute path.** `log` is a
+  common shell alias or function (git log wrappers,
+  oh-my-zsh plugins). A shadowed `log` fails with
+  something like `(eval):log:1: too many arguments`,
+  which looks nothing like a missing-entries result.
+- **Never redirect stderr to `/dev/null`.** With
+  `2>/dev/null` a shadowed or failing `log` produces
+  empty output, and "no activity" is exactly what
+  empty output means in `rules/activity-check.md` —
+  so a broken check reads as a clean host. Keep
+  `2>&1` and treat any line that is not a log entry
+  as a failed check, not silence.
+
+`senderImagePath CONTAINS "logger"` also works but
+matches more broadly; `process == "logger"` is the
+narrower predicate.
+
+## Rollback Timer
+
+- Arm: the generic `nohup` variant in
+  `rules/rollback-timer.md`.
+- Disarm:
+  `pkill -F /var/run/heinzel-rollback-<ts>.pid`
+- Did it run: the Journal command above, with
+  `--last 10m`.
 
 ## SIP and Gatekeeper
 

@@ -58,7 +58,8 @@ and fight for the same role.
   starting, reloading or stopping that unit wipes
   ufw's or firewalld's rules. Raw `iptables` is a
   backend, not a member. FreeBSD's pf and ipfw are in
-  base, no frontend packages compete.
+  base, no frontend packages compete; the same holds
+  for OpenBSD's pf.
 - **Container runtime:** docker.io, docker-ce,
   moby-engine, podman, containerd.io
 
@@ -76,119 +77,18 @@ class member, halt and apply the prompt from
 
 ### Phase 1 — Already-installed probe
 
-For the detected OS, query the package database
-for every class member listed above.
+Query the package database for every class member
+listed above: run the probe from the **Service
+Classes** section of the host's OS file
+(`rules/debian.md`, `rules/rhel.md`,
+`rules/suse.md`, `rules/arch.md`,
+`rules/freebsd.md`, `rules/netbsd.md`,
+`rules/openbsd.md`, `rules/macos.md`).
 
-**Debian / Ubuntu**
-
-```bash
-dpkg-query -W \
-  -f='${db:Status-Status} ${Package}\n' \
-  apache2 nginx caddy lighttpd httpd \
-  postgresql mariadb-server mysql-server \
-  postfix exim4 sendmail opensmtpd \
-  msmtp-mta nullmailer dma \
-  chrony ntp openntpd \
-  unbound bind9 dnsmasq pdns-recursor \
-  knot-resolver \
-  ufw firewalld \
-  docker.io docker-ce podman containerd.io \
-  2>/dev/null | awk '$1=="installed"{print $2}'
-```
-
-Then, for the firewall class:
-`systemctl is-enabled nftables 2>/dev/null`.
-
-**Arch / CachyOS**
-
-```bash
-pacman -Qq apache nginx caddy lighttpd \
-       postgresql mariadb \
-       postfix exim opensmtpd msmtp-mta nullmailer \
-       chrony ntp openntpd \
-       unbound bind dnsmasq powerdns-recursor \
-       knot-resolver \
-       ufw firewalld \
-       docker podman containerd \
-       2>/dev/null
-```
-
-Then, for the firewall class:
-`systemctl is-enabled nftables 2>/dev/null`.
-
-**RHEL / Fedora / SUSE**
-
-```bash
-rpm -q httpd nginx caddy lighttpd \
-       postgresql-server mariadb-server \
-       postfix exim sendmail opensmtpd \
-       msmtp nullmailer \
-       chrony ntp openntpd \
-       unbound bind dnsmasq pdns-recursor \
-       knot-resolver \
-       firewalld \
-       docker-ce podman moby-engine containerd.io \
-       2>/dev/null | grep -v 'is not installed'
-```
-
-**FreeBSD**
-
-```bash
-pkg info -E 'apache*' 'nginx*' 'caddy*' \
-            'postgresql*-server' 'mariadb*-server' \
-            'mysql*-server' \
-            'postfix*' 'exim*' 'sendmail*' \
-            'opensmtpd*' \
-            'msmtp*' 'nullmailer*' 'dma*' \
-            'chrony*' 'openntpd*' \
-            'unbound*' 'bind9*' 'dnsmasq*' \
-            'knot-resolver*' \
-            'podman*' 'containerd*' \
-            2>/dev/null
-```
-
-Note: on FreeBSD, `ntpd` and `local_unbound` ship in
-base, not as packages — check
-`service -e | grep -E 'ntpd|local_unbound'` as well.
-
-**macOS (Homebrew, best-effort)**
-
-```bash
-members=(httpd nginx caddy lighttpd
-         postgresql mariadb mysql
-         postfix exim opensmtpd msmtp
-         chrony unbound bind dnsmasq
-         podman containerd)
-brew list --formula \
-  | grep -Fxf <(printf '%s\n' "${members[@]}")
-```
-
-macOS installs are user-scoped rather than
-system-wide, so this phase is advisory on macOS.
-Still run it; still warn.
-
-### Systemd-provided members
-
-Two class members ship inside systemd itself and are
-not visible to the package DB:
-
-- `systemd-timesyncd` (time sync)
-- `systemd-resolved` (DNS resolver)
-
-On most Debian/Ubuntu hosts they are present but
-only count as a real conflict when the unit is
-actually running. Probe the unit state:
-
-```bash
-systemctl is-active systemd-timesyncd 2>/dev/null
-systemctl is-active systemd-resolved 2>/dev/null
-```
-
-Treat the member as "installed" only when the
-output is `active`. A unit that is `inactive`,
-`masked`, or absent is not a conflict — the user
-already disabled it (often when they installed
-chrony or unbound the first time).
+Members that ship in the base system or inside
+systemd never show up in the package database. The
+same section names them and their probe; on Linux
+read `rules/linux.md` → Service Classes as well.
 
 ### Phase 2 — Pending-install dry-run
 
@@ -198,49 +98,9 @@ request and scan the resolved plan for class
 members. This is the step that catches transitive
 pulls — the exact scenario this rule exists for.
 
-**Debian / Ubuntu**
-
-```bash
-apt-get install --simulate -y <pkg> 2>/dev/null \
-  | awk '/^Inst /{print $2}'
-```
-
-Match the resulting package list against the class
-table.
-
-**RHEL / Fedora**
-
-```bash
-dnf install --assumeno <pkg> 2>&1 \
-  | awk '/^ [a-z]/{print $1}'
-```
-
-**SUSE**
-
-```bash
-zypper --non-interactive install --dry-run <pkg>
-```
-
-**Arch / CachyOS**
-
-```bash
-pacman -S --print --print-format '%n' <pkg>
-```
-
-**FreeBSD**
-
-```bash
-pkg install -n <pkg>
-```
-
-**macOS (Homebrew)**
-
-```bash
-brew deps --include-build <pkg>
-```
-
-Homebrew rarely pulls a full web server as a
-transitive dependency, so this is best-effort.
+The dry-run command is in the same **Service
+Classes** section. Match the resulting package list
+against the class table.
 
 ## If a Conflict Is Found
 
