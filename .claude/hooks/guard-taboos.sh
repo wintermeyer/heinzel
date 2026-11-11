@@ -673,9 +673,12 @@ fi
 # lists nothing, so -l followed by a number is no exemption. The
 # number must end the word: fdisk -l 2>/dev/null is a listing.
 # The number may be quoted or come from a variable, which nobody
-# sees before it runs: both count. And the OpenBSD write flags
-# (-A -e -g -i -R) exist on no Linux fdisk, so a flag group with
-# one of them is a write whatever else the line holds.
+# sees before it runs: both count. And a flag group with one of
+# the OpenBSD write flags (-A -e -g -i -R -u) is a write whatever
+# else the line holds. Five of them exist on no Linux fdisk. -u
+# does (display units, sectors by default for years), and that
+# form is given up: it is the only write left that a hidden
+# word behind -l could ride on, so denying it closes the set.
 FDISK='(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]+["'\''\\$]*-'
 #
 # So -l is a listing only when a path, another flag or nothing
@@ -686,11 +689,12 @@ FDISK='(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]+["'\''
 # starts with a dash (> -l) is a file name, not a flag.
 if hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]+["'\''\\[:space:]]*[^-/[:space:];|&<>)"'\''\\0-9]' \
   || hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]*["'\''\\[:space:]]*[0-9]+([^0-9>&]|$)' \
-  || hit "$FDISK"'[[:alnum:]"'\''\\]*[AegiR]' \
+  || hit "$FDISK"'[[:alnum:]"'\''\\]*[AegiRu]' \
   || hit '(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]*[<>]+[[:space:]]*["'\''\\]*-'
 then
   deny "fdisk -l with a block count is the OpenBSD geometry \
-option, not a listing, and -A -e -g -i -R write the table"
+option, not a listing, and -A -e -g -i -R -u write the table or \
+the boot code (plain fdisk -l lists)"
 fi
 # The BSD label editors (OpenBSD and NetBSD disklabel, FreeBSD
 # bsdlabel). The label is the partition table there. Their write

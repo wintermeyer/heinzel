@@ -1279,8 +1279,17 @@ check deny 'fdisk -u -l sd0 sd0'
 check deny 'fdisk -u sd0 > -l'
 check deny 'installboot -r -n sd0'
 check deny 'installboot -rn sd0'
-check pass 'fdisk -l -u /dev/sda'
-check pass 'fdisk -lu /dev/sda'
+# -u is OpenBSD's last write flag (it rewrites the MBR boot
+# code). On Linux it only picks the display unit, which has been
+# sectors by default for years, so the guard gives that form up
+# rather than chase every way to hide what follows -l.
+check deny 'fdisk -l -u /dev/sda'
+check deny 'fdisk -lu /dev/sda'
+check deny 'fdisk -u sd0'
+check deny 'fdisk -u -l 2>/dev/null 2048 sd0'
+check deny 'fdisk -u -l </dev/null 2048 sd0'
+check deny 'fdisk -u -l 2048>/dev/null sd0'
+check deny 'fdisk -yu -l /dev/null sd0'
 check pass 'fdisk -l | grep Disk'
 check pass 'ssh root@h "fdisk -l"'
 check pass 'installboot -v -n sd0'

@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.6.2 — 2026-11-11
+
+- **`fdisk -u` is denied.** On OpenBSD it rewrites
+  the MBR boot code, and it was the one write flag
+  left that could hide behind the `-l` exemption
+  (`fdisk -u -l 2>/dev/null 2048 sd0`). The Linux
+  form `fdisk -l -u` goes with it; `fdisk -l` shows
+  sectors without it.
+
 ## 3.6.1 — 2026-11-11
 
 - **Three more ways around the BSD guard rules are
