@@ -18,6 +18,6 @@ Bug reports, ideas and pull requests are welcome.
   one row in `rules/os-detection.md` and one in the
   README. The other rule files point to those
   sections by name: do not add a branch per OS to
-  them.
+  them. CI runs the lint.
 - A rule names the effect it guards against, never a
   list of binaries. See the head of the hook for why.
