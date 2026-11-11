@@ -677,8 +677,17 @@ fi
 # (-A -e -g -i -R) exist on no Linux fdisk, so a flag group with
 # one of them is a write whatever else the line holds.
 FDISK='(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]+["'\''\\$]*-'
-if hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]*["'\''\\]*(\$|[0-9]+["'\''\\]*([[:space:]]|$))' \
-  || hit "$FDISK"'[[:alnum:]"'\''\\]*[AegiR]'
+#
+# So -l is a listing only when a path, another flag or nothing
+# follows it. Any other word (a number, bare or wrapped, a
+# variable, a backtick, +2048, a disk name without /dev/) may be
+# the block count. A number right before > is a redirect
+# (2>/dev/null) and stays allowed. And a redirect target that
+# starts with a dash (> -l) is a file name, not a flag.
+if hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]+["'\''\\[:space:]]*[^-/[:space:];|&<>)"'\''\\0-9]' \
+  || hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]*["'\''\\[:space:]]*[0-9]+([^0-9>&]|$)' \
+  || hit "$FDISK"'[[:alnum:]"'\''\\]*[AegiR]' \
+  || hit '(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]*[<>]+[[:space:]]*["'\''\\]*-'
 then
   deny "fdisk -l with a block count is the OpenBSD geometry \
 option, not a listing, and -A -e -g -i -R write the table"
@@ -942,9 +951,11 @@ fi
 # OpenBSD and NetBSD write their boot blocks with installboot;
 # -n is the dry run on both. It counts only in the option list
 # right behind the command, so a -n further down the line (an
-# argument, another word) exempts nothing.
+# argument, another word) exempts nothing. Only the flags
+# without an argument (c n p v) may stand before or beside it:
+# -r takes one, so in -r -n the -n is the root directory.
 if hit_without '(^|[^[:alnum:]_.-])installboot([^[:alnum:]_.-]|$)' \
-  '^[^[:alnum:]]?installboot([[:space:]]+-[[:alnum:]]+)*[[:space:]]+-[[:alnum:]]*n'; then
+  '^[^[:alnum:]]?installboot([[:space:]]+-[cnpv]+)*[[:space:]]+-[cpv]*n[cnpv]*([[:space:]"'\'']|$)'; then
   deny "installboot rewrites the boot blocks (installboot -n is \
 the dry run); boot work is a Heinzel Pro feature"
 fi

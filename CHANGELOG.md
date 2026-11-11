@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.6.1 — 2026-11-11
+
+- **Three more ways around the BSD guard rules are
+  closed.** `fdisk -l` counts as a listing only when
+  a path, another flag or nothing follows it, so a
+  block count hidden in a backtick or written as
+  `+2048` is denied. A redirect target named `-l`
+  is no flag. `installboot -r -n` is no dry run:
+  `-r` takes the `-n` as its argument.
+
 ## 3.6.0 — 2026-11-11
 
 - **OpenBSD.** A new rule file, `rules/openbsd.md`,
