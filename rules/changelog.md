@@ -25,13 +25,10 @@ Every session gets at least one entry — sessions
 that change nothing log a single `read-only:`
 summary.
 
-Reading back:
-- systemd: `journalctl -t heinzel`
-- macOS: `log show --predicate
-  'senderImagePath CONTAINS "logger"'
-  --info --last 7d | grep heinzel`
-- Unraid: `grep heinzel /var/log/syslog*` — tmpfs,
-  lost at every reboot (`rules/unraid.md`)
+Reading back: the **Journal** section of the host's
+OS file (`rules/linux.md` for systemd,
+`rules/unraid.md` → Journal Replacement, where the
+lines are lost at every reboot).
 
 If `logger` fails, log to the local changelog only.
 

@@ -1,7 +1,9 @@
 # openSUSE & SLES
 
 Rules for openSUSE (Leap, Tumbleweed) and SUSE Linux
-Enterprise Server (SLES).
+Enterprise Server (SLES). Read `rules/linux.md` with
+it: systemd, the journal, listening ports and the
+rollback timer are there.
 
 ## Package Manager
 
@@ -16,33 +18,17 @@ Enterprise Server (SLES).
 
 ## Version Detection
 
-- `/etc/os-release` — full distro info
 - `/etc/SuSE-release` — on older versions (deprecated)
+- Lifecycle: suse.com/lifecycle
 
 ## Firewall
 
-- **Expected:** `firewalld`
-- Check status: `firewall-cmd --state`
-- List rules: `firewall-cmd --list-all`
-- Add rule: `firewall-cmd --permanent --add-service=http`
-- Reload: `firewall-cmd --reload`
+- **Expected:** `firewalld`. Commands, the SSH
+  check before `systemctl start firewalld` and the
+  runtime-first order are the same as in
+  `rules/rhel.md` → Firewall. Read that section.
 - Some systems may use SuSEfirewall2 (older) — if so,
   flag it to the user as it's deprecated.
-- **Critical:** before `systemctl start firewalld` on
-  a remote host, verify the `ssh` service is in the
-  active/default zone's permanent config:
-  `firewall-cmd --permanent --zone=<zone>
-  --list-services`. Add it if missing:
-  `firewall-cmd --permanent --zone=<zone>
-  --add-service=ssh`. Starting `firewalld` without it
-  cuts off the SSH session immediately. The `ssh`
-  service covers port 22 only: add every other port
-  sshd listens on with `--add-port=<port>/tcp`
-  (`CLAUDE.md` → Firewall & network).
-- Over SSH, arm a rollback timer before any firewall
-  or network change (`rules/rollback-timer.md`).
-  Change the runtime config first and persist with
-  `--permanent` only after a fresh login worked.
 - Verify the default zone drops unsolicited traffic:
   `firewall-cmd --get-default-zone` (should be `public`).
   Then `firewall-cmd --info-zone=public` — the target
@@ -65,16 +51,17 @@ Enterprise Server (SLES).
   mechanism for configuring automatic updates.
 - If no auto-update is configured, flag it to the user.
 
-## Service Manager
+## Service Classes
 
-- `systemctl` (systemd)
-- Check service: `systemctl status <service>`
-- Logs: `journalctl -u <service>`
-- Reload vs restart: prefer `systemctl reload` when
-  the service supports it. See
-  `rules/service-reload.md` for the auto-proceed
-  policy and `memory/service-policy.md` opt-out /
-  opt-in lists.
+Installed members (`rules/service-class-check.md`,
+phase 1): the `rpm -q` command from `rules/rhel.md`
+→ Service Classes.
+
+Install dry run (phase 2):
+
+```bash
+zypper --non-interactive install --dry-run <pkg>
+```
 
 ## YaST
 
@@ -85,9 +72,7 @@ Enterprise Server (SLES).
 
 ## Directory Conventions
 
-- Config files: `/etc/`
 - Web roots: `/srv/www/htdocs/` (different from most distros)
-- Logs: `/var/log/`
 - Nginx config: `/etc/nginx/conf.d/`
 
 ## Notes

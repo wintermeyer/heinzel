@@ -1211,6 +1211,87 @@ for TOOL in Edit Write NotebookEdit; do
   fi
 done
 
+# --- OpenBSD (and the other BSDs' label tools) ------------------
+# The same effects through OpenBSD's own tools: disklabel is its
+# partition editor, installboot its boot loader writer, doas.conf
+# its sudoers, rmuser and "user del" its account deletion, and
+# /dev/rsd0c and /dev/wd0c its raw disks. fdisk -l takes a block
+# count there, so -l followed by a number is no listing.
+check deny 'disklabel -E sd0'
+check deny 'disklabel -e sd0'
+check deny 'disklabel -w sd0 default'
+check deny 'disklabel -Aw sd0'
+check deny 'disklabel -R sd0 /root/label.txt'
+check deny 'disklabel -n -E sd0'
+check deny 'disklabel -T /root/template -w -A sd0'
+check deny 'disklabel "-E" sd0'
+check deny 'ssh root@h "disklabel -E sd0"'
+check deny 'doas disklabel -E sd0'
+check deny 'disklabel -i wd0'
+check deny 'disklabel -I -w sd0'
+check deny 'bsdlabel -w ada0s1'
+check deny 'installboot sd0'
+check deny 'installboot -v sd0'
+check deny 'installboot -p sd0'
+check deny 'ssh root@h "installboot -c sd0"'
+check deny 'fdisk -iy -l 20000 sd0'
+check deny 'fdisk -l 2048 -gy sd0'
+check deny 'fdisk -e sd0'
+check deny 'echo "permit nopass :wheel" >> /etc/doas.conf'
+check deny 'cp /etc/examples/doas.conf /etc/doas.conf'
+check deny 'vi /etc/doas.conf'
+check deny 'tee /etc/doas.conf < doas.new'
+check deny "sed -i 's/^#//' /etc/doas.conf"
+check deny 'rm /etc/doas.conf'
+check deny 'chmod 644 /etc/doas.conf'
+check deny 'ssh root@h "echo permit :wheel > /etc/doas.conf"'
+check deny 'perl -e "open(F, q{>>/etc/doas.conf}); print F q{x}"'
+check deny 'rmuser alice'
+check deny 'ssh root@h "rmuser -y alice"'
+check deny 'user del -r alice'
+check deny 'group del staff'
+check deny 'cat image.raw > /dev/rsd0c'
+check deny 'echo x > /dev/wd0c'
+check deny 'tee /dev/rwd0c < image.raw'
+# The same commands with the flag or the number hidden from a
+# plain word match: quotes, a backslash, $'...', a variable, and
+# an exemption that only appears in a comment.
+check deny "disklabel \$'-E' sd0"
+check deny 'disklabel \-E sd0'
+check deny 'disklabel -h"E" sd0'
+check deny 'disklabel $FLAGS sd0'
+check deny 'fdisk -iy -l "20000" sd0'
+check deny "fdisk -e -l '2048' sd0"
+check deny 'fdisk -l $BLOCKS -gy sd0'
+check deny 'fdisk -u -l "2048" sd0'
+check deny 'fdisk "-i" -l sd0'
+check deny 'installboot sd0 # -n'
+check deny 'installboot -r /mnt sd0 # dry run is -n'
+check deny 'fdisk /dev/sda # -l'
+check deny 'visudo # -c'
+check pass 'fdisk -l "/dev/sda"'
+check pass 'fdisk -l /dev/sda # list the table'
+check pass 'installboot -n -v sd0'
+check pass 'disklabel sd0'
+check pass 'disklabel -h sd0'
+check pass 'disklabel -p g sd0'
+check pass 'disklabel -hv sd0 > /root/label-sd0.txt'
+check pass 'ssh root@h "disklabel -h sd0"'
+check pass 'disklabel -h sd0 | grep -E "^ +[a-p]:"'
+check pass 'installboot -nv sd0'
+check pass 'fdisk -l 2>/dev/null'
+check pass 'cat /etc/doas.conf'
+check pass 'ls -l /etc/doas.conf'
+check pass 'doas -C /etc/doas.conf'
+check pass 'cat /etc/examples/doas.conf'
+check pass 'doas -n true'
+check pass 'doas rcctl restart httpd'
+check pass 'user info alice'
+check pass 'syspatch -c'
+check pass 'sysctl hw.disknames'
+check pass 'pfctl -nf /etc/pf.conf'
+check pass 'rcctl ls on'
+
 # --- no negated hit() may remain -------------------------------
 # A rule of the form  hit X && ! hit Y  evaluates Y against the
 # whole command string, so any unrelated flag disarms it (issue

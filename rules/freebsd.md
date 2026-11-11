@@ -1,6 +1,7 @@
 # FreeBSD
 
-Rules for FreeBSD (all versions).
+Rules for FreeBSD (all versions). Read
+`rules/bsd.md` with it.
 
 ## Package Manager
 
@@ -26,6 +27,9 @@ Rules for FreeBSD (all versions).
 - `uname -m` — architecture (e.g. `amd64`,
   `aarch64`)
 - There is no `/etc/os-release` on FreeBSD.
+- Hardware: `sysctl` for CPU and RAM, `df -h`,
+  `zpool status` if ZFS.
+- Lifecycle: freebsd.org/security
 
 ## Firewall
 
@@ -123,6 +127,72 @@ Rules for FreeBSD (all versions).
 - **List enabled services:** `sysrc -a | grep _enable`
 - `/etc/rc.conf` is the central service
   configuration file.
+
+## Service Classes
+
+Installed members (`rules/service-class-check.md`,
+phase 1):
+
+```bash
+pkg info -E 'apache*' 'nginx*' 'caddy*' \
+            'postgresql*-server' 'mariadb*-server' \
+            'mysql*-server' \
+            'postfix*' 'exim*' 'sendmail*' \
+            'opensmtpd*' \
+            'msmtp*' 'nullmailer*' 'dma*' \
+            'chrony*' 'openntpd*' \
+            'unbound*' 'bind9*' 'dnsmasq*' \
+            'knot-resolver*' \
+            'podman*' 'containerd*' \
+            2>/dev/null
+```
+
+`ntpd` and `local_unbound` ship in base, not as
+packages: check
+`service -e | grep -E 'ntpd|local_unbound'` as well.
+pf and ipfw are in base too, no frontend packages
+compete.
+
+Install dry run (phase 2):
+
+```bash
+pkg install -n <pkg>
+```
+
+## Listening Ports
+
+```bash
+sockstat -4 -6 -l | grep -E ':<port>\b'
+```
+
+No root needed. Shows user, command, PID, protocol,
+and local address.
+
+## Journal
+
+```
+grep -h heinzel /var/log/messages.0 \
+  /var/log/messages 2>/dev/null | tail -20
+```
+
+This shows the last 20 matches, not a strict 7-day
+window, and only reaches one rotation back
+(`messages.0`). Older rotated logs are usually
+compressed; mention the limitation if relevant.
+
+## Rollback Timer
+
+- Arm:
+
+      daemon -f -p /var/run/heinzel-rollback-<ts>.pid \
+        sh -c 'sleep 120; sh /var/backups/heinzel/rollback-<ts>.sh'
+
+  Not `at`: `atrun` runs from cron every five
+  minutes, so the window becomes unpredictable.
+- Disarm:
+  `pkill -F /var/run/heinzel-rollback-<ts>.pid`
+- Did it run: the `rollback-<ts> ran` line in
+  `/var/log/messages`.
 
 ## Filesystem
 

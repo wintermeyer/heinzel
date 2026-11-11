@@ -67,6 +67,13 @@ applies before any of this runs.
   for SSH hardening, `find / -perm -4000` for SUID, sysctl
   `security.*` knobs) and state in the report that FreeBSD
   has no baseline reference yet.
+- OpenBSD has no baseline either. Same procedure with
+  `syspatch -c` for missing base patches, `pfctl -sr` for the
+  firewall (the stock ruleset passes everything inbound, see
+  `rules/openbsd.md`), `sshd -T`, `cat /etc/doas.conf`,
+  `find / -perm -4000`, `sysctl kern.securelevel` and root's
+  mail from security(8); say that OpenBSD has no baseline
+  reference yet.
 
 ## Cross-references
 

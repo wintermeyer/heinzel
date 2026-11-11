@@ -169,17 +169,11 @@ Debian       13       UP TO DATE
 
 For OS releases, always check whether the
 installed version is approaching or past its
-end-of-life date. Use official sources:
-
-- **Debian:** wiki.debian.org release lifecycle
-- **Ubuntu:** ubuntu.com/about/release-cycle
-- **RHEL/CentOS:** Red Hat lifecycle policy
-- **FreeBSD:** freebsd.org/security
-- **NetBSD:** netbsd.org/releases (supported
-  series)
-- **SUSE:** suse.com/lifecycle
-- **macOS:** Apple typically supports current and
-  two prior major versions
+end-of-life date. Use the official source named in
+the `Lifecycle:` line under **Version Detection** in
+the host's OS file. Arch has none: a rolling host
+is judged by the date of its last full upgrade
+(`rules/arch.md`).
 
 Severity:
 

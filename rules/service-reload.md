@@ -84,7 +84,8 @@ Matching is by systemd unit name without the
 full instance (`nginx@default`). No wildcards in v1.
 
 On FreeBSD and macOS, match the `service` /
-`brew services` / `launchctl` service name.
+`brew services` / `launchctl` service name, on
+OpenBSD the `rcctl` name.
 
 ## Prompt Shape When Asking
 
@@ -139,6 +140,7 @@ show the test output if it fails.
 | sshd           | `sshd -t` (but sshd is "always ask" — see below) |
 | haproxy        | `haproxy -c -f <file>`             |
 | unbound        | `unbound-checkconf`                |
+| OpenBSD base   | `rcctl configtest <name>` (`rules/openbsd.md`) |
 
 If no config test is known for the service, ask
 the user before reloading — auto-proceed requires

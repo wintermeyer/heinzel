@@ -30,8 +30,8 @@
 #     delete under /sys/firmware/efi/efivars/
 #   - accounts and sudo (Heinzel Pro's work since 3.0):
 #     deleting an account or a group, visudo, vipw/vigr, any
-#     write to sudoers(.d/) or to the account files
-#     (/etc/passwd, shadow, group, master.passwd)
+#     write to sudoers(.d/), to doas.conf or to the account
+#     files (/etc/passwd, shadow, group, master.passwd)
 #   - writing, moving or deleting the server lock
 #     /etc/heinzel.conf, which only the machine's owner sets
 #     (rules/access-control.md)
@@ -295,7 +295,7 @@ hit_i() {
 # A raw disk device, as opposed to /dev/null, /dev/stderr,
 # /dev/shm or /dev/disk/by-id (all of which are ordinary and
 # must stay usable).
-DEV='/dev/(sd|vd|xvd|hd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
+DEV='/dev/(r?sd|vd|xvd|hd|r?wd|nvme|mmcblk|nbd|loop|da|ada|nda|r?disk[0-9])'
 
 # Any SSH key file, OR the directory that holds them. The
 # directory belongs in here because re-permissioning or removing
@@ -356,7 +356,10 @@ EDITOR='(vi|vim|nvim|nano|emacs|ed)'
 # files, where a direct write bypasses every check useradd and
 # passwd make; and the firmware variables, where a deleted entry
 # has bricked boards. All three stay readable.
-SUDOERS='/etc/sudoers(\.d(/[[:alnum:]_.-]*)?)?'
+#
+# /etc/doas.conf is OpenBSD's sudoers: one file, no drop-ins, and
+# a write to it grants or revokes root the same way.
+SUDOERS='/etc/(sudoers(\.d(/[[:alnum:]_.-]*)?)?|doas\.conf)'
 ACCOUNTS='/etc/(passwd|shadow|gshadow|group|master\.passwd|s?pwd\.db)'
 EFIVARS='/sys/firmware/efi/efivars'
 
@@ -401,7 +404,13 @@ hit_without() {
       line = $0
       while (match(line, cmd)) {
         if (RLENGTH <= 0) break
-        if (substr(line, RSTART) !~ exempt) { bare = 1; exit }
+        # A shell comment is not part of the invocation: without
+        # this cut, fdisk /dev/sda # -l counted as a listing.
+        # Cutting at a # that sits inside quotes only removes a
+        # possible exemption, so it errs towards blocking.
+        rest = substr(line, RSTART)
+        sub(/[ \t]#.*$/, "", rest)
+        if (rest !~ exempt) { bare = 1; exit }
         line = substr(line, RSTART + RLENGTH)
       }
     }
@@ -543,7 +552,7 @@ with a file-edit tool as much as with a command"
 and partition table"
   fi
   if target_hit "$SUDOERS"; then
-    deny "writing sudoers or a sudoers.d file grants or revokes \
+    deny "writing sudoers, a sudoers.d file or doas.conf grants or revokes \
 root rights; sudo work is a Heinzel Pro feature"
   fi
   if target_hit "$ACCOUNTS"; then
@@ -659,6 +668,35 @@ fi
 if hit_without '(^|[^[:alnum:]_.-])fdisk([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])-l'; then
   deny "fdisk without -l opens the partition table for writing"
+fi
+# On OpenBSD -l takes a block count (fdisk -iy -l 20000 sd0) and
+# lists nothing, so -l followed by a number is no exemption. The
+# number must end the word: fdisk -l 2>/dev/null is a listing.
+# The number may be quoted or come from a variable, which nobody
+# sees before it runs: both count. And the OpenBSD write flags
+# (-A -e -g -i -R) exist on no Linux fdisk, so a flag group with
+# one of them is a write whatever else the line holds.
+FDISK='(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]+["'\''\\$]*-'
+if hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]*["'\''\\]*(\$|[0-9]+["'\''\\]*([[:space:]]|$))' \
+  || hit "$FDISK"'[[:alnum:]"'\''\\]*[AegiR]'
+then
+  deny "fdisk -l with a block count is the OpenBSD geometry \
+option, not a listing, and -A -e -g -i -R write the table"
+fi
+# The BSD label editors (OpenBSD and NetBSD disklabel, FreeBSD
+# bsdlabel). The label is the partition table there. Their write
+# flags differ per system, so the READ set is the closed one: a
+# flag group with any letter outside A c d h p r t v counts as a
+# write, and that fails closed for -n and -T as well. The flags
+# must sit in the same invocation, after the command: no ; | &
+# between them, so grep -E behind a pipe does not count. A word
+# that starts with a quote, a backslash or a $ could be any
+# flag once the shell has unwrapped it, so it counts as a write
+# too, and so does a quote in the middle of a flag group.
+if hit '(^|[^[:alnum:]_.-])(disklabel|bsdlabel)([[:space:]]+[^[:space:];|&]+)*[[:space:]]+(-[Acdhprtv]*[^Acdhprtv[:space:]]|[^[:alnum:][:space:];|&/._>-])'
+then
+  deny "disklabel in a write form modifies the partition table \
+(disklabel <disk> and disklabel -h <disk> read it)"
 fi
 # cfdisk has no read-only mode at all: it is the curses editor.
 if hit '(^|[^[:alnum:]_.-])cfdisk([^[:alnum:]_.-]|$)'; then
@@ -901,6 +939,15 @@ if hit_without '(^|[^[:alnum:]_.-])bless([^[:alnum:]_.-]|$)' \
 (bless --info and --getBoot read it); boot work is a Heinzel \
 Pro feature"
 fi
+# OpenBSD and NetBSD write their boot blocks with installboot;
+# -n is the dry run on both. It counts only in the option list
+# right behind the command, so a -n further down the line (an
+# argument, another word) exempts nothing.
+if hit_without '(^|[^[:alnum:]_.-])installboot([^[:alnum:]_.-]|$)' \
+  '^[^[:alnum:]]?installboot([[:space:]]+-[[:alnum:]]+)*[[:space:]]+-[[:alnum:]]*n'; then
+  deny "installboot rewrites the boot blocks (installboot -n is \
+the dry run); boot work is a Heinzel Pro feature"
+fi
 if hit '(^|[^[:alnum:]_.-])efivar([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])(-w|--write|-a|--append)([[:space:]]|$)'; then
   deny "efivar -w writes a firmware variable; boot work is a \
@@ -928,7 +975,8 @@ fi
 # account (useradd, pw useradd) and resetting a password stay
 # with the prompt: nothing breaks, and a reset is heinzel's own
 # everyday work (rules/ethics.md).
-if hit '(^|[^[:alnum:]_.-])(userdel|deluser|luserdel|groupdel|delgroup|lgroupdel)([^[:alnum:]_.-]|$)' \
+if hit '(^|[^[:alnum:]_.-])(userdel|deluser|luserdel|rmuser|groupdel|delgroup|lgroupdel)([^[:alnum:]_.-]|$)' \
+  || hit '(^|[^[:alnum:]_.-])(user|group)[[:space:]]+del([^[:alnum:]_-]|$)' \
   || hit '(^|[^[:alnum:]_.-])pw[[:space:]]+(userdel|groupdel|user[[:space:]]+del|group[[:space:]]+del)([^[:alnum:]_-]|$)' \
   || hit '(^|[^[:alnum:]_.-])sysadminctl[[:space:]].*-deleteUser([^[:alnum:]_-]|$)' \
   || hit '(^|[^[:alnum:]_.-])dscl[[:space:]].*-delete[[:space:]]+/(Users|Groups)/'
@@ -955,7 +1003,7 @@ if hit "$SUDOERS"; then
     || hit "(^|[^[:alnum:]_-])($CLOBBER|cp)([^[:alnum:]_-]|\$)" \
     || writes_to "$SUDOERS"
   then
-    deny "writing sudoers or a sudoers.d file grants or revokes \
+    deny "writing sudoers, a sudoers.d file or doas.conf grants or revokes \
 root rights (cat and visudo -c read it); sudo work is a Heinzel \
 Pro feature"
   fi

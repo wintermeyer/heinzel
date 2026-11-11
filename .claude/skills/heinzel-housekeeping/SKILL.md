@@ -88,6 +88,12 @@ Read on demand, only when the relevant section applies:
   firewall, `df -h` / `swapinfo` / `uptime` for the basics,
   `service -e` for enabled services) and state in the report
   that FreeBSD has no baseline reference yet.
+- OpenBSD has no baseline either. Same procedure with
+  `syspatch -c`, the reboot-pending comparison from
+  `rules/openbsd.md`, `pkg_add -un`, `pfctl -sr`, `df -h` per
+  mount point, `swapctl -l`, `uptime`, `rcctl ls failed` and
+  `ntpctl -s status`; say that OpenBSD has no baseline
+  reference yet.
 
 ## Custom checks
 

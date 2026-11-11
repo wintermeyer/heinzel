@@ -1,6 +1,8 @@
 # RHEL, CentOS, Fedora, Rocky Linux, AlmaLinux
 
-Rules for the Red Hat family of distributions.
+Rules for the Red Hat family of distributions. Read
+`rules/linux.md` with it: systemd, the journal,
+listening ports and the rollback timer are there.
 
 ## Package Manager
 
@@ -22,7 +24,7 @@ finding. See `rules/version-check.md`.
 ## Version Detection
 
 - `/etc/redhat-release` — distro and version string
-- `/etc/os-release` — full distro info
+- Lifecycle: Red Hat lifecycle policy
 
 ## Firewall
 
@@ -43,10 +45,9 @@ finding. See `rules/version-check.md`.
   service covers port 22 only: add every other port
   sshd listens on with `--add-port=<port>/tcp`
   (`CLAUDE.md` → Firewall & network).
-- Over SSH, arm a rollback timer before any firewall
-  or network change (`rules/rollback-timer.md`).
-  Change the runtime config first and persist with
-  `--permanent` only after a fresh login worked.
+- Under the rollback timer, change the runtime
+  config first and persist with `--permanent` only
+  after a fresh login worked.
 - Note the default zone:
   `firewall-cmd --get-default-zone`. A custom or
   renamed default zone is legitimate — what matters
@@ -68,16 +69,30 @@ finding. See `rules/version-check.md`.
 - If not installed or not enabled, flag it to the
   user.
 
-## Service Manager
+## Service Classes
 
-- `systemctl` (systemd)
-- Check service: `systemctl status <service>`
-- Logs: `journalctl -u <service>`
-- Reload vs restart: prefer `systemctl reload` when
-  the service supports it. See
-  `rules/service-reload.md` for the auto-proceed
-  policy and `memory/service-policy.md` opt-out /
-  opt-in lists.
+Installed members (`rules/service-class-check.md`,
+phase 1):
+
+```bash
+rpm -q httpd nginx caddy lighttpd \
+       postgresql-server mariadb-server \
+       postfix exim sendmail opensmtpd \
+       msmtp nullmailer \
+       chrony ntp openntpd \
+       unbound bind dnsmasq pdns-recursor \
+       knot-resolver \
+       firewalld \
+       docker-ce podman moby-engine containerd.io \
+       2>/dev/null | grep -v 'is not installed'
+```
+
+Install dry run (phase 2):
+
+```bash
+dnf install --assumeno <pkg> 2>&1 \
+  | awk '/^ [a-z]/{print $1}'
+```
 
 ## SELinux
 
@@ -90,9 +105,7 @@ finding. See `rules/version-check.md`.
 
 ## Directory Conventions
 
-- Config files: `/etc/`
 - Web roots: `/var/www/` or `/usr/share/nginx/html/`
-- Logs: `/var/log/`
 - Nginx config: `/etc/nginx/conf.d/`
   (no sites-available/sites-enabled pattern)
 

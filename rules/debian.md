@@ -1,6 +1,8 @@
 # Debian & Ubuntu
 
-Rules for Debian, Ubuntu, and derivatives.
+Rules for Debian, Ubuntu, and derivatives. Read
+`rules/linux.md` with it: systemd, the journal,
+listening ports and the rollback timer are there.
 
 ## Package Manager
 
@@ -136,8 +138,9 @@ third-party PPAs.
 ## Version Detection
 
 - `/etc/debian_version` — Debian version number
-- `/etc/os-release` — full distro info
 - `lsb_release -a` — if `lsb-release` is installed
+- Lifecycle: wiki.debian.org release lifecycle;
+  Ubuntu: ubuntu.com/about/release-cycle
 
 ## Firewall
 
@@ -151,8 +154,6 @@ third-party PPAs.
   `ufw allow OpenSSH && ufw enable`. Both cover
   port 22 only: allow every other port sshd listens
   on as well (`CLAUDE.md` → Firewall & network).
-- Over SSH, arm a rollback timer before any firewall
-  or network change (`rules/rollback-timer.md`).
 - After enabling, verify the default policy:
   `ufw status verbose` — look for
   `Default: deny (incoming)`. If incoming is set to
@@ -177,17 +178,39 @@ third-party PPAs.
   and `systemctl status apt-daily-upgrade.timer`
 - If not installed, flag it to the user.
 
-## Service Manager
+## Service Classes
 
-- `systemctl` (systemd)
-- Check service: `systemctl status <service>`
-- Logs: `journalctl -u <service>`
+Installed members (`rules/service-class-check.md`,
+phase 1):
+
+```bash
+dpkg-query -W \
+  -f='${db:Status-Status} ${Package}\n' \
+  apache2 nginx caddy lighttpd httpd \
+  postgresql mariadb-server mysql-server \
+  postfix exim4 sendmail opensmtpd \
+  msmtp-mta nullmailer dma \
+  chrony ntp openntpd \
+  unbound bind9 dnsmasq pdns-recursor \
+  knot-resolver \
+  ufw firewalld \
+  docker.io docker-ce podman containerd.io \
+  2>/dev/null | awk '$1=="installed"{print $2}'
+```
+
+Then, for the firewall class:
+`systemctl is-enabled nftables 2>/dev/null`.
+
+Install dry run (phase 2):
+
+```bash
+apt-get install --simulate -y <pkg> 2>/dev/null \
+  | awk '/^Inst /{print $2}'
+```
 
 ## Directory Conventions
 
-- Config files: `/etc/`
 - Web roots: `/var/www/`
-- Logs: `/var/log/`
 - Sites config (nginx): `/etc/nginx/sites-available/` and
   `/etc/nginx/sites-enabled/`
 - Sites config (Apache): `/etc/apache2/sites-available/` and
@@ -205,11 +228,6 @@ third-party PPAs.
 
 - Use `apt-get` not `apt` — `apt` is for interactive
   use and its output format is unstable.
-- `systemctl restart` vs `systemctl reload` — prefer
-  `reload` when the service supports it (e.g. nginx)
-  to avoid downtime. See `rules/service-reload.md`
-  for the auto-proceed policy and the
-  `memory/service-policy.md` opt-out / opt-in lists.
 - Before enabling `ufw`, allow SSH first — see the
   lockout warning in the Firewall section above.
 - `ufw` must be enabled (`ufw enable`) — installing

@@ -1,7 +1,7 @@
 # NetBSD
 
 Rules for NetBSD (10.x and 11.x, the supported
-series).
+series). Read `rules/bsd.md` with it.
 
 ## PATH Over SSH
 
@@ -44,6 +44,8 @@ without it.
   `uname -p` — port and CPU (`evbarm`, `aarch64`).
 - `head -1 /etc/release` — `NetBSD 11.0/evbarm`.
 - There is no `/etc/os-release`.
+- Hardware: `sysctl hw.model hw.ncpu
+  hw.physmem64`, `df -h`.
 - Lifecycle: netbsd.org/releases lists the
   supported series; older ones get no security
   fixes.
@@ -63,8 +65,8 @@ without it.
   npf has no state for a connection opened before
   it was active, and `pass stateful … port ssh`
   matches only the opening SYN. Arm the rollback
-  timer (`rules/rollback-timer.md`, "anything
-  else" variant) and start npf in the same detached
+  timer (`rules/rollback-timer.md`, Rollback Timer
+  below) and start npf in the same detached
   command, then confirm with a fresh login.
 - Minimal inbound-SSH-only config (list every port
   sshd listens on):
@@ -136,6 +138,63 @@ without it.
   `PROVIDE` / `REQUIRE` / `BEFORE` header that
   `rcorder` sorts by.
 
+## Service Classes
+
+Installed members (`rules/service-class-check.md`,
+phase 1):
+
+```bash
+pkg_info | grep -E \
+  '^(nginx|apache|caddy|lighttpd|postgresql|mariadb)'
+pkg_info | grep -E \
+  '^(postfix|exim|msmtp|chrony|dnsmasq|unbound|bind)-'
+service -e | grep -E \
+  '/(httpd|named|ntpd|postfix|unbound)$'
+```
+
+The `service -e` line is not optional: `httpd`,
+`named`, `ntpd`, `postfix` and `unbound` ship in
+base and never show up as packages. `postfix` is
+enabled after a plain install.
+
+Install dry run (phase 2):
+
+```bash
+pkgin -n install <pkg>
+```
+
+## Listening Ports
+
+```bash
+sockstat -n -4 -6 -l | grep -E '\.<port> '
+```
+
+`-n` is required: without it NetBSD prints service
+names (`*.ssh`). The port follows a dot, not a
+colon.
+
+## Journal
+
+```
+grep -ah heinzel /var/log/messages 2>/dev/null \
+  | tail -20
+```
+
+`-a` is required: after an unclean shutdown
+`/var/log/messages` can hold NUL bytes, and plain
+`grep` then prints only `Binary file matches`.
+Rotated copies are gzipped (`messages.0.gz`).
+
+## Rollback Timer
+
+- Arm: the generic `nohup` variant in
+  `rules/rollback-timer.md`. There is no `daemon(8)`.
+- Disarm:
+  `pkill -F /var/run/heinzel-rollback-<ts>.pid`,
+  never `pkill -f '<pattern>'` (`rules/bsd.md`).
+- Did it run: `grep -a 'rollback-<ts> ran'
+  /var/log/messages`.
+
 ## Networking
 
 - `ifconfig`, `route -n show`, no `ip`.
@@ -147,29 +206,18 @@ without it.
 - Hostname: `hostname=` in `/etc/rc.conf`. Without
   one the host is `Amnesiac` and **postfix fails at
   boot** (`unable to use my own hostname`).
-- `sockstat -l` prints service names and a dot
-  before the port (`*.ssh`). For a port check use
-  `sockstat -n -4 -6 -l | grep -E '\.<port> '`.
 
 ## Logs
 
-- Syslog only, no `journalctl`: `/var/log/messages`,
+- Syslog only: `/var/log/messages`,
   `/var/log/authlog`; rotated copies are gzipped
-  (`messages.0.gz`).
-- After an unclean shutdown `messages` can hold NUL
-  bytes, and `grep` then prints only `Binary file
-  matches`. Use `grep -a`, also for the heinzel
-  journal (`grep -a heinzel /var/log/messages`).
+  (`messages.0.gz`). Use `grep -a` on them, for the
+  reason given under Journal.
 
 ## Common Pitfalls
 
-- **No `sudo`, no `doas`** in base. The sudoers line
-  is Heinzel Pro's work.
-- **No `daemon(8)`**: the rollback timer uses the
-  `nohup` variant. Disarm with `pkill -F`, never
-  `pkill -f '<pattern>'`: the pattern also matches
-  the shell running the command and kills heinzel's
-  own session.
+- **No `doas` either** in base (`rules/bsd.md` for
+  `sudo`).
 - **ntpd and IPv6**: where the host has an IPv6
   route that does not reach the internet (UTM's
   shared network, many home routers), ntpd solicits

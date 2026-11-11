@@ -13,5 +13,11 @@ Bug reports, ideas and pull requests are welcome.
   blocked, one for the read-only form that stays
   allowed, one through a language runtime, one inside
   `ssh host "…"`. CI runs the matrix.
+- A new operating system is one file in `rules/`
+  with the sections `bin/heinzel-lint-rules` lists,
+  one row in `rules/os-detection.md` and one in the
+  README. The other rule files point to those
+  sections by name: do not add a branch per OS to
+  them.
 - A rule names the effect it guards against, never a
   list of binaries. See the head of the hook for why.

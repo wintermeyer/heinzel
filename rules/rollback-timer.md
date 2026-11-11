@@ -67,12 +67,23 @@ line: `Rollback in 120 s unless a new login works.`
 (`date +%Y%m%d-%H%M%S`). Write paths literally; the
 guard hook denies a redirect onto a computed target.
 
-1. **No other window open.** On Linux with systemd:
+The commands that arm, disarm and read back the
+timer differ per OS. They are in the **Rollback
+Timer** section of the host's OS file
+(`rules/linux.md` for every systemd Linux, else
+`rules/freebsd.md`, `rules/netbsd.md`,
+`rules/openbsd.md`, `rules/macos.md`). Read it
+before step 1. A host without such a section uses
+the generic variant in step 4.
 
-       systemctl list-timers --all 'heinzel-rollback-*'
-
-   A pending timer means another change is still in
-   its window: wait for it or ask the user.
+1. **No other window open.** Check with the OS
+   file's command, or
+   `ls /var/run/heinzel-rollback-*.pid` for the
+   generic variant (a file may be left over from a
+   finished window: `kill -0 <pid>` says whether it
+   still runs). A pending timer means another
+   change is still in its window: wait for it or
+   ask the user.
 
 2. **Back up** every file the change touches, as in
    `rules/backups.md`. For a live firewall also save
@@ -97,26 +108,13 @@ guard hook denies a redirect onto a computed target.
    it was disabled before the change.
 
 4. **Arm the timer.** It must not belong to the SSH
-   session.
-   - Linux with systemd:
+   session. Use the OS file's command. The generic
+   variant, for every host whose OS file names none
+   of its own:
 
-         systemd-run --unit=heinzel-rollback-<ts> \
-           --on-active=120 \
-           /var/backups/heinzel/rollback-<ts>.sh
-
-     Check it shows up in `systemctl list-timers`.
-   - FreeBSD:
-
-         daemon -f -p /var/run/heinzel-rollback-<ts>.pid \
-           sh -c 'sleep 120; sh /var/backups/heinzel/rollback-<ts>.sh'
-
-     Not `at`: `atrun` runs from cron every five
-     minutes, so the window becomes unpredictable.
-   - Anything else (macOS, NetBSD, OpenRC):
-
-         nohup sh -c 'echo $$ > /var/run/heinzel-rollback-<ts>.pid; \
-           sleep 120; sh /var/backups/heinzel/rollback-<ts>.sh' \
-           >/dev/null 2>&1 &
+       nohup sh -c 'echo $$ > /var/run/heinzel-rollback-<ts>.pid; \
+         sleep 120; sh /var/backups/heinzel/rollback-<ts>.sh' \
+         >/dev/null 2>&1 &
 
    No timer, no change: join steps 4 and 5 with
    `&&` in one command. The change then never runs
@@ -151,12 +149,11 @@ guard hook denies a redirect onto a computed target.
    it alive after new logins are already blocked.
 
 7. **Disarm only after that login worked**, and
-   through it:
+   through it, with the OS file's command. Generic
+   variant:
 
-       systemctl stop heinzel-rollback-<ts>.timer
+       kill "$(cat /var/run/heinzel-rollback-<ts>.pid)"
 
-   FreeBSD and the rest:
-   `pkill -F /var/run/heinzel-rollback-<ts>.pid`.
    Heinzel Pro sends every command naming
    `heinzel-rollback-` over a new login of its own,
    so there the disarm is its own confirmation. After
@@ -172,10 +169,9 @@ guard hook denies a redirect onto a computed target.
 
 Do not race the timer and do not fix the change
 through the old session. Wait the window plus 30
-seconds, log in on the old address and read
-`journalctl -t heinzel --since '-10 min'` (FreeBSD:
-`/var/log/messages`) for the `rollback-<ts> ran`
-line. Report in one line what was rolled back, then
+seconds, log in on the old address and read the
+journal (OS file → Rollback Timer, "Did it run")
+for the `rollback-<ts> ran` line. Report in one line what was rolled back, then
 find the cause before trying again.
 
 No line and no login: the host is unreachable after
