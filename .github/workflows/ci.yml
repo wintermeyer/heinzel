@@ -18,6 +18,13 @@ jobs:
       - name: Guard test matrix
         run: sh .claude/hooks/guard-taboos-test.sh
 
+      # port-check.md, activity-check.md and the other
+      # cross-cutting rules point to sections of the OS files by
+      # name. An OS file without one leaves heinzel with no
+      # command on that host.
+      - name: OS rule files carry every section
+        run: sh bin/heinzel-lint-rules
+
       - name: Validate tracked JSON files
         run: |
           git ls-files '*.json' | while read -r f; do
