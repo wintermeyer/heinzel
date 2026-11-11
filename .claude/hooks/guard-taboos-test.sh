@@ -1253,6 +1253,25 @@ check deny 'group del staff'
 check deny 'cat image.raw > /dev/rsd0c'
 check deny 'echo x > /dev/wd0c'
 check deny 'tee /dev/rwd0c < image.raw'
+# The same commands with the flag or the number hidden from a
+# plain word match: quotes, a backslash, $'...', a variable, and
+# an exemption that only appears in a comment.
+check deny "disklabel \$'-E' sd0"
+check deny 'disklabel \-E sd0'
+check deny 'disklabel -h"E" sd0'
+check deny 'disklabel $FLAGS sd0'
+check deny 'fdisk -iy -l "20000" sd0'
+check deny "fdisk -e -l '2048' sd0"
+check deny 'fdisk -l $BLOCKS -gy sd0'
+check deny 'fdisk -u -l "2048" sd0'
+check deny 'fdisk "-i" -l sd0'
+check deny 'installboot sd0 # -n'
+check deny 'installboot -r /mnt sd0 # dry run is -n'
+check deny 'fdisk /dev/sda # -l'
+check deny 'visudo # -c'
+check pass 'fdisk -l "/dev/sda"'
+check pass 'fdisk -l /dev/sda # list the table'
+check pass 'installboot -n -v sd0'
 check pass 'disklabel sd0'
 check pass 'disklabel -h sd0'
 check pass 'disklabel -p g sd0'

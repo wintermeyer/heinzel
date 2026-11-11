@@ -32,6 +32,10 @@
   `rmuser`, `user del` and a redirect onto
   `/dev/rsd0c` or `/dev/wd0c` are denied. All of
   them passed before.
+- **A flag in a shell comment exempts nothing.**
+  `fdisk /dev/sda # -l` and `visudo # -c` passed
+  the guard as read-only forms, because the
+  exemption was searched to the end of the line.
 - **`fdisk -l` followed by a number is no
   listing.** On OpenBSD `-l` takes a block count,
   so `fdisk -iy -l 20000 sd0` rewrote the partition

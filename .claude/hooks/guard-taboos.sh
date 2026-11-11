@@ -404,7 +404,13 @@ hit_without() {
       line = $0
       while (match(line, cmd)) {
         if (RLENGTH <= 0) break
-        if (substr(line, RSTART) !~ exempt) { bare = 1; exit }
+        # A shell comment is not part of the invocation: without
+        # this cut, fdisk /dev/sda # -l counted as a listing.
+        # Cutting at a # that sits inside quotes only removes a
+        # possible exemption, so it errs towards blocking.
+        rest = substr(line, RSTART)
+        sub(/[ \t]#.*$/, "", rest)
+        if (rest !~ exempt) { bare = 1; exit }
         line = substr(line, RSTART + RLENGTH)
       }
     }
@@ -666,10 +672,16 @@ fi
 # On OpenBSD -l takes a block count (fdisk -iy -l 20000 sd0) and
 # lists nothing, so -l followed by a number is no exemption. The
 # number must end the word: fdisk -l 2>/dev/null is a listing.
-if hit '(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]+-[[:alnum:]]*l[[:space:]]*[0-9]+([[:space:]]|$)'
+# The number may be quoted or come from a variable, which nobody
+# sees before it runs: both count. And the OpenBSD write flags
+# (-A -e -g -i -R) exist on no Linux fdisk, so a flag group with
+# one of them is a write whatever else the line holds.
+FDISK='(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]+["'\''\\$]*-'
+if hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]*["'\''\\]*(\$|[0-9]+["'\''\\]*([[:space:]]|$))' \
+  || hit "$FDISK"'[[:alnum:]"'\''\\]*[AegiR]'
 then
   deny "fdisk -l with a block count is the OpenBSD geometry \
-option, not a listing, and the other flags write the table"
+option, not a listing, and -A -e -g -i -R write the table"
 fi
 # The BSD label editors (OpenBSD and NetBSD disklabel, FreeBSD
 # bsdlabel). The label is the partition table there. Their write
@@ -677,8 +689,11 @@ fi
 # flag group with any letter outside A c d h p r t v counts as a
 # write, and that fails closed for -n and -T as well. The flags
 # must sit in the same invocation, after the command: no ; | &
-# between them, so grep -E behind a pipe does not count.
-if hit '(^|[^[:alnum:]_.-])(disklabel|bsdlabel)([[:space:]]+[^[:space:];|&]+)*[[:space:]]+["'\'']?-[Acdhprtv]*[^Acdhprtv[:space:]"'\'']'
+# between them, so grep -E behind a pipe does not count. A word
+# that starts with a quote, a backslash or a $ could be any
+# flag once the shell has unwrapped it, so it counts as a write
+# too, and so does a quote in the middle of a flag group.
+if hit '(^|[^[:alnum:]_.-])(disklabel|bsdlabel)([[:space:]]+[^[:space:];|&]+)*[[:space:]]+(-[Acdhprtv]*[^Acdhprtv[:space:]]|[^[:alnum:][:space:];|&/._>-])'
 then
   deny "disklabel in a write form modifies the partition table \
 (disklabel <disk> and disklabel -h <disk> read it)"
@@ -925,9 +940,11 @@ if hit_without '(^|[^[:alnum:]_.-])bless([^[:alnum:]_.-]|$)' \
 Pro feature"
 fi
 # OpenBSD and NetBSD write their boot blocks with installboot;
-# -n is the dry run on both.
+# -n is the dry run on both. It counts only in the option list
+# right behind the command, so a -n further down the line (an
+# argument, another word) exempts nothing.
 if hit_without '(^|[^[:alnum:]_.-])installboot([^[:alnum:]_.-]|$)' \
-  '(^|[[:space:]])-[[:alnum:]]*n'; then
+  '^[^[:alnum:]]?installboot([[:space:]]+-[[:alnum:]]+)*[[:space:]]+-[[:alnum:]]*n'; then
   deny "installboot rewrites the boot blocks (installboot -n is \
 the dry run); boot work is a Heinzel Pro feature"
 fi
