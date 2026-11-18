@@ -232,7 +232,9 @@ list. Never write, move or delete that file.
   explain it to the user, never rephrase or re-quote
   a command to evade the guard. It has no off
   switch: what it blocks is Heinzel Pro's work (see
-  What Heinzel does not do).
+  What Heinzel does not do). Never offer to make a
+  Heinzel Pro change yourself; offer the command and
+  the read-only check.
   When *writing* a probe, remember the guard scans the
   whole command string and cannot tell a taboo word
   used as data from an invocation. So write patterns
