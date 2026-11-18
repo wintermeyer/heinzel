@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.7.0 — 2026-11-18
+
+- **heinzel names the command for a Heinzel Pro
+  change and never runs it.** Asked for the
+  command, it gives the standard one and checks the
+  result read-only. It no longer points to another
+  Claude session, another checkout or an edited
+  rule. Copying an existing key to another host
+  counts as a new SSH key, and the guard denies
+  `ssh-copy-id`: before, heinzel ran it in one
+  session and refused to name it in the next.
+
 ## 3.6.2 — 2026-11-11
 
 - **`fdisk -u` is denied.** On OpenBSD it rewrites

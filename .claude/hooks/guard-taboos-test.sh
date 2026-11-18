@@ -451,6 +451,18 @@ check pass 'sysadminctl -secureTokenStatus alice'
 check pass 'groups alice'
 check pass 'ssh root@h "cat /etc/sudoers.d/deploy"'
 
+# Copying a key to another host or account widens access. heinzel
+# names the command for the operator and checks the result read-only.
+check deny 'ssh-copy-id -i ~/.ssh/supalfa.pub user@web7'
+check deny 'ssh-copy-id user@h'
+check deny 'sudo ssh-copy-id -f -i k.pub u@h'
+check deny '/usr/bin/ssh-copy-id -i k.pub u@h'
+check deny 'command ssh-copy-id -i k.pub u@h'
+check deny 'ssh root@h "ssh-copy-id -i /root/.ssh/k.pub deploy@web2"'
+check pass 'ssh-keygen -lf ~/.ssh/supalfa.pub'
+check pass 'ssh -o BatchMode=yes -o ControlMaster=no -o ControlPath=none -o IdentitiesOnly=yes -i ~/.ssh/supalfa u@h true'
+check pass 'ssh u@h "grep -c ssh-ed25519 .ssh/authorized_keys"'
+
 # The server lock (/etc/heinzel.conf, rules/access-control.md).
 # The machine's owner sets it; heinzel reads it and never lifts
 # it, by any of the ways a file gets written, moved or deleted.

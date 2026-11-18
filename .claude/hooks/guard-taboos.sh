@@ -31,7 +31,8 @@
 #   - accounts and sudo (Heinzel Pro's work since 3.0):
 #     deleting an account or a group, visudo, vipw/vigr, any
 #     write to sudoers(.d/), to doas.conf or to the account
-#     files (/etc/passwd, shadow, group, master.passwd)
+#     files (/etc/passwd, shadow, group, master.passwd),
+#     ssh-copy-id (copying a key to another host or account)
 #   - writing, moving or deleting the server lock
 #     /etc/heinzel.conf, which only the machine's owner sets
 #     (rules/access-control.md)
@@ -1009,6 +1010,16 @@ fi
 if hit '(^|[^[:alnum:]_.-])(vipw|vigr)([^[:alnum:]_.-]|$)'; then
   deny "vipw and vigr edit the account files in place; account \
 work is a Heinzel Pro feature"
+fi
+# ssh-copy-id widens access rather than locking anyone out, but
+# without this deny the model ran it in one session and refused to
+# even name it in the next. A deny gives one answer every time; the
+# write rules on KEY already stop a hand-made append. Accepted
+# false positive: man ssh-copy-id.
+if hit '(^|[^[:alnum:]_.-])ssh-copy-id([^[:alnum:]_.-]|$)'; then
+  deny "ssh-copy-id puts a key on another host or account; copying \
+keys is a Heinzel Pro feature. Name the command for the user to run \
+and check the result read-only"
 fi
 if hit "$SUDOERS"; then
   if hit '>>?[[:space:]]*["'\'']?[^[:space:];|&]*'"$SUDOERS" \
