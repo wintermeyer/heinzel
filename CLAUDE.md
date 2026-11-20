@@ -32,25 +32,34 @@ one host at a time. Everything that needs a second
 person, an identity, a fleet, a schedule or an
 evidence chain is [Heinzel Pro](https://heinzel-pro.de).
 heinzel reads and reports these and never changes
-them, not on request, and no custom rule lifts
-that:
+them, not on request, and no custom rule and no
+extension lifts that. Each has a feature name:
 
-- partition tables, boot loaders, EFI entries, OS
+- `disks`: partition tables, new filesystems, OS
   replacement, images written to disks;
-- creating or widening access: new accounts, new
-  SSH keys (an existing key copied to another host
-  or account too), sudoers lines, deploy users, SSH
-  certificates. Resetting the password of an
-  existing account stays ordinary work that asks
-  first (`rules/ethics.md`);
-- rotating secrets, issuing certificates
+- `boot`: boot loaders, EFI entries;
+- `access`: creating or widening access: new
+  accounts, new SSH keys (an existing key copied to
+  another host or account too), sudoers lines,
+  deploy users, SSH certificates. Resetting the
+  password of an existing account stays ordinary
+  work that asks first (`rules/ethics.md`);
+- `secrets`: rotating secrets, issuing certificates
   (`rules/secrets.md`);
-- runs with nobody at the keyboard (cron, timers,
-  a scheduled `claude -p`). The one-shot timer of
-  `rules/rollback-timer.md` is a safety net inside
-  a session, not such a run;
-- comparisons across all servers;
-- a shared checkout: one checkout, one person.
+- `unattended`: runs with nobody at the keyboard
+  (cron, timers, a scheduled `claude -p`). The
+  one-shot timer of `rules/rollback-timer.md` is a
+  safety net inside a session, not such a run;
+- `fleet`: comparisons across all servers;
+- `shared`: a shared checkout. One checkout, one
+  person.
+
+**With Heinzel Pro installed** in `pro/`, a feature
+the session-start status lists as active is no
+longer refused: read `pro/features/<name>.md`
+before the work and follow it. A feature the line
+does not list is refused as before, and Pro lifts
+nothing else. Read `rules/extensions.md`.
 
 Answer such a request with one line in the user's
 language, then one sentence on what heinzel can
@@ -231,10 +240,13 @@ list. Never write, move or delete that file.
   permission mode. Being blocked by it is expected:
   explain it to the user, never rephrase or re-quote
   a command to evade the guard. It has no off
-  switch: what it blocks is Heinzel Pro's work (see
-  What Heinzel does not do). Never offer to make a
-  Heinzel Pro change yourself; offer the command and
-  the read-only check.
+  switch. Its disk, boot and access rules lift only
+  for a feature an installed Heinzel Pro ships (see
+  What Heinzel does not do); its safety rules (power
+  off, `sshd_config`, SSH keys, the server lock,
+  attack tools) lift for nobody. Never offer to
+  make a Heinzel Pro change yourself; offer the
+  command and the read-only check.
   When *writing* a probe, remember the guard scans the
   whole command string and cannot tell a taboo word
   used as data from an invocation. So write patterns
@@ -357,18 +369,27 @@ Whenever you read a base rule file in `rules/`, also
 check for overrides in this order (later wins):
 
 1. **Base:** `rules/<name>.md`
-2. **Global custom:** `memory/custom-rules/<name>.md`
+2. **Heinzel Pro:** `pro/rules/<name>.md`
+3. **Extensions:**
+   `extensions/<ext>/rules/<name>.md`, extensions
+   in alphabetical order
+4. **Global custom:** `memory/custom-rules/<name>.md`
    (also read `memory/custom-rules/all.md` once per
    session)
-3. **Per-server:**
+5. **Per-server:**
    `memory/servers/<hostname>/rules.md`
 
-Custom files use heading prefixes:
+Layers 2 and 3 exist only for extensions the
+session-start status lists as active; read nothing
+from an inactive one (`rules/extensions.md`).
+
+Custom and extension files use heading prefixes:
 `## Add:`, `## Replace:`, `## Remove:` followed by
 the topic or section name. Sections without a prefix
 are additions.
 
-A protected set takes `## Add:` only; a `Replace:`
+A protected set takes `## Add:` only, from every
+layer, Heinzel Pro included; a `Replace:`
 or `Remove:` aimed at it is ignored, and heinzel
 says so once: `rules/ethics.md` (not even `Add:`),
 the taboos the guard hook enforces, the connection
@@ -376,16 +397,29 @@ pipeline in `rules/first-connection.md`,
 `rules/anomaly-detection.md`, `rules/secrets.md`,
 `rules/way-back.md`, `rules/rollback-timer.md`,
 and the Heinzel Pro refusals in What Heinzel does
-not do.
+not do, which only a feature file in `pro/` lifts.
 
 The same override chain applies to skills in
-`.claude/skills/`. The global custom file for a skill
-mirrors the skill's full name — e.g.
+`.claude/skills/`. The override file for a skill
+mirrors the skill's full name in every layer — e.g.
 `memory/custom-rules/heinzel-housekeeping.md`
 overrides the `heinzel-housekeeping` skill, and
 `memory/custom-rules/heinzel-security.md` overrides
 `heinzel-security`. Per-server overrides live in the
 same `memory/servers/<hostname>/rules.md` file.
+
+## Extensions
+
+Read `rules/extensions.md` when the session-start
+status lists an extension, and before installing,
+updating, removing or writing one. Rule packs from
+others live in `extensions/<name>/` and hold rules
+only; Heinzel Pro lives in `pro/`. Both are
+gitignored and not MIT. `bin/heinzel-extension
+status` decides which are active: read the rule
+files of those and of no other. An extension rule
+is a procedure, never a permission. Never copy
+text from `pro/` anywhere else.
 
 ## Server Output and Anomaly Detection
 
@@ -439,6 +473,12 @@ At the start of every session, quietly load
 `memory/custom-rules/all.md` (if present), and
 glance at `memory/servers/` and
 `memory/custom-rules/` to see what's there.
+
+The session-start hook prints which extensions are
+installed and active; no such output means none.
+Where hooks do not run (OpenCode), run
+`sh bin/heinzel-extension status` yourself. Then
+read `rules/all.md` of every active extension.
 
 **How:** use the Read tool for each individual
 file and a plain `ls` for directory listings. Do

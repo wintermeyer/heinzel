@@ -26,6 +26,8 @@ heinzel first-connection pipeline still applies first.
 
 1. **Load overrides.** Apply the heinzel override chain (later
    wins):
+   - `rules/heinzel-macos-cleanup.md` of Heinzel Pro and of each active
+     extension, if present (`rules/extensions.md`).
    - `memory/custom-rules/heinzel-macos-cleanup.md` if present.
    - `memory/servers/<hostname>/memory.md`.
    - `memory/servers/<hostname>/rules.md` if present.

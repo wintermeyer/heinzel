@@ -1,0 +1,795 @@
+#!/bin/sh
+# heinzel-extension — install, write and check extensions.
+#
+# An extension is a directory of rule files with a manifest
+# and a licence. Third-party and self-written ones live in
+# extensions/<name>/ and hold rules only. Heinzel Pro lives
+# in pro/ and may also bring skills and the features plain
+# heinzel refuses. Both directories are gitignored and are
+# not covered by heinzel's MIT licence. docs/extensions.md
+# has the guide, rules/extensions.md what the agent does.
+#
+# Usage:
+#   heinzel-extension status            What is installed, and
+#                                       which of it is active
+#   heinzel-extension new NAME [--mit]  Start your own extension
+#   heinzel-extension add URL [--ref REF] [--pro]
+#                                       Install one from git
+#   heinzel-extension update NAME [--ref REF] [--yes]
+#                                       Show what changed, then
+#                                       apply it (NAME or "pro")
+#   heinzel-extension remove NAME [--force]
+#   heinzel-extension lint [NAME|PATH]  Check an extension the
+#                                       way an author needs it
+#   heinzel-extension --help
+#
+# For heinzel itself:
+#   heinzel-extension pro-feature NAME  Exit 0 when Heinzel Pro
+#                                       is active and carries
+#                                       that feature (the guard
+#                                       hook asks this)
+#   heinzel-extension sync              Link Pro's skills into
+#                                       .claude/skills/
+#   heinzel-extension check-core        CI: no Pro file and no
+#                                       extension is tracked
+#
+# Every check here fails closed: an extension that cannot be
+# shown to be valid is inactive, and an inactive one is never
+# read.
+
+set -u
+
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+SELF="$SCRIPT_DIR/$(basename "$0")"
+EXT_DIR="$ROOT/extensions"
+PRO_DIR="$ROOT/pro"
+SKILL_DIR="$ROOT/.claude/skills"
+
+PRO_NAME=heinzel-pro
+# The work plain heinzel refuses, one name per bullet of
+# CLAUDE.md -> What Heinzel does not do. Pro lifts a refusal by
+# shipping features/<name>.md. The guard hook backs the first
+# three.
+PRO_FEATURES="disks boot access secrets unattended fleet shared"
+# Rules that take additions only (CLAUDE.md -> Rule Overrides).
+# ethics takes none at all.
+PROTECTED="first-connection anomaly-detection secrets way-back
+rollback-timer"
+SPDX_ID="LicenseRef-Heinzel-Pro"
+SPDX_LINE="^(<!-- |# |// )?SPDX-License-Identifier: $SPDX_ID( -->)?[[:space:]]*\$"
+
+export GIT_TERMINAL_PROMPT=0
+
+usage() {
+  awk '/^# heinzel-extension/{h=1} h{if(/^[^#]/||/^$/)exit; sub(/^# ?/,""); print}' "$SELF"
+}
+
+die() {
+  echo "heinzel-extension: $*" >&2
+  exit 1
+}
+
+# --- manifest ---------------------------------------------------
+
+# conf_get FILE KEY: the value of "key = value", first hit wins.
+conf_get() {
+  awk -v k="$2" '
+    /^[ \t]*#/ { next }
+    {
+      i = index($0, "=")
+      if (!i) next
+      key = substr($0, 1, i - 1)
+      val = substr($0, i + 1)
+      gsub(/^[ \t]+|[ \t]+$/, "", key)
+      gsub(/^[ \t]+|[ \t\r]+$/, "", val)
+      if (key == k) { print val; exit }
+    }' "$1" 2>/dev/null
+}
+
+is_semver() {
+  printf '%s\n' "$1" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+}
+
+# ver_le A B: true when version A <= version B.
+ver_le() {
+  printf '%s %s\n' "$1" "$2" | awk '{
+    split($1, a, "."); split($2, b, ".")
+    for (i = 1; i <= 3; i++) {
+      if (a[i] + 0 < b[i] + 0) exit 0
+      if (a[i] + 0 > b[i] + 0) exit 1
+    }
+    exit 0 }'
+}
+
+core_version() {
+  CORE=""
+  [ -f "$ROOT/VERSION" ] && CORE=$(tr -d ' \t\r\n' < "$ROOT/VERSION")
+  is_semver "$CORE" || CORE=""
+}
+
+# --- validation -------------------------------------------------
+
+# Files an extension in extensions/ may hold. Rules, not tools:
+# anything else (a script, a hook, a skill, a link) makes the
+# whole extension inactive. The set cannot be closed against a
+# rule that tells the agent to fetch a script; that is what the
+# sentence in rules/extensions.md is for.
+tree_problem() {
+  # $1 dir. Prints the first entry that does not belong.
+  ( cd "$1" 2>/dev/null || { echo "(unreadable)"; exit 0; }
+    find . -name .git -prune -o -type l -print | head -n 1
+    find . -name .git -prune -o ! -name . -print | while IFS= read -r P; do
+      case "$P" in
+        ./extension.conf|./README.md|./CHANGELOG.md) ;;
+        ./LICENSE|./LICENSE.md|./LICENSE.txt) ;;
+        ./.gitignore|./.gitattributes) ;;
+        ./rules|./.github|./.github/workflows) ;;
+        ./rules/*/*) echo "$P" ;;
+        ./rules/*.md)
+          printf '%s\n' "${P#./rules/}" \
+            | grep -Eq '^[a-z0-9][a-z0-9-]*\.md$' || echo "$P" ;;
+        ./.github/workflows/*/*) echo "$P" ;;
+        ./.github/workflows/*.yml|./.github/workflows/*.yaml) ;;
+        *) echo "$P" ;;
+      esac
+    done | head -n 1
+  ) | head -n 1
+}
+
+# validate DIR TIER [any]
+#   TIER is "ext" or "pro". With "any" the directory name is
+#   not compared (a clone that has not been moved into place).
+# Sets V_NAME, V_VERSION and, on failure, V_REASON.
+validate() {
+  V_DIR=$1
+  V_TIER=$2
+  V_ANY=${3:-}
+  V_NAME=""
+  V_VERSION=""
+  V_REASON=""
+  V_CONF="$V_DIR/extension.conf"
+
+  core_version
+  if [ -z "$CORE" ]; then
+    V_REASON="heinzel's own VERSION file is unreadable"
+    return 1
+  fi
+  if [ ! -f "$V_CONF" ] || [ -L "$V_CONF" ]; then
+    V_REASON="no extension.conf"
+    return 1
+  fi
+  V_NAME=$(conf_get "$V_CONF" name)
+  V_VERSION=$(conf_get "$V_CONF" version)
+  V_MAJOR=$(conf_get "$V_CONF" heinzel)
+  V_MIN=$(conf_get "$V_CONF" heinzel-min)
+  V_LICENSE=$(conf_get "$V_CONF" license)
+
+  if ! printf '%s\n' "$V_NAME" | grep -Eq '^[a-z][a-z0-9-]{1,39}$'; then
+    V_REASON="name in extension.conf must be 2 to 40 characters of a-z, 0-9 and -"
+    return 1
+  fi
+  if [ "$V_TIER" = pro ]; then
+    if [ "$V_NAME" != "$PRO_NAME" ]; then
+      V_REASON="pro/ holds '$V_NAME', not $PRO_NAME"
+      return 1
+    fi
+  else
+    case "$V_NAME" in
+      heinzel|heinzel-*|pro)
+        V_REASON="the name '$V_NAME' is reserved for heinzel itself"
+        return 1 ;;
+    esac
+    if [ -z "$V_ANY" ] && [ "$V_NAME" != "$(basename "$V_DIR")" ]; then
+      V_REASON="directory is '$(basename "$V_DIR")' but extension.conf says '$V_NAME'"
+      return 1
+    fi
+  fi
+  if ! is_semver "$V_VERSION"; then
+    V_REASON="version in extension.conf must look like 1.2.3"
+    return 1
+  fi
+  if ! printf '%s\n' "$V_MAJOR" | grep -Eq '^[0-9]+$'; then
+    V_REASON="extension.conf needs 'heinzel = <major version>'"
+    return 1
+  fi
+  if [ "$V_MAJOR" != "${CORE%%.*}" ]; then
+    V_REASON="written for heinzel $V_MAJOR, this is $CORE"
+    return 1
+  fi
+  if [ -n "$V_MIN" ]; then
+    if ! is_semver "$V_MIN"; then
+      V_REASON="heinzel-min in extension.conf must look like 1.2.3"
+      return 1
+    fi
+    if ! ver_le "$V_MIN" "$CORE"; then
+      V_REASON="needs heinzel $V_MIN or newer, this is $CORE"
+      return 1
+    fi
+  fi
+  if [ -z "$V_LICENSE" ]; then
+    V_REASON="extension.conf names no license"
+    return 1
+  fi
+  if [ ! -f "$V_DIR/LICENSE" ] && [ ! -f "$V_DIR/LICENSE.md" ] \
+    && [ ! -f "$V_DIR/LICENSE.txt" ]; then
+    V_REASON="no LICENSE file"
+    return 1
+  fi
+  if [ "$V_TIER" = ext ]; then
+    V_BAD=$(tree_problem "$V_DIR")
+    if [ -n "$V_BAD" ]; then
+      V_REASON="holds more than rules: $V_BAD"
+      return 1
+    fi
+    if ! ls "$V_DIR"/rules/*.md >/dev/null 2>&1; then
+      V_REASON="no rule file under rules/"
+      return 1
+    fi
+  fi
+  return 0
+}
+
+# Overrides heinzel ignores, one per line. Both tiers: not even
+# Pro replaces or removes a protected rule.
+ignored_overrides() {
+  D=$1
+  [ -d "$D/rules" ] || return 0
+  [ -e "$D/rules/ethics.md" ] \
+    && echo "rules/ethics.md (the ethics rule takes no override)"
+  for P in $PROTECTED all; do
+    F="$D/rules/$P.md"
+    [ -f "$F" ] || continue
+    if grep -Eiq '^##+[[:space:]]*(replace|remove)[[:space:]]*:' "$F"; then
+      if [ "$P" = all ]; then
+        echo "rules/all.md: Replace/Remove sections (all.md only adds)"
+      else
+        echo "rules/$P.md: Replace/Remove sections (this rule only takes Add)"
+      fi
+    fi
+  done
+}
+
+rule_names() {
+  # $1 dir, $2 subdirectory. Names without .md, on one line.
+  NAMES=""
+  for F in "$1/$2"/*.md; do
+    [ -f "$F" ] || continue
+    B=$(basename "$F" .md)
+    NAMES="$NAMES $B"
+  done
+  printf '%s' "${NAMES# }"
+}
+
+pro_features_present() {
+  FOUND=""
+  for F in $PRO_FEATURES; do
+    FILE="$PRO_DIR/features/$F.md"
+    if [ -f "$FILE" ] && [ ! -L "$FILE" ] && [ -s "$FILE" ]; then
+      FOUND="$FOUND $F"
+    fi
+  done
+  printf '%s' "${FOUND# }"
+}
+
+# --- status -----------------------------------------------------
+
+status_line() {
+  # $1 dir, $2 tier, $3 path as shown
+  if validate "$1" "$2"; then
+    if [ "$2" = pro ]; then
+      FEAT=$(pro_features_present)
+      echo "  $V_NAME $V_VERSION ($3): active, features: ${FEAT:-none}"
+      R=$(rule_names "$1" rules)
+      [ -n "$R" ] && echo "    rules: $R"
+    else
+      echo "  $V_NAME $V_VERSION ($3): active, rules: $(rule_names "$1" rules)"
+    fi
+    ignored_overrides "$1" | while IFS= read -r L; do
+      echo "    ignored: $L"
+    done
+  else
+    echo "  ${V_NAME:-$(basename "$1")} ($3): INACTIVE, $V_REASON"
+  fi
+}
+
+cmd_status() {
+  LINES=""
+  [ -d "$PRO_DIR" ] && LINES=$(status_line "$PRO_DIR" pro "pro/")
+  for D in "$EXT_DIR"/*/; do
+    [ -d "$D" ] || continue
+    D=${D%/}
+    L=$(status_line "$D" ext "extensions/$(basename "$D")/")
+    LINES="$LINES${LINES:+
+}$L"
+  done
+  # Nothing installed: say nothing.
+  [ -n "$LINES" ] || return 0
+  core_version
+  echo "heinzel ${CORE:-?} extensions:"
+  printf '%s\n' "$LINES"
+  echo "Read rule files of active extensions only" \
+    "(rules/extensions.md)."
+}
+
+# --- pro-feature ------------------------------------------------
+
+cmd_pro_feature() {
+  WANT=${1:-}
+  OK=""
+  for F in $PRO_FEATURES; do
+    [ "$F" = "$WANT" ] && OK=1
+  done
+  [ -n "$OK" ] || return 1
+  [ -d "$PRO_DIR" ] || return 1
+  validate "$PRO_DIR" pro || return 1
+  FILE="$PRO_DIR/features/$WANT.md"
+  [ -f "$FILE" ] && [ ! -L "$FILE" ] && [ -s "$FILE" ]
+}
+
+# --- sync: Pro's skills -----------------------------------------
+# Claude Code finds skills only under .claude/skills/. Pro's are
+# linked there, never copied, so no Pro file ever sits outside
+# pro/. Only links named heinzel-pro-* are created or removed.
+
+cmd_sync() {
+  [ -d "$SKILL_DIR" ] || return 0
+  PRO_OK=""
+  [ -d "$PRO_DIR" ] && validate "$PRO_DIR" pro && PRO_OK=1
+  for L in "$SKILL_DIR"/heinzel-pro-*; do
+    [ -L "$L" ] || continue
+    if [ -z "$PRO_OK" ] || [ ! -f "$L/SKILL.md" ]; then
+      command rm -f "$L"
+      echo "heinzel-extension: unlinked skill $(basename "$L")"
+    fi
+  done
+  [ -n "$PRO_OK" ] || return 0
+  for S in "$PRO_DIR"/skills/heinzel-pro-*/; do
+    [ -f "${S}SKILL.md" ] || continue
+    N=$(basename "$S")
+    [ -e "$SKILL_DIR/$N" ] || [ -L "$SKILL_DIR/$N" ] && continue
+    ln -s "../../pro/skills/$N" "$SKILL_DIR/$N" \
+      && echo "heinzel-extension: linked skill $N"
+  done
+  return 0
+}
+
+# --- new --------------------------------------------------------
+
+cmd_new() {
+  NAME=""
+  MIT=""
+  for A in "$@"; do
+    case "$A" in
+      --mit) MIT=1 ;;
+      -*) die "unknown option: $A" ;;
+      *) NAME=$A ;;
+    esac
+  done
+  [ -n "$NAME" ] || die "usage: heinzel-extension new NAME [--mit]"
+  printf '%s\n' "$NAME" | grep -Eq '^[a-z][a-z0-9-]{1,39}$' \
+    || die "a name is 2 to 40 characters of a-z, 0-9 and -"
+  case "$NAME" in
+    heinzel|heinzel-*|pro) die "the name '$NAME' is reserved" ;;
+  esac
+  DIR="$EXT_DIR/$NAME"
+  [ -e "$DIR" ] && die "extensions/$NAME already exists"
+  core_version
+  [ -n "$CORE" ] || die "heinzel's VERSION file is unreadable"
+  AUTHOR=$(git config user.name 2>/dev/null || true)
+  [ -n "$AUTHOR" ] || AUTHOR="<your name>"
+  YEAR=$(date +%Y)
+
+  mkdir -p "$DIR/rules" || die "cannot create extensions/$NAME"
+  if [ -n "$MIT" ]; then
+    LIC=MIT
+    cat > "$DIR/LICENSE" <<EOF
+MIT License
+
+Copyright (c) $YEAR $AUTHOR
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+EOF
+  else
+    LIC=LicenseRef-Proprietary
+    cat > "$DIR/LICENSE" <<EOF
+Copyright (c) $YEAR $AUTHOR. All rights reserved.
+
+This extension is not covered by heinzel's MIT licence. Nobody
+may copy, change or pass it on without the written permission
+of the copyright holder.
+
+Replace this file with the licence you want. For an open one,
+start over with: bin/heinzel-extension new <name> --mit
+EOF
+  fi
+
+  cat > "$DIR/extension.conf" <<EOF
+# Manifest of the $NAME extension (docs/extensions.md).
+name = $NAME
+version = 0.1.0
+description = One line on what these rules add
+# The heinzel major version these rules were written for.
+heinzel = ${CORE%%.*}
+# Optional: the oldest heinzel they work with.
+# heinzel-min = $CORE
+license = $LIC
+EOF
+
+  cat > "$DIR/rules/all.md" <<EOF
+# $NAME
+
+heinzel reads this file once per session, on every
+server. Rules for one topic go into a file named
+like the rule they extend: \`rules/debian.md\`,
+\`rules/backups.md\`, \`rules/heinzel-housekeeping.md\`.
+
+## Add: Say that $NAME is active
+Asked which extensions are active, name \`$NAME\`.
+Replace this section with your first real rule.
+EOF
+
+  cat > "$DIR/README.md" <<EOF
+# $NAME
+
+One paragraph on what these rules add to heinzel and
+who they are for.
+
+## Install
+
+    bin/heinzel-extension add <git url of this repository>
+
+## Rules
+
+- \`rules/all.md\`: read once per session.
+EOF
+
+  echo "Created extensions/$NAME/ (license: $LIC)."
+  echo "Edit rules/all.md, then: bin/heinzel-extension lint $NAME"
+  echo "It is not in git yet, and bin/heinzel-backup does not" \
+    "cover it: git init it to keep it."
+}
+
+# --- add --------------------------------------------------------
+
+cmd_add() {
+  URL=""
+  REF=""
+  PRO=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --pro) PRO=1 ;;
+      --ref) shift; REF=${1:-} ;;
+      -*) die "unknown option: $1" ;;
+      *) URL=$1 ;;
+    esac
+    shift
+  done
+  [ -n "$URL" ] || die "usage: heinzel-extension add URL [--ref REF] [--pro]"
+  command -v git >/dev/null 2>&1 || die "git is not installed"
+  if [ -n "$PRO" ] && [ -e "$PRO_DIR" ]; then
+    die "pro/ already exists; update it with: heinzel-extension update pro"
+  fi
+  mkdir -p "$EXT_DIR" || die "cannot create extensions/"
+  TMP="$EXT_DIR/.incoming.$$"
+  trap 'command rm -rf "$TMP"' EXIT
+  trap 'exit 1' INT TERM
+  git clone --quiet "$URL" "$TMP" 2>/dev/null \
+    || die "could not clone $URL (no access, or no such repository)"
+  if [ -n "$REF" ]; then
+    git -C "$TMP" checkout --quiet --detach "$REF" 2>/dev/null \
+      || die "no such tag or commit in that repository: $REF"
+  fi
+  if [ -n "$PRO" ]; then
+    validate "$TMP" pro || die "not installed: $V_REASON"
+    DEST="$PRO_DIR"
+    SHOWN="pro/"
+  else
+    if [ "$(conf_get "$TMP/extension.conf" name)" = "$PRO_NAME" ]; then
+      die "that is Heinzel Pro; install it with: heinzel-extension add --pro <url>"
+    fi
+    validate "$TMP" ext any || die "not installed: $V_REASON"
+    DEST="$EXT_DIR/$V_NAME"
+    SHOWN="extensions/$V_NAME/"
+    [ -e "$DEST" ] && die "$SHOWN already exists; update it with: heinzel-extension update $V_NAME"
+  fi
+  mv "$TMP" "$DEST" || die "could not move the clone to $SHOWN"
+  echo "Installed $V_NAME $V_VERSION in $SHOWN" \
+    "(license: $(conf_get "$DEST/extension.conf" license))."
+  if [ -n "$PRO" ]; then
+    echo "Features: $(pro_features_present)"
+    cmd_sync
+    echo "Heinzel Pro is not MIT: read pro/LICENSE."
+  else
+    echo "Rules: $(rule_names "$DEST" rules)"
+    ignored_overrides "$DEST" | while IFS= read -r L; do
+      echo "Ignored: $L"
+    done
+    echo "These rules steer what heinzel does on your servers." \
+      "Read them before the next session: $SHOWN""rules/"
+  fi
+}
+
+# --- update -----------------------------------------------------
+# An extension never updates behind the operator's back: the
+# diff is shown first and --yes applies it. Heinzel Pro is the
+# one exception, heinzel-update and the session-start hook pull
+# it together with heinzel.
+
+resolve_dir() {
+  # $1 name. Sets U_DIR, U_TIER, U_SHOWN.
+  if [ "$1" = pro ] || [ "$1" = "$PRO_NAME" ]; then
+    U_DIR="$PRO_DIR"; U_TIER=pro; U_SHOWN="pro/"
+  else
+    printf '%s\n' "$1" | grep -Eq '^[a-z][a-z0-9-]{1,39}$' \
+      || die "no such extension: $1"
+    U_DIR="$EXT_DIR/$1"; U_TIER=ext; U_SHOWN="extensions/$1/"
+  fi
+}
+
+cmd_update() {
+  NAME=""
+  REF=""
+  YES=""
+  QUIET=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --yes) YES=1 ;;
+      --quiet) QUIET=1 ;;
+      --ref) shift; REF=${1:-} ;;
+      -*) die "unknown option: $1" ;;
+      *) NAME=$1 ;;
+    esac
+    shift
+  done
+  [ -n "$NAME" ] || die "usage: heinzel-extension update NAME [--ref REF] [--yes]"
+  resolve_dir "$NAME"
+  if [ ! -d "$U_DIR" ]; then
+    [ -n "$QUIET" ] && return 0
+    die "$U_SHOWN is not installed"
+  fi
+  if [ ! -e "$U_DIR/.git" ]; then
+    [ -n "$QUIET" ] && return 0
+    die "$U_SHOWN is not a git clone; change it by hand"
+  fi
+  if ! git -C "$U_DIR" fetch --quiet --tags origin 2>/dev/null; then
+    echo "heinzel-extension: could not fetch $U_SHOWN (no network or no access); left as it is"
+    return 1
+  fi
+  if [ -n "$REF" ]; then
+    TARGET=$(git -C "$U_DIR" rev-parse --verify -q "$REF^{commit}" 2>/dev/null) \
+      || TARGET=$(git -C "$U_DIR" rev-parse --verify -q "origin/$REF^{commit}" 2>/dev/null) \
+      || die "no such tag, branch or commit in $U_SHOWN: $REF"
+  else
+    if ! git -C "$U_DIR" symbolic-ref -q HEAD >/dev/null 2>&1; then
+      [ -n "$QUIET" ] && return 0
+      die "$U_SHOWN is pinned to $(git -C "$U_DIR" describe --tags --always 2>/dev/null); name the new version with --ref"
+    fi
+    TARGET=$(git -C "$U_DIR" rev-parse --verify -q '@{u}' 2>/dev/null) \
+      || die "$U_SHOWN has no upstream branch to update from"
+  fi
+  OLD=$(git -C "$U_DIR" rev-parse HEAD)
+  if [ "$OLD" = "$TARGET" ]; then
+    [ -n "$QUIET" ] || echo "$U_SHOWN is up to date."
+    return 0
+  fi
+  if [ -n "$(git -C "$U_DIR" status --porcelain 2>/dev/null)" ]; then
+    echo "heinzel-extension: $U_SHOWN has local changes; not updated"
+    return 1
+  fi
+  OLD_VER=$(conf_get "$U_DIR/extension.conf" version)
+  if [ -z "$QUIET" ]; then
+    echo "Changes in $U_SHOWN:"
+    git -C "$U_DIR" --no-pager log --oneline "$OLD..$TARGET"
+    echo
+    git -C "$U_DIR" --no-pager diff "$OLD" "$TARGET"
+    echo
+  fi
+  if [ -z "$YES" ]; then
+    if [ -t 0 ]; then
+      printf 'Apply this update to %s? [y/N] ' "$U_SHOWN"
+      read -r ANSWER
+      case "$ANSWER" in
+        y|Y|yes|j|J|ja) ;;
+        *) echo "Not applied."; return 3 ;;
+      esac
+    else
+      echo "Not applied. Read the diff above, then:" \
+        "bin/heinzel-extension update $NAME${REF:+ --ref $REF} --yes"
+      return 3
+    fi
+  fi
+  if [ -n "$REF" ]; then
+    git -C "$U_DIR" checkout --quiet --detach "$TARGET" 2>/dev/null \
+      || { echo "heinzel-extension: could not check out $REF in $U_SHOWN"; return 1; }
+  else
+    git -C "$U_DIR" merge --ff-only --quiet "$TARGET" 2>/dev/null \
+      || { echo "heinzel-extension: $U_SHOWN has local commits; not updated"; return 1; }
+  fi
+  NEW_VER=$(conf_get "$U_DIR/extension.conf" version)
+  echo "$(conf_get "$U_DIR/extension.conf" name) updated: $OLD_VER -> $NEW_VER"
+  if ! validate "$U_DIR" "$U_TIER"; then
+    echo "It is INACTIVE now: $V_REASON"
+  fi
+  [ "$U_TIER" = pro ] && cmd_sync
+  return 0
+}
+
+# --- remove -----------------------------------------------------
+
+cmd_remove() {
+  NAME=""
+  FORCE=""
+  for A in "$@"; do
+    case "$A" in
+      --force) FORCE=1 ;;
+      -*) die "unknown option: $A" ;;
+      *) NAME=$A ;;
+    esac
+  done
+  [ -n "$NAME" ] || die "usage: heinzel-extension remove NAME [--force]"
+  resolve_dir "$NAME"
+  [ -d "$U_DIR" ] || die "$U_SHOWN is not installed"
+  if [ -z "$FORCE" ]; then
+    # Never delete the only copy of somebody's work.
+    if [ ! -e "$U_DIR/.git" ]; then
+      die "$U_SHOWN is not in git, so this is the only copy; remove it with --force"
+    fi
+    if [ -n "$(git -C "$U_DIR" status --porcelain 2>/dev/null)" ]; then
+      die "$U_SHOWN has uncommitted changes; remove it with --force"
+    fi
+    if ! git -C "$U_DIR" rev-parse --verify -q '@{u}' >/dev/null 2>&1; then
+      if [ -z "$(git -C "$U_DIR" branch -r --contains HEAD 2>/dev/null)" ]; then
+        die "$U_SHOWN has commits that are on no remote; remove it with --force"
+      fi
+    elif [ -n "$(git -C "$U_DIR" rev-list '@{u}..HEAD' 2>/dev/null)" ]; then
+      die "$U_SHOWN has unpushed commits; remove it with --force"
+    fi
+  fi
+  command rm -rf "$U_DIR" || die "could not remove $U_SHOWN"
+  echo "Removed $U_SHOWN"
+  [ "$U_TIER" = pro ] && cmd_sync
+  return 0
+}
+
+# --- lint -------------------------------------------------------
+# What status tolerates and reports, lint fails on: an author
+# should hear about an ignored override before a user does.
+
+lint_one() {
+  # $1 dir
+  L_DIR=$1
+  L_FAIL=0
+  L_TIER=ext
+  [ "$(conf_get "$L_DIR/extension.conf" name)" = "$PRO_NAME" ] && L_TIER=pro
+  L_SHOWN=$(basename "$L_DIR")
+  if ! validate "$L_DIR" "$L_TIER" any; then
+    echo "FAIL $L_SHOWN: $V_REASON"
+    return 1
+  fi
+  IGN=$(ignored_overrides "$L_DIR")
+  if [ -n "$IGN" ]; then
+    printf '%s\n' "$IGN" | while IFS= read -r L; do
+      echo "FAIL $L_SHOWN: heinzel ignores $L"
+    done
+    L_FAIL=1
+  fi
+  # A rule file is read when the rule or skill of the same name
+  # is read. Any other name is a topic file, and something must
+  # point to it or nobody ever opens it.
+  for F in "$L_DIR"/rules/*.md; do
+    [ -f "$F" ] || continue
+    B=$(basename "$F" .md)
+    [ "$B" = all ] && continue
+    [ -f "$ROOT/rules/$B.md" ] && continue
+    [ -d "$SKILL_DIR/$B" ] && continue
+    if ! grep -lF "$B.md" "$L_DIR"/rules/*.md 2>/dev/null \
+      | grep -vqF "/$B.md"; then
+      echo "FAIL $L_SHOWN: rules/$B.md extends no heinzel rule or skill" \
+        "and no other rule file points to it, so it is never read"
+      L_FAIL=1
+    fi
+  done
+  if [ "$L_TIER" = pro ]; then
+    MISSING=$(find "$L_DIR" -name .git -prune -o -type f \
+      \( -name '*.md' -o -name '*.sh' -o -name '*.py' \
+         -o -name 'extension.conf' \) -print | while IFS= read -r F; do
+        B=$(basename "$F")
+        [ "${B#LICENSE}" != "$B" ] && continue
+        head -n 30 "$F" | grep -Eq "$SPDX_LINE" || echo "${F#"$L_DIR"/}"
+      done)
+    if [ -n "$MISSING" ]; then
+      printf '%s\n' "$MISSING" | while IFS= read -r F; do
+        echo "FAIL $L_SHOWN: $F lacks the line" \
+          "'SPDX-License-Identifier: $SPDX_ID' in its first 30 lines"
+      done
+      L_FAIL=1
+    fi
+  fi
+  [ "$L_FAIL" -eq 0 ] && echo "ok   $V_NAME $V_VERSION"
+  return "$L_FAIL"
+}
+
+cmd_lint() {
+  FAIL=0
+  if [ $# -gt 0 ]; then
+    case "$1" in
+      pro|"$PRO_NAME") T="$PRO_DIR" ;;
+      */*|.) T=$1 ;;
+      *) if [ -d "$EXT_DIR/$1" ]; then T="$EXT_DIR/$1"; else T=$1; fi ;;
+    esac
+    [ -d "$T" ] || die "no such extension or directory: $1"
+    T=$(cd "$T" && pwd)
+    lint_one "$T" || FAIL=1
+  else
+    SEEN=""
+    if [ -d "$PRO_DIR" ]; then SEEN=1; lint_one "$PRO_DIR" || FAIL=1; fi
+    for D in "$EXT_DIR"/*/; do
+      [ -d "$D" ] || continue
+      SEEN=1
+      lint_one "${D%/}" || FAIL=1
+    done
+    [ -n "$SEEN" ] || echo "No extension installed."
+  fi
+  return "$FAIL"
+}
+
+# --- check-core -------------------------------------------------
+# heinzel's own CI. pro/ and extensions/ are other people's
+# property under other licences: nothing from them may end up
+# tracked here, by a stray git add or by a pull request that
+# copies a Pro file into the open repository.
+
+cmd_check_core() {
+  FAIL=0
+  cd "$ROOT" || die "cannot enter $ROOT"
+  TRACKED=$(git ls-files -- pro extensions | grep -vx 'extensions/.gitkeep')
+  if [ -n "$TRACKED" ]; then
+    echo "FAIL: tracked files under pro/ or extensions/:"
+    printf '%s\n' "$TRACKED" | sed 's/^/  /'
+    FAIL=1
+  fi
+  MARKED=$(git grep -lE "$SPDX_LINE" 2>/dev/null)
+  if [ -n "$MARKED" ]; then
+    echo "FAIL: files carrying the Heinzel Pro licence header:"
+    printf '%s\n' "$MARKED" | sed 's/^/  /'
+    FAIL=1
+  fi
+  [ "$FAIL" -eq 0 ] && echo "heinzel-extension: no Pro or extension file is tracked"
+  return "$FAIL"
+}
+
+# --- dispatch ---------------------------------------------------
+
+CMD=${1:-}
+[ $# -gt 0 ] && shift
+case "$CMD" in
+  status|list) cmd_status ;;
+  new) cmd_new "$@" ;;
+  add) cmd_add "$@" ;;
+  update) cmd_update "$@" ;;
+  remove) cmd_remove "$@" ;;
+  lint) cmd_lint "$@" ;;
+  pro-feature) cmd_pro_feature "$@" ;;
+  sync) cmd_sync ;;
+  check-core) cmd_check_core ;;
+  --help|-h|help) usage ;;
+  "") usage; exit 1 ;;
+  *) die "unknown command: $CMD (see --help)" ;;
+esac

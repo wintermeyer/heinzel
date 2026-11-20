@@ -130,6 +130,13 @@ case "${1:-}" in
     # to do.
     [ -f bin/heinzel-migrate ] && sh bin/heinzel-migrate
 
+    # Heinzel Pro (pro/) moves together with heinzel.
+    # Third-party extensions do not: they update
+    # through heinzel-extension, diff first.
+    if [ -f bin/heinzel-extension ]; then
+      sh bin/heinzel-extension update pro --yes --quiet || true
+    fi
+
     if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
       echo "heinzel $(current_version) — already up to date."
     else

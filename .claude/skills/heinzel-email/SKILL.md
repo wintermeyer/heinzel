@@ -35,6 +35,8 @@ applies before any of this runs.
 
 2. **Load overrides.** Apply the heinzel rule-override chain
    (later wins):
+   - `rules/heinzel-email.md` of Heinzel Pro and of each active
+     extension, if present (`rules/extensions.md`).
    - `memory/custom-rules/heinzel-email.md` if present.
    - `memory/servers/<host>/memory.md` (recipient, source,
      transport, policies — see "Per-server memory" below).

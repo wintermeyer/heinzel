@@ -59,3 +59,11 @@ fi
 # script runs from the new tree. Last, so a failure
 # here cannot stop the moves above.
 mkdir -p -m 700 "$HOME/.cache/heinzel" || true
+
+# Heinzel Pro's skills are links from .claude/skills/
+# into pro/ (rules/extensions.md). Create the missing
+# ones and drop those whose target is gone. Silent
+# when pro/ is not installed.
+if [ -f bin/heinzel-extension ]; then
+  sh bin/heinzel-extension sync || true
+fi

@@ -22,6 +22,19 @@ memory/servers/*
 memory/custom-rules/*
 !memory/custom-rules/.gitkeep
 
+# Extensions: rule packs from other people, under
+# their own licences. They are NOT part of heinzel
+# and heinzel's MIT licence does not cover them
+# (docs/extensions.md). Nothing below these paths is
+# ever committed here; CI checks that.
+#
+# pro/ is Heinzel Pro, a commercial product.
+/pro/
+/extensions/*
+!/extensions/.gitkeep
+# Heinzel Pro's skills, linked from pro/skills/.
+.claude/skills/heinzel-pro-*
+
 # Project history (auto-maintained by Claude Code).
 HISTORY.md
 

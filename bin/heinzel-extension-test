@@ -1,0 +1,425 @@
+#!/bin/sh
+# heinzel-extension-test — dev-only tests for
+# bin/heinzel-extension. Run before committing a change to it:
+#   sh bin/heinzel-extension-test
+#
+# Every test runs against a throwaway checkout: the script
+# finds its root from its own location, so a copy under a
+# temporary directory sees only the fixtures built here. The
+# directory name holds a space on purpose.
+
+SRC="$(cd "$(dirname "$0")" && pwd)/heinzel-extension"
+BASE=$(mktemp -d "${TMPDIR:-/tmp}/heinzel ext test.XXXXXX") || exit 1
+trap 'command rm -rf "$BASE"' EXIT
+PASS=0
+FAIL=0
+
+export GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.com
+export GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.com
+export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+
+ok() { PASS=$((PASS + 1)); }
+bad() { FAIL=$((FAIL + 1)); echo "FAIL: $1"; }
+
+# expect STATUS DESCRIPTION -- command ...
+expect() {
+  WANT=$1; DESC=$2; shift 3
+  OUT=$("$@" 2>&1)
+  GOT=$?
+  if [ "$GOT" -eq "$WANT" ]; then ok
+  else bad "$DESC (exit $GOT, wanted $WANT): $OUT"; fi
+}
+
+# contains DESCRIPTION NEEDLE (in $OUT of the last expect)
+contains() {
+  case "$OUT" in
+    *"$2"*) ok ;;
+    *) bad "$1: no '$2' in: $OUT" ;;
+  esac
+}
+
+lacks() {
+  case "$OUT" in
+    *"$2"*) bad "$1: unexpected '$2' in: $OUT" ;;
+    *) ok ;;
+  esac
+}
+
+# A fresh checkout with heinzel 3.8.0 and two base rules.
+fresh() {
+  R="$BASE/$1"
+  mkdir -p "$R/bin" "$R/rules" "$R/.claude/skills/heinzel-housekeeping"
+  cp "$SRC" "$R/bin/heinzel-extension"
+  echo "${2:-3.8.0}" > "$R/VERSION"
+  for N in debian secrets ethics backups; do
+    echo "# $N" > "$R/rules/$N.md"
+  done
+  X="$R/bin/heinzel-extension"
+}
+
+# ext ROOT NAME [MAJOR]: a valid extension with one rule file.
+ext() {
+  D="$1/extensions/$2"
+  mkdir -p "$D/rules"
+  cat > "$D/extension.conf" <<EOF
+name = $2
+version = 1.2.0
+heinzel = ${3:-3}
+license = MIT
+EOF
+  echo "MIT" > "$D/LICENSE"
+  printf '## Add: Nala\nUse nala.\n' > "$D/rules/debian.md"
+}
+
+# pro ROOT [MAJOR] [FEATURES...]: a Heinzel Pro tree.
+pro() {
+  P="$1/pro"; M=${2:-3}
+  [ $# -ge 2 ] && shift 2 || shift
+  mkdir -p "$P/features" "$P/rules"
+  cat > "$P/extension.conf" <<EOF
+# SPDX-License-Identifier: LicenseRef-Heinzel-Pro
+name = heinzel-pro
+version = 1.0.0
+heinzel = $M
+license = LicenseRef-Heinzel-Pro
+EOF
+  echo "Proprietary." > "$P/LICENSE"
+  for F in "$@"; do
+    printf '<!-- SPDX-License-Identifier: LicenseRef-Heinzel-Pro -->\n# %s\n' \
+      "$F" > "$P/features/$F.md"
+  done
+}
+
+# gitify DIR: turn a directory into a repository with one commit.
+gitify() {
+  git -C "$1" init --quiet -b main
+  git -C "$1" add -A
+  git -C "$1" commit --quiet -m init
+}
+
+# --- status ------------------------------------------------------
+fresh empty
+expect 0 "status with nothing installed" -- sh "$X" status
+[ -z "$OUT" ] && ok || bad "status prints nothing when nothing is installed: $OUT"
+
+fresh one
+ext "$R" acme
+expect 0 "status with one extension" -- sh "$X" status
+contains "active extension" "acme 1.2.0 (extensions/acme/): active, rules: debian"
+contains "status names the core version" "heinzel 3.8.0 extensions:"
+
+# --- what makes an extension inactive ----------------------------
+fresh major; ext "$R" acme 4
+expect 0 "status" -- sh "$X" status
+contains "wrong major" "INACTIVE, written for heinzel 4, this is 3.8.0"
+
+fresh min; ext "$R" acme
+echo "heinzel-min = 3.9.0" >> "$R/extensions/acme/extension.conf"
+expect 0 "status" -- sh "$X" status
+contains "heinzel-min too new" "INACTIVE, needs heinzel 3.9.0 or newer"
+
+fresh minok; ext "$R" acme
+echo "heinzel-min = 3.8.0" >> "$R/extensions/acme/extension.conf"
+expect 0 "status" -- sh "$X" status
+contains "heinzel-min equal" "acme 1.2.0 (extensions/acme/): active"
+
+fresh dirname; ext "$R" acme
+mv "$R/extensions/acme" "$R/extensions/other"
+expect 0 "status" -- sh "$X" status
+contains "directory and name differ" "INACTIVE, directory is 'other'"
+
+fresh nolicense; ext "$R" acme
+command rm "$R/extensions/acme/LICENSE"
+expect 0 "status" -- sh "$X" status
+contains "no LICENSE" "INACTIVE, no LICENSE file"
+
+fresh noconf; mkdir -p "$R/extensions/acme/rules"
+expect 0 "status" -- sh "$X" status
+contains "no manifest" "INACTIVE, no extension.conf"
+
+fresh script; ext "$R" acme
+echo "echo hi" > "$R/extensions/acme/setup.sh"
+expect 0 "status" -- sh "$X" status
+contains "a script makes it inactive" "INACTIVE, holds more than rules: ./setup.sh"
+
+fresh hidden; ext "$R" acme
+mkdir "$R/extensions/acme/.tools"; echo x > "$R/extensions/acme/.tools/run"
+expect 0 "status" -- sh "$X" status
+contains "a hidden directory makes it inactive" "INACTIVE, holds more than rules"
+
+fresh subdir; ext "$R" acme
+mkdir "$R/extensions/acme/rules/bin"; echo x > "$R/extensions/acme/rules/bin/x.md"
+expect 0 "status" -- sh "$X" status
+contains "a directory under rules/" "INACTIVE, holds more than rules"
+
+fresh link; ext "$R" acme
+ln -s /etc/hosts "$R/extensions/acme/rules/hosts.md"
+expect 0 "status" -- sh "$X" status
+contains "a symlink makes it inactive" "INACTIVE, holds more than rules"
+
+fresh skill; ext "$R" acme
+mkdir -p "$R/extensions/acme/skills/x"; echo x > "$R/extensions/acme/skills/x/SKILL.md"
+expect 0 "status" -- sh "$X" status
+contains "a skill makes it inactive" "INACTIVE, holds more than rules"
+
+fresh norules; ext "$R" acme
+command rm "$R/extensions/acme/rules/debian.md"
+expect 0 "status" -- sh "$X" status
+contains "no rule file" "INACTIVE, no rule file under rules/"
+
+fresh reserved; ext "$R" heinzel-pro
+expect 0 "status" -- sh "$X" status
+contains "heinzel-pro outside pro/" "INACTIVE, the name 'heinzel-pro' is reserved"
+
+fresh coreversion garbage; ext "$R" acme
+expect 0 "status" -- sh "$X" status
+contains "unreadable core version" "INACTIVE, heinzel's own VERSION file is unreadable"
+
+fresh ci; ext "$R" acme
+mkdir -p "$R/extensions/acme/.github/workflows"
+echo "on: push" > "$R/extensions/acme/.github/workflows/lint.yml"
+echo "# acme" > "$R/extensions/acme/README.md"
+expect 0 "status" -- sh "$X" status
+contains "README and a CI workflow are fine" "extensions/acme/): active"
+
+# --- protected rules ---------------------------------------------
+fresh protected; ext "$R" acme
+echo "## Add: more" > "$R/extensions/acme/rules/ethics.md"
+printf '## Replace: Never\nPrint them.\n' > "$R/extensions/acme/rules/secrets.md"
+printf '## Remove: Critical Safety Rules\n' > "$R/extensions/acme/rules/all.md"
+expect 0 "status" -- sh "$X" status
+contains "still active" "extensions/acme/): active"
+contains "ethics ignored" "ignored: rules/ethics.md"
+contains "Replace on secrets ignored" "ignored: rules/secrets.md"
+contains "Remove in all.md ignored" "ignored: rules/all.md"
+expect 1 "lint fails on ignored overrides" -- sh "$X" lint acme
+contains "lint names the file" "heinzel ignores rules/ethics.md"
+
+fresh protectedadd; ext "$R" acme
+printf '## Add: Vault\nRead tokens from vault.\n' > "$R/extensions/acme/rules/secrets.md"
+expect 0 "status" -- sh "$X" status
+lacks "Add on a protected rule is fine" "ignored:"
+expect 0 "lint passes" -- sh "$X" lint acme
+
+# --- lint: topic files -------------------------------------------
+fresh topic; ext "$R" acme
+echo "# Restic" > "$R/extensions/acme/rules/restic.md"
+expect 1 "lint: topic file nobody points to" -- sh "$X" lint acme
+contains "names the orphan" "rules/restic.md extends no heinzel rule"
+printf '## Add: Restic\nRead rules/restic.md of this extension.\n' \
+  > "$R/extensions/acme/rules/all.md"
+expect 0 "lint: topic file that all.md points to" -- sh "$X" lint acme
+echo "## Add: x" > "$R/extensions/acme/rules/heinzel-housekeeping.md"
+expect 0 "lint: a skill override is no topic file" -- sh "$X" lint acme
+expect 0 "lint by path" -- sh "$X" lint "$R/extensions/acme"
+expect 1 "lint of a missing directory" -- sh "$X" lint nosuch
+
+# --- new ---------------------------------------------------------
+fresh new
+expect 0 "new" -- sh "$X" new team-rules
+[ -f "$R/extensions/team-rules/rules/all.md" ] && ok || bad "new writes rules/all.md"
+expect 0 "a new extension is active" -- sh "$X" status
+contains "new extension active" "team-rules 0.1.0 (extensions/team-rules/): active, rules: all"
+expect 0 "a new extension passes lint" -- sh "$X" lint team-rules
+expect 1 "new refuses an existing name" -- sh "$X" new team-rules
+expect 1 "new refuses a reserved name" -- sh "$X" new heinzel-pro
+expect 1 "new refuses an invalid name" -- sh "$X" new Team_Rules
+expect 0 "new --mit" -- sh "$X" new open-rules --mit
+grep -q '^license = MIT$' "$R/extensions/open-rules/extension.conf" && ok \
+  || bad "new --mit writes license = MIT"
+grep -q '^license = LicenseRef-Proprietary$' "$R/extensions/team-rules/extension.conf" \
+  && ok || bad "new defaults to a proprietary licence"
+
+# --- Heinzel Pro -------------------------------------------------
+fresh nopro
+expect 1 "no pro/: no feature" -- sh "$X" pro-feature disks
+
+fresh pro1; pro "$R" 3 disks boot
+expect 0 "feature present" -- sh "$X" pro-feature disks
+expect 0 "second feature present" -- sh "$X" pro-feature boot
+expect 1 "feature not shipped" -- sh "$X" pro-feature access
+expect 1 "unknown feature" -- sh "$X" pro-feature everything
+expect 1 "no feature named" -- sh "$X" pro-feature
+expect 1 "a path is no feature" -- sh "$X" pro-feature ../features/disks
+expect 0 "status" -- sh "$X" status
+contains "status lists the features" "heinzel-pro 1.0.0 (pro/): active, features: disks boot"
+
+fresh proempty; pro "$R" 3 disks
+: > "$R/pro/features/disks.md"
+expect 1 "an empty feature file lifts nothing" -- sh "$X" pro-feature disks
+
+fresh prolink; pro "$R" 3
+ln -s /etc/hosts "$R/pro/features/disks.md"
+expect 1 "a linked feature file lifts nothing" -- sh "$X" pro-feature disks
+
+fresh promajor; pro "$R" 4 disks
+expect 1 "Pro for another major lifts nothing" -- sh "$X" pro-feature disks
+expect 0 "status" -- sh "$X" status
+contains "Pro inactive" "INACTIVE, written for heinzel 4"
+
+fresh proname; pro "$R" 3 disks
+sed 's/^name = .*/name = acme/' "$R/pro/extension.conf" > "$R/pro/c" \
+  && mv "$R/pro/c" "$R/pro/extension.conf"
+expect 1 "pro/ holding something else lifts nothing" -- sh "$X" pro-feature disks
+
+fresh procore garbage; pro "$R" 3 disks
+expect 1 "unreadable core version lifts nothing" -- sh "$X" pro-feature disks
+
+fresh barepro; mkdir -p "$R/pro/features"; echo x > "$R/pro/features/disks.md"
+expect 1 "a bare pro/ directory lifts nothing" -- sh "$X" pro-feature disks
+
+# Pro's protected overrides are ignored like anybody's.
+fresh proprot; pro "$R" 3 disks
+echo "## Add: x" > "$R/pro/rules/ethics.md"
+expect 0 "status" -- sh "$X" status
+contains "Pro cannot touch ethics either" "ignored: rules/ethics.md"
+
+# --- sync: Pro's skills ------------------------------------------
+fresh sync; pro "$R" 3 disks
+mkdir -p "$R/pro/skills/heinzel-pro-rotate" "$R/pro/skills/other"
+echo "---" > "$R/pro/skills/heinzel-pro-rotate/SKILL.md"
+echo "---" > "$R/pro/skills/other/SKILL.md"
+expect 0 "sync" -- sh "$X" sync
+[ -L "$R/.claude/skills/heinzel-pro-rotate" ] && ok || bad "sync links a Pro skill"
+[ -f "$R/.claude/skills/heinzel-pro-rotate/SKILL.md" ] && ok || bad "the link resolves"
+[ ! -e "$R/.claude/skills/other" ] && ok || bad "sync links heinzel-pro-* only"
+expect 0 "sync twice" -- sh "$X" sync
+[ -z "$OUT" ] && ok || bad "a second sync is silent: $OUT"
+echo 4.0.0 > "$R/VERSION"
+expect 0 "sync after Pro went inactive" -- sh "$X" sync
+[ ! -L "$R/.claude/skills/heinzel-pro-rotate" ] && ok || bad "sync unlinks when Pro is inactive"
+[ -d "$R/.claude/skills/heinzel-housekeeping" ] && ok || bad "sync leaves heinzel's own skills alone"
+
+# --- lint: Pro licence headers -----------------------------------
+fresh prolint; pro "$R" 3 disks
+expect 0 "Pro with headers passes lint" -- sh "$X" lint pro
+echo "# no header" > "$R/pro/rules/debian.md"
+expect 1 "Pro file without header fails lint" -- sh "$X" lint pro
+contains "names the file" "rules/debian.md lacks the line"
+
+# --- add ---------------------------------------------------------
+fresh add
+UP="$BASE/upstream"; mkdir -p "$UP/extensions"
+ext "$UP" acme
+mv "$UP/extensions/acme" "$BASE/acme.git.src"; UPX="$BASE/acme.git.src"
+gitify "$UPX"
+expect 0 "add from a repository" -- sh "$X" add "$UPX"
+contains "add names what it installed" "Installed acme 1.2.0 in extensions/acme/"
+[ -f "$R/extensions/acme/rules/debian.md" ] && ok || bad "add puts the rules in place"
+expect 1 "add twice" -- sh "$X" add "$UPX"
+contains "add twice explains" "already exists"
+expect 1 "add of a missing repository" -- sh "$X" add "$BASE/nosuch"
+[ -z "$(ls -A "$R/extensions" | grep -v '^acme$')" ] && ok \
+  || bad "a failed add leaves nothing behind: $(ls -A "$R/extensions")"
+expect 1 "add --pro of something that is not Pro" -- sh "$X" add --pro "$UPX"
+[ ! -e "$R/pro" ] && ok || bad "a refused add --pro creates no pro/"
+
+BADX="$BASE/bad.src"; mkdir -p "$BASE/b/extensions"; ext "$BASE/b" badone
+mv "$BASE/b/extensions/badone" "$BADX"; echo "id" > "$BADX/run.sh"; gitify "$BADX"
+expect 1 "add of an extension with a script" -- sh "$X" add "$BADX"
+contains "add says why" "holds more than rules"
+[ ! -e "$R/extensions/badone" ] && ok || bad "an invalid extension is not installed"
+
+PROX="$BASE/pro.src"; mkdir -p "$BASE/p"; pro "$BASE/p" 3 disks
+mv "$BASE/p/pro" "$PROX"; gitify "$PROX"
+expect 1 "Pro without --pro" -- sh "$X" add "$PROX"
+contains "points to --pro" "add --pro"
+expect 0 "add --pro" -- sh "$X" add --pro "$PROX"
+contains "add --pro names the licence" "Heinzel Pro is not MIT"
+expect 0 "the feature is live" -- sh "$X" pro-feature disks
+expect 1 "add --pro twice" -- sh "$X" add --pro "$PROX"
+
+git -C "$UPX" tag v1.2.0
+fresh addref
+expect 0 "add --ref" -- sh "$X" add "$UPX" --ref v1.2.0
+expect 1 "add --ref with a missing tag" -- sh "$X" add "$BADX" --ref v9
+
+# --- update ------------------------------------------------------
+fresh update
+expect 0 "add" -- sh "$X" add "$UPX"
+expect 0 "update with nothing new" -- sh "$X" update acme
+contains "up to date" "up to date"
+printf '## Add: Nala\nUse nala everywhere.\n' > "$UPX/rules/debian.md"
+sed 's/^version = .*/version = 1.3.0/' "$UPX/extension.conf" > "$UPX/c" \
+  && mv "$UPX/c" "$UPX/extension.conf"
+git -C "$UPX" commit --quiet -am "nala everywhere"
+expect 3 "update without --yes is not applied" -- sh "$X" update acme < /dev/null
+contains "update shows the diff" "+Use nala everywhere."
+contains "update says how to apply" "update acme --yes"
+grep -q 'everywhere' "$R/extensions/acme/rules/debian.md" && bad "applied without --yes" || ok
+expect 0 "update --yes" -- sh "$X" update acme --yes
+contains "update names the versions" "acme updated: 1.2.0 -> 1.3.0"
+grep -q 'everywhere' "$R/extensions/acme/rules/debian.md" && ok || bad "update --yes applies"
+expect 1 "update of something not installed" -- sh "$X" update nosuch
+expect 0 "update pro --quiet without pro/" -- sh "$X" update pro --yes --quiet
+[ -z "$OUT" ] && ok || bad "quiet Pro update without pro/ is silent: $OUT"
+
+# An update that breaks the extension is applied and reported.
+echo "id" > "$UPX/run.sh"; git -C "$UPX" add -A
+git -C "$UPX" commit --quiet -m "add a script"
+expect 0 "update that adds a script" -- sh "$X" update acme --yes
+contains "says it went inactive" "INACTIVE now: holds more than rules"
+git -C "$UPX" rm --quiet run.sh; git -C "$UPX" commit --quiet -m "remove it"
+
+# Pinned to a tag: update needs the new one named.
+fresh pinned
+expect 0 "add --ref" -- sh "$X" add "$UPX" --ref v1.2.0
+expect 1 "update of a pinned extension" -- sh "$X" update acme --yes
+contains "asks for --ref" "name the new version with --ref"
+git -C "$UPX" tag v1.3.1
+expect 0 "update --ref" -- sh "$X" update acme --ref v1.3.1 --yes
+contains "moved to the tag" "acme updated: 1.2.0 -> 1.3.0"
+
+# Local changes are never overwritten.
+fresh dirty
+expect 0 "add" -- sh "$X" add "$UPX" --ref v1.2.0
+echo "local" >> "$R/extensions/acme/rules/debian.md"
+expect 1 "update over local changes" -- sh "$X" update acme --ref v1.3.1 --yes
+contains "names the local changes" "local changes"
+
+# --- remove ------------------------------------------------------
+expect 1 "remove with uncommitted changes" -- sh "$X" remove acme
+[ -d "$R/extensions/acme" ] && ok || bad "a refused remove keeps the directory"
+expect 0 "remove --force" -- sh "$X" remove acme --force
+[ ! -e "$R/extensions/acme" ] && ok || bad "remove --force deletes"
+
+fresh remove
+expect 0 "add" -- sh "$X" add "$UPX"
+expect 0 "remove a clean clone" -- sh "$X" remove acme
+expect 0 "new" -- sh "$X" new mine
+expect 1 "remove the only copy" -- sh "$X" remove mine
+contains "says it is the only copy" "only copy"
+gitify "$R/extensions/mine"
+expect 1 "remove commits that are on no remote" -- sh "$X" remove mine
+expect 1 "remove of something not installed" -- sh "$X" remove nosuch
+
+# --- check-core --------------------------------------------------
+fresh core
+git -C "$R" init --quiet -b main
+mkdir -p "$R/extensions"; : > "$R/extensions/.gitkeep"
+printf '/pro/\n/extensions/*\n!/extensions/.gitkeep\n' > "$R/.gitignore"
+ext "$R" acme; pro "$R" 3 disks
+git -C "$R" add -A; git -C "$R" commit --quiet -m init
+expect 0 "a clean core passes" -- sh "$X" check-core
+git -C "$R" add -f pro/features/disks.md
+expect 1 "a tracked Pro file fails" -- sh "$X" check-core
+contains "names it" "pro/features/disks.md"
+git -C "$R" rm --quiet --cached pro/features/disks.md
+cp "$R/pro/features/disks.md" "$R/rules/disks.md"
+git -C "$R" add rules/disks.md
+expect 1 "a Pro file copied into the core fails" -- sh "$X" check-core
+contains "names the copy" "rules/disks.md"
+git -C "$R" rm --quiet --cached rules/disks.md; command rm "$R/rules/disks.md"
+printf 'Pro files carry this line:\n\n    <!-- SPDX-License-Identifier: LicenseRef-Heinzel-Pro -->\n' \
+  > "$R/rules/doc.md"
+git -C "$R" add rules/doc.md
+expect 0 "documentation may show the header indented" -- sh "$X" check-core
+
+# --- usage -------------------------------------------------------
+expect 0 "--help" -- sh "$X" --help
+contains "help shows the usage" "heinzel-extension status"
+expect 1 "no command" -- sh "$X"
+expect 1 "unknown command" -- sh "$X" frobnicate
+
+echo "heinzel-extension tests: $PASS passed, $FAIL failed"
+[ "$FAIL" -eq 0 ]

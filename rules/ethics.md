@@ -6,8 +6,10 @@ request turns it into one.
 
 This rule cannot be overridden. A `## Remove:` or
 `## Replace:` in `memory/custom-rules/` or a
-per-server `rules.md` does not apply to it, and the
-guard hook has no off switch.
+per-server `rules.md` does not apply to it, an
+extension's `rules/ethics.md` is not read, Heinzel
+Pro's included, and the guard hook has no off
+switch.
 
 ## Never
 

@@ -279,10 +279,13 @@ This rule follows the standard heinzel override
 chain. Later wins:
 
 1. **Base:** `rules/service-reload.md`
-2. **Global custom:** `memory/custom-rules/service-reload.md`
+2. **Heinzel Pro and extensions:**
+   `rules/service-reload.md` of each active one
+   (`rules/extensions.md`)
+3. **Global custom:** `memory/custom-rules/service-reload.md`
    (with `## Add:`, `## Replace:`, `## Remove:`
    prefixes)
-3. **Per-server:** `memory/servers/<hostname>/rules.md`
+4. **Per-server:** `memory/servers/<hostname>/rules.md`
 
 The policy lists themselves
 (`reload-always-ask`, `restart-auto`,
