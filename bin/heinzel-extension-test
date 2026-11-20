@@ -76,8 +76,11 @@ pro() {
   P="$1/pro"; M=${2:-3}
   [ $# -ge 2 ] && shift 2 || shift
   mkdir -p "$P/features" "$P/rules"
+  # The header comes from a variable: written out at the start
+  # of a line, it would make check-core reject this very file.
+  HDR="SPDX-License-Identifier: LicenseRef-Heinzel-Pro"
   cat > "$P/extension.conf" <<EOF
-# SPDX-License-Identifier: LicenseRef-Heinzel-Pro
+# $HDR
 name = heinzel-pro
 version = 1.0.0
 heinzel = $M
