@@ -27,7 +27,7 @@ rights.
 | In `bin/heinzel-backup` | yes | no, keep it in git | no |
 
 Rules only you use belong in `memory/custom-rules/`
-(README, Rule customization). An extension is for
+([usage.md](usage.md#rule-customization)). An extension is for
 rules that should travel: to your team, your
 customers, everybody.
 
