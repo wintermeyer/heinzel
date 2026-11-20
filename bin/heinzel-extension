@@ -141,7 +141,30 @@ tree_problem() {
 #   TIER is "ext" or "pro". With "any" the directory name is
 #   not compared (a clone that has not been moved into place).
 # Sets V_NAME, V_VERSION and, on failure, V_REASON.
+#
+# The status output lands in the agent's context at session
+# start, so nothing an extension author controls (manifest
+# values, file and directory names) is printed as written: a
+# name with a line break could fake a status line or carry an
+# instruction. safe() maps everything outside a small set to
+# "?" and caps the length.
+safe() {
+  printf '%s' "$1" \
+    | LC_ALL=C tr -c "A-Za-z0-9 ./_:,<>=()'-" '?' \
+    | cut -c1-200
+}
+
 validate() {
+  V_RC=0
+  validate_raw "$@" || V_RC=$?
+  if [ "$V_RC" -ne 0 ]; then
+    V_NAME=$(safe "$V_NAME")
+    V_REASON=$(safe "$V_REASON")
+  fi
+  return "$V_RC"
+}
+
+validate_raw() {
   V_DIR=$1
   V_TIER=$2
   V_ANY=${3:-}
@@ -167,6 +190,7 @@ validate() {
 
   if ! printf '%s\n' "$V_NAME" | grep -Eq '^[a-z][a-z0-9-]{1,39}$'; then
     V_REASON="name in extension.conf must be 2 to 40 characters of a-z, 0-9 and -"
+    V_NAME=""
     return 1
   fi
   if [ "$V_TIER" = pro ]; then
@@ -258,7 +282,7 @@ rule_names() {
     B=$(basename "$F" .md)
     NAMES="$NAMES $B"
   done
-  printf '%s' "${NAMES# }"
+  safe "${NAMES# }"
 }
 
 pro_features_present() {
@@ -289,7 +313,7 @@ status_line() {
       echo "    ignored: $L"
     done
   else
-    echo "  ${V_NAME:-$(basename "$1")} ($3): INACTIVE, $V_REASON"
+    echo "  ${V_NAME:-$(safe "$(basename "$1")")} ($3): INACTIVE, $V_REASON"
   fi
 }
 
@@ -299,7 +323,7 @@ cmd_status() {
   for D in "$EXT_DIR"/*/; do
     [ -d "$D" ] || continue
     D=${D%/}
-    L=$(status_line "$D" ext "extensions/$(basename "$D")/")
+    L=$(status_line "$D" ext "extensions/$(safe "$(basename "$D")")/")
     LINES="$LINES${LINES:+
 }$L"
   done
