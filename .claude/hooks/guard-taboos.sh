@@ -610,6 +610,32 @@ work is a Heinzel Pro feature"
     deny "/etc/heinzel.conf is the server lock; only the \
 machine's owner changes it, never heinzel"
   fi
+  # pro/ of this checkout decides what the PRO rules lift, so a
+  # file-edit tool never writes into it: with or without Pro
+  # installed, three small files there would otherwise switch the
+  # disk, boot and access rules off. bin/heinzel-extension is the
+  # one way in. The root is compared as the hook was called and
+  # with its links resolved, both without regard to case.
+  # Boundary, left open: a shell command that builds pro/ (cd,
+  # mkdir, cp, git clone, a link). That set cannot be closed by
+  # reading command strings, and this hook's own file is as
+  # writable as pro/ is.
+  if [ -n "$GUARD_ROOT" ]; then
+    SEEN=$(printf '%s\n%s\n%s\n%s\n' \
+      "$TARGET" "$MAPPED" "$ASCII" "$FOLDED" \
+      | LC_ALL=C tr 'A-Z' 'a-z')
+    REAL_ROOT=$(cd "$GUARD_ROOT" 2>/dev/null && pwd -P) \
+      || REAL_ROOT="$GUARD_ROOT"
+    for ROOT in "$GUARD_ROOT" "$REAL_ROOT"; do
+      PRO_AT=$(printf '%s' "$ROOT/pro/" | LC_ALL=C tr 'A-Z' 'a-z')
+      case "$SEEN" in
+        *"$PRO_AT"*)
+          deny "pro/ holds Heinzel Pro and decides what this \
+guard lifts; it is installed and updated with \
+bin/heinzel-extension, never written by hand" ;;
+      esac
+    done
+  fi
   exit 0
 fi
 

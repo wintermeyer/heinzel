@@ -25,6 +25,7 @@
   installed Pro feature and for nothing else: a
   bare `pro/` directory, a Pro for another major
   version or an empty feature file changes nothing.
+  The file-edit tools cannot write into `pro/`.
 - **The override chain has two more layers.** Base,
   Heinzel Pro, extensions, your custom rules, the
   server's rules. Your own rules still win.

@@ -1442,6 +1442,27 @@ if command -v jq >/dev/null 2>&1; then
   check_file pass Write file_path /dev/sda x
   check_file pass Write file_path /sys/firmware/efi/efivars/Boot0001-x x
   check_file deny Write file_path /etc/sudoers x
+
+  # No file-edit tool writes into pro/ of this checkout, with Pro
+  # installed or without: that directory decides what lifts.
+  check_file deny Write file_path "$PRO_ROOT/pro/features/access.md" x
+  check_file deny Write file_path "$PRO_ROOT/pro/extension.conf" x
+  check_file deny Edit file_path "$PRO_ROOT/pro/LICENSE" x
+  check_file deny Write file_path "$PRO_ROOT/PRO/Features/access.md" x
+  check_file deny Write file_path "$PRO_ROOT/rules/../pro/features/a.md" x
+  check_file deny Write file_path "$PRO_ROOT//pro/./features/a.md" x
+  check_file deny NotebookEdit notebook_path "$PRO_ROOT/pro/x.ipynb" x
+  command rm -rf "$PRO_ROOT/pro"
+  check_file deny Write file_path "$PRO_ROOT/pro/extension.conf" x
+  check_file deny Write file_path "$PRO_ROOT/pro/features/disks.md" x
+  # Everything else in the checkout, and a pro/ elsewhere, is
+  # ordinary.
+  check_file pass Write file_path "$PRO_ROOT/extensions/acme/rules/all.md" x
+  check_file pass Write file_path "$PRO_ROOT/rules/pro/x.md" x
+  check_file pass Write file_path "$PRO_ROOT/production/x.md" x
+  check_file pass Write file_path "$PRO_ROOT/memory/servers/h/memory.md" \
+    'see pro/features/disks.md'
+  check_file pass Write file_path /srv/www/pro/features/x.md x
 fi
 
 # Every doubt about pro/ denies.
@@ -1504,12 +1525,12 @@ HOOK=$REAL_HOOK
 # look at it, then correct the number.
 PRO_RULES=$(grep -c '^ *deny_pro [a-z]* "' "$HOOK")
 SAFETY_RULES=$(grep -c '^ *deny "' "$HOOK")
-if [ "$PRO_RULES" -eq 45 ] && [ "$SAFETY_RULES" -eq 24 ]; then
+if [ "$PRO_RULES" -eq 45 ] && [ "$SAFETY_RULES" -eq 25 ]; then
   PASS=$((PASS + 1))
 else
   FAIL=$((FAIL + 1))
   echo "FAIL: guard has $PRO_RULES Pro rules and $SAFETY_RULES" \
-    "safety rules, expected 45 and 24"
+    "safety rules, expected 45 and 25"
 fi
 
 # --- no negated hit() may remain -------------------------------
