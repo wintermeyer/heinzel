@@ -72,6 +72,17 @@ fi
 # and silent when there's nothing to do.
 run_migration
 
+# Heinzel Pro (pro/) is updated together with
+# heinzel, so the two never drift apart. Silent
+# when it is not installed or already current; a
+# Pro that does not fit this heinzel version goes
+# inactive and says so. Third-party extensions are
+# never pulled here: they update only after the
+# operator has seen the diff (rules/extensions.md).
+if [ -f bin/heinzel-extension ]; then
+  sh bin/heinzel-extension update pro --yes --quiet
+fi
+
 # Read new version after pulling.
 NEW_VERSION=""
 if [ -f VERSION ]; then

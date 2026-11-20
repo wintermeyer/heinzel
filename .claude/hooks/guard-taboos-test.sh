@@ -1328,6 +1328,211 @@ check pass 'sysctl hw.disknames'
 check pass 'pfctl -nf /etc/pf.conf'
 check pass 'rcctl ls on'
 
+# --- Heinzel Pro lifts its own rules, feature by feature -------
+# The hook finds its root from its own location, so a copy in a
+# throwaway checkout sees only the pro/ built here. Three things
+# must hold: a feature lifts its own rules and no other, no
+# feature lifts a safety rule, and every doubt about pro/ denies.
+REAL_HOOK=$HOOK
+PRO_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/heinzel guard pro.XXXXXX")
+mkdir -p "$PRO_ROOT/.claude/hooks" "$PRO_ROOT/bin"
+cp "$REAL_HOOK" "$PRO_ROOT/.claude/hooks/guard-taboos.sh"
+cp "$CLAUDE_DIR/../bin/heinzel-extension" "$PRO_ROOT/bin/"
+cp "$CLAUDE_DIR/../VERSION" "$PRO_ROOT/VERSION"
+HOOK="$PRO_ROOT/.claude/hooks/guard-taboos.sh"
+
+pro_fixture() {
+  # $1 major version it claims, then the features it ships.
+  command rm -rf "$PRO_ROOT/pro"
+  mkdir -p "$PRO_ROOT/pro/features"
+  printf 'name = heinzel-pro\nversion = 1.0.0\nheinzel = %s\n' "$1" \
+    > "$PRO_ROOT/pro/extension.conf"
+  echo 'license = LicenseRef-Heinzel-Pro' \
+    >> "$PRO_ROOT/pro/extension.conf"
+  echo 'Proprietary.' > "$PRO_ROOT/pro/LICENSE"
+  shift
+  for FEATURE in "$@"; do
+    echo "# $FEATURE" > "$PRO_ROOT/pro/features/$FEATURE.md"
+  done
+}
+MAJOR=$(cut -d. -f1 "$PRO_ROOT/VERSION")
+
+# No pro/ at all: the copy behaves like the original.
+check deny 'mkfs.ext4 /dev/sda1'
+check deny 'grub-install /dev/sda'
+check deny 'visudo'
+
+# disks: filesystems, partition tables, raw devices. Nothing else.
+pro_fixture "$MAJOR" disks
+check pass 'mkfs.ext4 /dev/sda1'
+check pass 'ssh root@h "mkfs.xfs /dev/sdb1"'
+check pass 'fdisk /dev/sda'
+check pass 'sgdisk --zap-all /dev/sda'
+check pass 'parted /dev/sda mklabel gpt'
+check pass 'dd if=image.raw of=/dev/sda bs=4M'
+check pass 'blkdiscard /dev/sda'
+check pass 'cat disk.img > /dev/sda'
+check pass 'python3 -c "open(\"/dev/sda\",\"wb\").write(b)"'
+check deny 'grub-install /dev/sda'
+check deny 'efibootmgr -o 0001,0002'
+check deny 'visudo'
+check deny 'userdel alice'
+check deny 'ssh-copy-id root@h'
+check deny 'mkfs.ext4 /dev/sda1 && visudo'
+check deny 'fdisk /dev/sda; grub-install /dev/sda'
+
+# boot: loaders and firmware variables.
+pro_fixture "$MAJOR" boot
+check pass 'grub-install /dev/sda'
+check pass 'update-grub'
+check pass 'efibootmgr -o 0001,0002'
+check pass 'bootctl install'
+check pass 'installboot sd0'
+check deny 'mkfs.ext4 /dev/sda1'
+check deny 'fdisk /dev/sda'
+check deny 'visudo'
+check deny 'ssh-copy-id root@h'
+
+# access: accounts, sudo, copying keys.
+pro_fixture "$MAJOR" access
+check pass 'visudo'
+check pass 'userdel alice'
+check pass 'vipw'
+check pass 'ssh-copy-id root@h'
+check pass 'echo "deploy ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/deploy'
+check pass 'python3 -c "open(\"/etc/sudoers\",\"a\").write(x)"'
+check deny 'mkfs.ext4 /dev/sda1'
+check deny 'grub-install /dev/sda'
+check deny 'efibootmgr -o 0001,0002'
+
+# All three together still lift no safety rule.
+pro_fixture "$MAJOR" disks boot access
+check pass 'mkfs.ext4 /dev/sda1 && grub-install /dev/sda && visudo'
+check deny 'halt'
+check deny 'poweroff'
+check deny 'shutdown -h now'
+check deny 'ssh root@h "shutdown -h now"'
+check deny 'rm -f ~/.ssh/id_ed25519'
+check deny 'chown -R alice:alice /home/alice/.ssh'
+check deny ': > /root/.ssh/authorized_keys'
+check deny "sed -i 's/^/#/' /etc/ssh/sshd_config"
+check deny 'echo "PermitRootLogin yes" >> /etc/ssh/sshd_config'
+check deny 'rm /etc/heinzel.conf'
+check deny 'echo "allow_changes = true" > /etc/heinzel.conf'
+check deny 'hashcat -m 1800 hashes.txt'
+check deny 'python3 -c "open(\"/etc/ssh/sshd_config\",\"a\").write(x)"'
+check deny 'HEINZEL_GUARD_DISABLE=1 halt'
+check deny 'mkfs.ext4 /dev/sda1; halt'
+check deny 'visudo; rm /etc/ssh/ssh_host_ed25519_key'
+# Features the hook does not back change nothing here.
+pro_fixture "$MAJOR" secrets unattended fleet shared
+check deny 'mkfs.ext4 /dev/sda1'
+check deny 'visudo'
+
+if command -v jq >/dev/null 2>&1; then
+  pro_fixture "$MAJOR" access
+  check_file pass Write file_path /etc/sudoers.d/deploy x
+  check_file pass Edit file_path /etc/passwd x
+  check_file deny Write file_path /dev/sda x
+  check_file deny Write file_path /sys/firmware/efi/efivars/Boot0001-x x
+  check_file deny Write file_path /etc/ssh/sshd_config x
+  check_file deny Edit file_path /root/.ssh/authorized_keys x
+  check_file deny Write file_path /etc/heinzel.conf x
+  pro_fixture "$MAJOR" disks boot
+  check_file pass Write file_path /dev/sda x
+  check_file pass Write file_path /sys/firmware/efi/efivars/Boot0001-x x
+  check_file deny Write file_path /etc/sudoers x
+
+  # No file-edit tool writes into pro/ of this checkout, with Pro
+  # installed or without: that directory decides what lifts.
+  check_file deny Write file_path "$PRO_ROOT/pro/features/access.md" x
+  check_file deny Write file_path "$PRO_ROOT/pro/extension.conf" x
+  check_file deny Edit file_path "$PRO_ROOT/pro/LICENSE" x
+  check_file deny Write file_path "$PRO_ROOT/PRO/Features/access.md" x
+  check_file deny Write file_path "$PRO_ROOT/rules/../pro/features/a.md" x
+  check_file deny Write file_path "$PRO_ROOT//pro/./features/a.md" x
+  check_file deny NotebookEdit notebook_path "$PRO_ROOT/pro/x.ipynb" x
+  command rm -rf "$PRO_ROOT/pro"
+  check_file deny Write file_path "$PRO_ROOT/pro/extension.conf" x
+  check_file deny Write file_path "$PRO_ROOT/pro/features/disks.md" x
+  # Everything else in the checkout, and a pro/ elsewhere, is
+  # ordinary.
+  check_file pass Write file_path "$PRO_ROOT/extensions/acme/rules/all.md" x
+  check_file pass Write file_path "$PRO_ROOT/rules/pro/x.md" x
+  check_file pass Write file_path "$PRO_ROOT/production/x.md" x
+  check_file pass Write file_path "$PRO_ROOT/memory/servers/h/memory.md" \
+    'see pro/features/disks.md'
+  check_file pass Write file_path /srv/www/pro/features/x.md x
+fi
+
+# Every doubt about pro/ denies.
+# ... a feature file that is empty:
+pro_fixture "$MAJOR" disks
+: > "$PRO_ROOT/pro/features/disks.md"
+check deny 'mkfs.ext4 /dev/sda1'
+# ... a feature file that is a link to something else:
+command rm "$PRO_ROOT/pro/features/disks.md"
+ln -s /etc/hosts "$PRO_ROOT/pro/features/disks.md"
+check deny 'mkfs.ext4 /dev/sda1'
+# ... a Pro written for another heinzel major:
+pro_fixture "$((MAJOR + 1))" disks boot access
+check deny 'mkfs.ext4 /dev/sda1'
+check deny 'visudo'
+# ... a bare directory with a feature file and no manifest:
+command rm -rf "$PRO_ROOT/pro"
+mkdir -p "$PRO_ROOT/pro/features"
+echo '# disks' > "$PRO_ROOT/pro/features/disks.md"
+check deny 'mkfs.ext4 /dev/sda1'
+# ... a manifest that names something else:
+pro_fixture "$MAJOR" disks
+printf 'name = acme\nversion = 1.0.0\nheinzel = %s\nlicense = MIT\n' \
+  "$MAJOR" > "$PRO_ROOT/pro/extension.conf"
+check deny 'mkfs.ext4 /dev/sda1'
+# ... no licence file:
+pro_fixture "$MAJOR" disks
+command rm "$PRO_ROOT/pro/LICENSE"
+check deny 'mkfs.ext4 /dev/sda1'
+# ... heinzel's own version unreadable:
+pro_fixture "$MAJOR" disks
+cp "$PRO_ROOT/VERSION" "$PRO_ROOT/VERSION.keep"
+echo 'garbage' > "$PRO_ROOT/VERSION"
+check deny 'mkfs.ext4 /dev/sda1'
+mv "$PRO_ROOT/VERSION.keep" "$PRO_ROOT/VERSION"
+# ... the script that decides is gone, or fails:
+check pass 'mkfs.ext4 /dev/sda1'
+mv "$PRO_ROOT/bin/heinzel-extension" "$PRO_ROOT/bin/keep"
+check deny 'mkfs.ext4 /dev/sda1'
+echo 'exit 1' > "$PRO_ROOT/bin/heinzel-extension"
+check deny 'mkfs.ext4 /dev/sda1'
+echo 'this is ( not a script' > "$PRO_ROOT/bin/heinzel-extension"
+check deny 'mkfs.ext4 /dev/sda1'
+mv "$PRO_ROOT/bin/keep" "$PRO_ROOT/bin/heinzel-extension"
+# ... an extension in extensions/ never lifts anything:
+command rm -rf "$PRO_ROOT/pro"
+mkdir -p "$PRO_ROOT/extensions/acme/features" \
+  "$PRO_ROOT/extensions/acme/rules"
+printf 'name = heinzel-pro\nversion = 1.0.0\nheinzel = %s\n' "$MAJOR" \
+  > "$PRO_ROOT/extensions/acme/extension.conf"
+echo '# disks' > "$PRO_ROOT/extensions/acme/features/disks.md"
+check deny 'mkfs.ext4 /dev/sda1'
+check deny 'visudo'
+
+command rm -rf "$PRO_ROOT"
+HOOK=$REAL_HOOK
+
+# Every Pro rule goes through deny_pro and every safety rule
+# through deny. A count that moves means a rule changed sides:
+# look at it, then correct the number.
+PRO_RULES=$(grep -c '^ *deny_pro [a-z]* "' "$HOOK")
+SAFETY_RULES=$(grep -c '^ *deny "' "$HOOK")
+if [ "$PRO_RULES" -eq 45 ] && [ "$SAFETY_RULES" -eq 25 ]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL: guard has $PRO_RULES Pro rules and $SAFETY_RULES" \
+    "safety rules, expected 45 and 25"
+fi
+
 # --- no negated hit() may remain -------------------------------
 # A rule of the form  hit X && ! hit Y  evaluates Y against the
 # whole command string, so any unrelated flag disarms it (issue

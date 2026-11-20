@@ -144,6 +144,10 @@
 # and the variable changes nothing. An inline assignment of it
 # inside a proposed command is still denied: a model that tries
 # to disarm the guard is the thing to stop.
+#
+# Heinzel Pro, installed in pro/, lifts the disk, boot and access
+# rules feature by feature (see the Heinzel Pro section below).
+# It lifts no safety rule.
 
 INPUT=$(cat)
 
@@ -435,6 +439,44 @@ deny() {
   exit 0
 }
 
+# --- Heinzel Pro's work ---------------------------------------
+# Two kinds of rule live in this hook. The SAFETY rules hold for
+# everybody and nothing lifts them: powering off, sshd_config,
+# destroying SSH keys, the server lock, attack tools, a redirect
+# onto a computed target. They call deny.
+#
+# The PRO rules mark work plain heinzel does not do (CLAUDE.md ->
+# What Heinzel does not do): disks (filesystems, partition
+# tables, raw devices), boot (loaders, firmware variables) and
+# access (accounts, sudo, copying keys). They call deny_pro with
+# the feature's name, and that denies unless Heinzel Pro is
+# installed in pro/, valid for this heinzel version, and ships
+# features/<name>.md. bin/heinzel-extension pro-feature decides,
+# so the hook and the session agree on one answer.
+#
+# Scoped and closed on purpose: one feature lifts only its own
+# rules, a bare pro/ directory lifts nothing, and every doubt (no
+# script, a broken manifest, a version that does not fit, an
+# empty or linked feature file) is a deny. The root is found from
+# this file's own location, never from the environment, so no
+# variable in a proposed command can point the check elsewhere.
+GUARD_ROOT=$(cd "$(dirname "$0")/../.." 2>/dev/null && pwd) \
+  || GUARD_ROOT=""
+pro_lifts() {
+  [ -n "$GUARD_ROOT" ] || return 1
+  [ -f "$GUARD_ROOT/bin/heinzel-extension" ] || return 1
+  sh "$GUARD_ROOT/bin/heinzel-extension" pro-feature "$1" \
+    >/dev/null 2>&1
+}
+deny_pro() {
+  # $1 feature, $2 reason
+  pro_lifts "$1" && return 0
+  case "$1" in
+    disks) deny "$2; disk work is a Heinzel Pro feature" ;;
+    *) deny "$2" ;;
+  esac
+}
+
 # --- File-edit tools (file mode) ------------------------------
 # Edit, Write and NotebookEdit write a file with no command line
 # at all, so none of the rules below ever sees them: in local
@@ -549,24 +591,50 @@ never allowed, with a file-edit tool as little as with a command"
 with a file-edit tool as much as with a command"
   fi
   if target_hit "$FILEDEV"; then
-    deny "writing onto a raw disk device overwrites its content \
+    deny_pro disks "writing onto a raw disk device overwrites its content \
 and partition table"
   fi
   if target_hit "$SUDOERS"; then
-    deny "writing sudoers, a sudoers.d file or doas.conf grants or revokes \
+    deny_pro access "writing sudoers, a sudoers.d file or doas.conf grants or revokes \
 root rights; sudo work is a Heinzel Pro feature"
   fi
   if target_hit "$ACCOUNTS"; then
-    deny "writing an account file directly bypasses every check \
+    deny_pro access "writing an account file directly bypasses every check \
 useradd and passwd make; account work is a Heinzel Pro feature"
   fi
   if target_hit "$EFIVARS"; then
-    deny "writing a firmware variable can brick the board; boot \
+    deny_pro boot "writing a firmware variable can brick the board; boot \
 work is a Heinzel Pro feature"
   fi
   if target_hit "$LOCKFILE"; then
     deny "/etc/heinzel.conf is the server lock; only the \
 machine's owner changes it, never heinzel"
+  fi
+  # pro/ of this checkout decides what the PRO rules lift, so a
+  # file-edit tool never writes into it: with or without Pro
+  # installed, three small files there would otherwise switch the
+  # disk, boot and access rules off. bin/heinzel-extension is the
+  # one way in. The root is compared as the hook was called and
+  # with its links resolved, both without regard to case.
+  # Boundary, left open: a shell command that builds pro/ (cd,
+  # mkdir, cp, git clone, a link). That set cannot be closed by
+  # reading command strings, and this hook's own file is as
+  # writable as pro/ is.
+  if [ -n "$GUARD_ROOT" ]; then
+    SEEN=$(printf '%s\n%s\n%s\n%s\n' \
+      "$TARGET" "$MAPPED" "$ASCII" "$FOLDED" \
+      | LC_ALL=C tr 'A-Z' 'a-z')
+    REAL_ROOT=$(cd "$GUARD_ROOT" 2>/dev/null && pwd -P) \
+      || REAL_ROOT="$GUARD_ROOT"
+    for ROOT in "$GUARD_ROOT" "$REAL_ROOT"; do
+      PRO_AT=$(printf '%s' "$ROOT/pro/" | LC_ALL=C tr 'A-Z' 'a-z')
+      case "$SEEN" in
+        *"$PRO_AT"*)
+          deny "pro/ holds Heinzel Pro and decides what this \
+guard lifts; it is installed and updated with \
+bin/heinzel-extension, never written by hand" ;;
+      esac
+    done
   fi
   exit 0
 fi
@@ -645,21 +713,21 @@ fi
 # --- Filesystem creation --------------------------------------
 if hit '(^|[^[:alnum:]_.-])mkfs(\.[[:alnum:]]+)?([^[:alnum:]_.-]|$)'
 then
-  deny "mkfs destroys the filesystem on its target"
+  deny_pro disks "mkfs destroys the filesystem on its target"
 fi
 # newfs_msdos and friends: the suffix must be part of the match,
 # otherwise the trailing word boundary rejects the underscore.
 if hit '(^|[^[:alnum:]_.-])newfs([._][[:alnum:]]+)*([^[:alnum:]_.-]|$)'
 then
-  deny "newfs destroys the filesystem on its target"
+  deny_pro disks "newfs destroys the filesystem on its target"
 fi
 if hit '(^|[^[:alnum:]_.-])(mke2fs|mkntfs|mkdosfs|mkexfatfs|mkudffs|mkfs2?)([^[:alnum:]_.-]|$)'
 then
-  deny "this filesystem creator destroys the data on its target"
+  deny_pro disks "this filesystem creator destroys the data on its target"
 fi
 if hit '(^|[^[:alnum:]_.-])wipefs([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])(-a|--all|-o|--offset)'; then
-  deny "wipefs in write mode erases filesystem signatures"
+  deny_pro disks "wipefs in write mode erases filesystem signatures"
 fi
 
 # --- Partition table writers ----------------------------------
@@ -668,7 +736,7 @@ fi
 # lsblk, diskutil list.
 if hit_without '(^|[^[:alnum:]_.-])fdisk([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])-l'; then
-  deny "fdisk without -l opens the partition table for writing"
+  deny_pro disks "fdisk without -l opens the partition table for writing"
 fi
 # On OpenBSD -l takes a block count (fdisk -iy -l 20000 sd0) and
 # lists nothing, so -l followed by a number is no exemption. The
@@ -693,7 +761,7 @@ if hit "$FDISK"'[[:alnum:]"'\''\\]*l["'\''\\]*[[:space:]]+["'\''\\[:space:]]*[^-
   || hit "$FDISK"'[[:alnum:]"'\''\\]*[AegiRu]' \
   || hit '(^|[^[:alnum:]_.-])fdisk([[:space:]]+[^[:space:];|&]+)*[[:space:]]*[<>]+[[:space:]]*["'\''\\]*-'
 then
-  deny "fdisk -l with a block count is the OpenBSD geometry \
+  deny_pro disks "fdisk -l with a block count is the OpenBSD geometry \
 option, not a listing, and -A -e -g -i -R -u write the table or \
 the boot code (plain fdisk -l lists)"
 fi
@@ -709,21 +777,21 @@ fi
 # too, and so does a quote in the middle of a flag group.
 if hit '(^|[^[:alnum:]_.-])(disklabel|bsdlabel)([[:space:]]+[^[:space:];|&]+)*[[:space:]]+(-[Acdhprtv]*[^Acdhprtv[:space:]]|[^[:alnum:][:space:];|&/._>-])'
 then
-  deny "disklabel in a write form modifies the partition table \
+  deny_pro disks "disklabel in a write form modifies the partition table \
 (disklabel <disk> and disklabel -h <disk> read it)"
 fi
 # cfdisk has no read-only mode at all: it is the curses editor.
 if hit '(^|[^[:alnum:]_.-])cfdisk([^[:alnum:]_.-]|$)'; then
-  deny "cfdisk is an interactive partition editor with no \
+  deny_pro disks "cfdisk is an interactive partition editor with no \
 read-only mode"
 fi
 if hit_without '(^|[^[:alnum:]_.-])sfdisk([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])(-l|--list|-d|--dump|-V|--verify)'; then
-  deny "sfdisk in write mode modifies the partition table"
+  deny_pro disks "sfdisk in write mode modifies the partition table"
 fi
 if hit_without '(^|[^[:alnum:]_.-])c?gdisk([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])-l'; then
-  deny "gdisk without -l opens the partition table for writing"
+  deny_pro disks "gdisk without -l opens the partition table for writing"
 fi
 # sgdisk and parted both take SEVERAL actions per invocation, so
 # "allow when a read-only flag is present" cannot work: the read
@@ -736,42 +804,42 @@ fi
 if hit '(^|[^[:alnum:]_.-])sgdisk([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])(-[BcCdegGhIjklmnNorRstTuUzZ]|--(byte-swap-name|change-name|recompute-chs|delete|move-second-header|mbrtogpt|randomize-guids|hybrid|align-end|move-main-table|move-backup-table|load-backup|gpttombr|new|largest-new|clear|transpose|replicate|sort|typecode|transform-bsd|partition-guid|disk-guid|zap|zap-all))'
 then
-  deny "sgdisk write options modify the partition table"
+  deny_pro disks "sgdisk write options modify the partition table"
 fi
 if hit '(^|[^[:alnum:]_.-])parted([^[:alnum:]_.-]|$)' \
   && hit '((mklabel|mktable|mkpartfs|mkpart|rescue|resize)([[:space:]]|$)|(rm|set|toggle|name|move|resizepart)[[:space:]]+[0-9]|disk_(set|toggle)[[:space:]])'
 then
-  deny "parted write commands modify the partition table"
+  deny_pro disks "parted write commands modify the partition table"
 fi
 # growpart rewrites the partition entry to enlarge it. Its dry
 # run is the only read-only form, and the exemption is scoped
 # the same way as every other one here.
 if hit_without '(^|[^[:alnum:]_.-])growpart([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])(-N|--dry-run)([[:space:]]|$)'; then
-  deny "growpart rewrites the partition table to resize a \
+  deny_pro disks "growpart rewrites the partition table to resize a \
 partition"
 fi
 # FreeBSD and macOS GUID partition table editor. show is the
 # read-only verb and stays allowed.
 if hit '(^|[^[:alnum:]_.-])gpt[[:space:]]+(create|destroy|add|remove|modify|migrate|recover|resize|restore|boot|label|set|unset)([^[:alnum:]_-]|$)'
 then
-  deny "gpt write verbs modify the partition table"
+  deny_pro disks "gpt write verbs modify the partition table"
 fi
 # macOS: the tool people actually partition with. Verbs are
 # case-insensitive, hence hit_i.
 if hit_i '(^|[^[:alnum:]_.-])diskutil([^[:alnum:]_.-]|$)' \
   && hit_i '(erasedisk|erasevolume|eraseoptical|zerodisk|randomdisk|secureerase|partitiondisk|splitpartition|mergepartitions|resizevolume|reformat|deletecontainer|deletevolume|erasecontainer|destroycontainer|resizecontainer|appleraid[[:space:]]+(delete|create))'
 then
-  deny "diskutil erase and partition verbs destroy data or the \
+  deny_pro disks "diskutil erase and partition verbs destroy data or the \
 partition map"
 fi
 if hit 'gpart[[:space:]]+(create|add|delete|destroy|modify|resize|bootcode|recover|set|undo|commit)'
 then
-  deny "gpart write verbs modify the partition table"
+  deny_pro disks "gpart write verbs modify the partition table"
 fi
 if hit '(^|[^[:alnum:]_-])dd([^[:alnum:]_-]|$)' \
   && hit 'of=["'\'']?/dev/'; then
-  deny "dd onto a raw device overwrites disk content and \
+  deny_pro disks "dd onto a raw device overwrites disk content and \
 partition table"
 fi
 
@@ -779,28 +847,28 @@ fi
 # These leave the partition table intact and destroy everything
 # it points at, which is the same effect by another route.
 if hit '(^|[^[:alnum:]_.-])blkdiscard([^[:alnum:]_.-]|$)'; then
-  deny "blkdiscard discards every block on the device"
+  deny_pro disks "blkdiscard discards every block on the device"
 fi
 if hit '(^|[^[:alnum:]_.-])nvme[[:space:]]+(format|sanitize|write|delete-ns|create-ns|attach-ns|detach-ns|security-send|copy|dsm|zns)'
 then
-  deny "this nvme subcommand overwrites or destroys namespace \
+  deny_pro disks "this nvme subcommand overwrites or destroys namespace \
 data"
 fi
 if hit '(^|[^[:alnum:]_.-])hdparm([^[:alnum:]_.-]|$)' \
   && hit '(--security-(erase|erase-enhanced|set-pass|unlock|disable)|--trim-sector-ranges|--make-bad-sector|--write-sector|--dco-(restore|setmax)|--repair-sector)'
 then
-  deny "this hdparm option erases the drive or writes raw \
+  deny_pro disks "this hdparm option erases the drive or writes raw \
 sectors"
 fi
 # badblocks -w is the destructive read-write test. -n and -sv
 # are non-destructive and stay allowed.
 if hit '(^|[^[:alnum:]_.-])badblocks([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])-[[:alnum:]]*w'; then
-  deny "badblocks -w overwrites the device while testing it"
+  deny_pro disks "badblocks -w overwrites the device while testing it"
 fi
 if hit '(^|[^[:alnum:]_.-])shred([^[:alnum:]_.-]|$)' \
   && hit "$DEV"; then
-  deny "shred on a disk device overwrites the whole device"
+  deny_pro disks "shred on a disk device overwrites the whole device"
 fi
 
 # True when the command writes INTO a path matching $1 (a regex
@@ -840,7 +908,7 @@ writes_to() {
 if hit ">[[:space:]]*[\"']?$DEV" \
   || { hit "$DEV" && writes_to "${DEV}[[:alnum:]]*"; }
 then
-  deny "writing onto a raw disk device overwrites its content \
+  deny_pro disks "writing onto a raw disk device overwrites its content \
 and partition table"
 fi
 
@@ -923,33 +991,33 @@ fi
 if hit '(^|[^[:alnum:]_.-])efibootmgr([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])(-[bBcCaAoOnNtTDwy@]|--(bootnum|delete-bootnum|create|create-only|active|inactive|bootorder|delete-bootorder|bootnext|delete-bootnext|timeout|delete-timeout|remove-dups|write-signature|sysprep|delete|append-binary-args|label|loader|disk|part))([[:space:]]|=|$)'
 then
-  deny "efibootmgr in a write form changes the boot entries or \
+  deny_pro boot "efibootmgr in a write form changes the boot entries or \
 the boot order (efibootmgr -v reads them); boot work is a \
 Heinzel Pro feature"
 fi
 if hit_without '(^|[^[:alnum:]_.-])grub2?-install([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])(-V|--version|--help)([[:space:]]|$)'; then
-  deny "grub-install rewrites the boot loader; boot work is a \
+  deny_pro boot "grub-install rewrites the boot loader; boot work is a \
 Heinzel Pro feature"
 fi
 if hit '(^|[^[:alnum:]_.-])update-grub2?([^[:alnum:]_.-]|$)' \
   || { hit '(^|[^[:alnum:]_.-])grub2?-mkconfig([^[:alnum:]_.-]|$)' \
        && hit '(^|[[:space:]])(-o|--output)([[:space:]]|=)'; }
 then
-  deny "update-grub and grub-mkconfig -o rewrite the boot loader \
+  deny_pro boot "update-grub and grub-mkconfig -o rewrite the boot loader \
 config (grub-mkconfig without -o only prints it); boot work is \
 a Heinzel Pro feature"
 fi
 if hit '(^|[^[:alnum:]_.-])bootctl([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])(install|update|remove|cleanup|unlink|set-default|set-oneshot|set-timeout|set-timeout-oneshot|random-seed|reboot-to-firmware)([[:space:]]|$)'
 then
-  deny "this bootctl verb installs, removes or reconfigures the \
+  deny_pro boot "this bootctl verb installs, removes or reconfigures the \
 boot loader (bootctl status and list read it); boot work is a \
 Heinzel Pro feature"
 fi
 if hit_without '(^|[^[:alnum:]_.-])bless([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])(--info|--getBoot|--version|--help)([[:space:]]|$)'; then
-  deny "bless in a write form changes what the Mac boots \
+  deny_pro boot "bless in a write form changes what the Mac boots \
 (bless --info and --getBoot read it); boot work is a Heinzel \
 Pro feature"
 fi
@@ -961,12 +1029,12 @@ fi
 # -r takes one, so in -r -n the -n is the root directory.
 if hit_without '(^|[^[:alnum:]_.-])installboot([^[:alnum:]_.-]|$)' \
   '^[^[:alnum:]]?installboot([[:space:]]+-[cnpv]+)*[[:space:]]+-[cpv]*n[cnpv]*([[:space:]"'\'']|$)'; then
-  deny "installboot rewrites the boot blocks (installboot -n is \
+  deny_pro boot "installboot rewrites the boot blocks (installboot -n is \
 the dry run); boot work is a Heinzel Pro feature"
 fi
 if hit '(^|[^[:alnum:]_.-])efivar([^[:alnum:]_.-]|$)' \
   && hit '(^|[[:space:]])(-w|--write|-a|--append)([[:space:]]|$)'; then
-  deny "efivar -w writes a firmware variable; boot work is a \
+  deny_pro boot "efivar -w writes a firmware variable; boot work is a \
 Heinzel Pro feature"
 fi
 if hit "$EFIVARS"; then
@@ -975,7 +1043,7 @@ if hit "$EFIVARS"; then
     || hit '(^|[[:space:]])-delete([[:space:]]|$)' \
     || writes_to "$EFIVARS"
   then
-    deny "writing to or deleting under the efivars mount changes \
+    deny_pro boot "writing to or deleting under the efivars mount changes \
 firmware variables and can brick the board (cat and ls read \
 them); boot work is a Heinzel Pro feature"
   fi
@@ -997,18 +1065,18 @@ if hit '(^|[^[:alnum:]_.-])(userdel|deluser|luserdel|rmuser|groupdel|delgroup|lg
   || hit '(^|[^[:alnum:]_.-])sysadminctl[[:space:]].*-deleteUser([^[:alnum:]_-]|$)' \
   || hit '(^|[^[:alnum:]_.-])dscl[[:space:]].*-delete[[:space:]]+/(Users|Groups)/'
 then
-  deny "deleting an account or a group locks people out and \
+  deny_pro access "deleting an account or a group locks people out and \
 cannot be undone; account work is a Heinzel Pro feature"
 fi
 # visudo edits sudoers; visudo -c only checks a file.
 if hit_without '(^|[^[:alnum:]_.-])visudo([^[:alnum:]_.-]|$)' \
   '(^|[[:space:]])-c([[:space:]]|$)'; then
-  deny "visudo edits sudoers, and one bad line locks everybody \
+  deny_pro access "visudo edits sudoers, and one bad line locks everybody \
 out of sudo (visudo -c only checks); sudo work is a Heinzel Pro \
 feature"
 fi
 if hit '(^|[^[:alnum:]_.-])(vipw|vigr)([^[:alnum:]_.-]|$)'; then
-  deny "vipw and vigr edit the account files in place; account \
+  deny_pro access "vipw and vigr edit the account files in place; account \
 work is a Heinzel Pro feature"
 fi
 # ssh-copy-id widens access rather than locking anyone out, but
@@ -1017,7 +1085,7 @@ fi
 # write rules on KEY already stop a hand-made append. Accepted
 # false positive: man ssh-copy-id.
 if hit '(^|[^[:alnum:]_.-])ssh-copy-id([^[:alnum:]_.-]|$)'; then
-  deny "ssh-copy-id puts a key on another host or account; copying \
+  deny_pro access "ssh-copy-id puts a key on another host or account; copying \
 keys is a Heinzel Pro feature. Name the command for the user to run \
 and check the result read-only"
 fi
@@ -1029,7 +1097,7 @@ if hit "$SUDOERS"; then
     || hit "(^|[^[:alnum:]_-])($CLOBBER|cp)([^[:alnum:]_-]|\$)" \
     || writes_to "$SUDOERS"
   then
-    deny "writing sudoers, a sudoers.d file or doas.conf grants or revokes \
+    deny_pro access "writing sudoers, a sudoers.d file or doas.conf grants or revokes \
 root rights (cat and visudo -c read it); sudo work is a Heinzel \
 Pro feature"
   fi
@@ -1042,7 +1110,7 @@ if hit "$ACCOUNTS"; then
     || hit "(^|[^[:alnum:]_-])($CLOBBER|cp)([^[:alnum:]_-]|\$)" \
     || writes_to "$ACCOUNTS"
   then
-    deny "writing an account file directly bypasses every check \
+    deny_pro access "writing an account file directly bypasses every check \
 useradd and passwd make (getent, grep and awk read them); \
 account work is a Heinzel Pro feature"
   fi
@@ -1115,17 +1183,17 @@ can rewrite it, and a pattern matcher cannot tell that from a \
 read - read it with cat, grep or sshd -T instead"
   fi
   if hit "$DEV"; then
-    deny "an interpreter with a raw disk device on its command \
+    deny_pro disks "an interpreter with a raw disk device on its command \
 line can overwrite the device, which destroys everything the \
 partition table points at"
   fi
   if hit "$SUDOERS"; then
-    deny "an interpreter with sudoers on its command line can \
+    deny_pro access "an interpreter with sudoers on its command line can \
 rewrite it, and a pattern matcher cannot tell that from a read \
 - read it with cat or visudo -c instead"
   fi
   if hit "$EFIVARS"; then
-    deny "an interpreter with the efivars mount on its command \
+    deny_pro boot "an interpreter with the efivars mount on its command \
 line can write a firmware variable - read them with cat or ls \
 instead"
   fi
@@ -1135,7 +1203,7 @@ line can lift the server lock - read it with cat or grep instead"
   fi
 fi
 if hit "$INTERP_NOAWK" && hit "$ACCOUNTS"; then
-  deny "an interpreter with an account file on its command line \
+  deny_pro access "an interpreter with an account file on its command line \
 can rewrite it, and a pattern matcher cannot tell that from a \
 read - read it with getent, grep or awk instead"
 fi

@@ -1,5 +1,37 @@
 # Changelog
 
+## 3.8.0 — 2026-11-20
+
+- **Extensions.** A rule pack from somebody else, or
+  your own for your team, lives in
+  `extensions/<name>/`: rule files, a manifest
+  (`extension.conf`) and a licence, in its own git
+  repository. `bin/heinzel-extension` installs,
+  updates, removes, scaffolds and lints them. An
+  extension holds rules only, takes `Add:` only on
+  the protected rules, and updates after you have
+  seen the diff. The guide is `docs/extensions.md`.
+- **Heinzel Pro installs into `pro/`.** Pro
+  customers can do Pro's technical work in their own
+  checkout. Each refusal has a feature name
+  (`disks`, `boot`, `access`, `secrets`,
+  `unattended`, `fleet`, `shared`), and Pro lifts
+  the ones it ships a file for. `pro/` is updated
+  together with heinzel and is not MIT.
+- **The guard separates safety from Pro.** Power
+  off, `sshd_config`, SSH keys, the server lock and
+  attack tools stay blocked for everybody. The
+  disk, boot and account rules lift for an
+  installed Pro feature and for nothing else: a
+  bare `pro/` directory, a Pro for another major
+  version or an empty feature file changes nothing.
+  The file-edit tools cannot write into `pro/`.
+- **The override chain has two more layers.** Base,
+  Heinzel Pro, extensions, your custom rules, the
+  server's rules. Your own rules still win.
+- **The session start lists active extensions.**
+  Nothing is printed when none is installed.
+
 ## 3.7.0 — 2026-11-18
 
 - **heinzel names the command for a Heinzel Pro

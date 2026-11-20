@@ -23,6 +23,8 @@ applies before any of this runs.
 
 1. **Load overrides.** Before running any check, apply the full
    heinzel rule-override chain (later wins):
+   - `rules/heinzel-security.md` of Heinzel Pro and of each active
+     extension, if present (`rules/extensions.md`).
    - `memory/custom-rules/heinzel-security.md` if present (global
      custom overrides for this skill — `## Add:`, `## Replace:`,
      `## Remove:` prefixes per `CLAUDE.md`).

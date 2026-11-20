@@ -25,6 +25,19 @@ jobs:
       - name: OS rule files carry every section
         run: sh bin/heinzel-lint-rules
 
+      # Manifest checks, the Add-only rule for protected
+      # rule files, install, update with the diff shown
+      # first, and Heinzel Pro's feature switch that the
+      # guard asks.
+      - name: Extension tests
+        run: sh bin/heinzel-extension-test
+
+      # pro/ and extensions/ hold other people's files
+      # under other licences. None may be tracked here,
+      # and no file may carry Heinzel Pro's licence header.
+      - name: No Pro or extension file is tracked
+        run: sh bin/heinzel-extension check-core
+
       - name: Validate tracked JSON files
         run: |
           git ls-files '*.json' | while read -r f; do

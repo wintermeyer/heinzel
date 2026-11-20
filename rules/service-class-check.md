@@ -63,7 +63,7 @@ and fight for the same role.
 - **Container runtime:** docker.io, docker-ce,
   moby-engine, podman, containerd.io
 
-Extensions live in
+Additions live in
 `memory/custom-rules/service-class-check.md` using
 the repo's standard `## Add:`, `## Replace:`, and
 `## Remove:` heading prefixes. Per-host overrides

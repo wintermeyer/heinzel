@@ -19,5 +19,16 @@ Bug reports, ideas and pull requests are welcome.
   README. The other rule files point to those
   sections by name: do not add a branch per OS to
   them. CI runs the lint.
+- Never copy a file or text from `pro/` or from
+  somebody's extension into a pull request: they are
+  not MIT. CI rejects a file with Heinzel Pro's
+  licence header and anything tracked under `pro/`
+  or `extensions/`. A change to
+  `bin/heinzel-extension` needs a case in
+  `bin/heinzel-extension-test`.
+- In the guard, a rule is either a safety rule
+  (`deny`) or Heinzel Pro's work (`deny_pro
+  <feature>`). The test matrix counts both; a new
+  rule changes one of the two numbers there.
 - A rule names the effect it guards against, never a
   list of binaries. See the head of the hook for why.

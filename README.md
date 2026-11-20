@@ -154,6 +154,12 @@ and firewall change stay in Heinzel. Heinzel Pro runs as a
 container, hosted or on your own servers; the details are on
 [heinzel-pro.de](https://heinzel-pro.de).
 
+Heinzel Pro customers can also do Pro's technical work in
+their own Heinzel checkout: the Pro rule pack installs into
+`pro/` and lifts the refusals feature by feature. It is
+commercial, not MIT. See
+[docs/extensions.md](docs/extensions.md#heinzel-pro).
+
 ## Safety & guardrails
 
 The safety rules are part of every session.
@@ -173,9 +179,10 @@ The safety rules are part of every session.
   them inside `ssh host "…"`, behind `python3 -c` and when
   the file-edit tools target one of those files. Read-only forms
   (`fdisk -l`, `efibootmgr -v`, `visudo -c`) stay allowed.
-  The hook has no off switch: what it blocks is Heinzel Pro's
-  work. OpenCode does not run this hook; there the written
-  rules are the safety layer.
+  The hook has no off switch. An installed Heinzel Pro lifts
+  its disk, boot and account rules feature by feature and
+  none of the others. OpenCode does not run this hook; there
+  the written rules are the safety layer.
 - **Verifies before it reports.** "It is gone since the
   reboot" gets checked against the live system first
   (`rules/verify-before-reporting.md`).
@@ -330,11 +337,13 @@ rights, approvals and an audit trail, is Heinzel Pro.
 ## Rule customization
 
 Change behaviour without editing the upstream rule files.
-Three layers, later wins:
+Later wins:
 
 1. `rules/<name>.md` (upstream)
-2. `memory/custom-rules/<name>.md` (yours, all servers)
-3. `memory/servers/<hostname>/rules.md` (one server)
+2. `pro/` and `extensions/<name>/` (rule packs you
+   installed, see [Extensions](#extensions))
+3. `memory/custom-rules/<name>.md` (yours, all servers)
+4. `memory/servers/<hostname>/rules.md` (one server)
 
 ```markdown
 ## Add: Docker cleanup
@@ -354,6 +363,34 @@ follow the same chain, e.g.
 take additions only: the ethics rule, the guard's taboos,
 the connection pipeline, anomaly detection, secrets hygiene
 and the Heinzel Pro refusals cannot be replaced or removed.
+
+## Extensions
+
+Rules that should travel go into an extension: a directory
+of rule files with a version and a licence, in its own git
+repository. Install one somebody wrote, or write your own
+for your team.
+
+```bash
+bin/heinzel-extension add <git url>     # install
+bin/heinzel-extension status            # what is active
+bin/heinzel-extension update <name>     # shows the diff first
+bin/heinzel-extension new team-rules    # start your own
+bin/heinzel-extension lint team-rules   # check it
+```
+
+A rule file named like one of Heinzel's extends that rule:
+
+```markdown
+<!-- extensions/team-rules/rules/debian.md -->
+## Replace: Package Manager
+Use `nala` for every install, upgrade and removal.
+```
+
+An extension holds rules, never scripts, and cannot weaken
+the protected rules or the guard. It updates only after you
+have seen the diff. The guide with examples for every step
+is [docs/extensions.md](docs/extensions.md).
 
 ## Updates
 
@@ -448,8 +485,13 @@ rules/           rule files per platform and topic
 .claude/skills/  housekeeping, security, email, macOS cleanup
 .claude/hooks/   update check and the taboo guard
 bin/             heinzel-update, heinzel-backup,
-                 heinzel-migrate
+                 heinzel-migrate, heinzel-extension
+docs/            the extension guide
 memory/          your state (gitignored)
+extensions/      rule packs you installed (gitignored,
+                 not MIT)
+pro/             Heinzel Pro, if installed (gitignored,
+                 not MIT)
 assets/trailer/  script that renders the README trailer
 ```
 
@@ -475,4 +517,6 @@ also end up in Heinzel Pro.
 
 ## License
 
-MIT
+MIT. That covers this repository. `extensions/` and `pro/`
+hold other people's rule packs under their own licences;
+Heinzel Pro is commercial.

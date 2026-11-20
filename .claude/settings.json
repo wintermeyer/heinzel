@@ -4,8 +4,7 @@
       "Bash(halt)",
       "Bash(halt *)",
       "Bash(poweroff)",
-      "Bash(poweroff *)",
-      "Bash(mkfs*)"
+      "Bash(poweroff *)"
     ]
   },
   "hooks": {
@@ -15,8 +14,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-updates.sh\"",
-            "timeout": 15
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-updates.sh\"; sh \"$CLAUDE_PROJECT_DIR/bin/heinzel-extension\" status",
+            "timeout": 25
+          }
+        ]
+      },
+      {
+        "matcher": "resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/bin/heinzel-extension\" status",
+            "timeout": 5
           }
         ]
       },
