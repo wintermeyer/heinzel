@@ -154,6 +154,14 @@ safe() {
     | cut -c1-200
 }
 
+# One name: no spaces, so a file or directory name cannot read
+# as a sentence in the status output.
+tok() {
+  printf '%s' "$1" \
+    | LC_ALL=C tr -c 'A-Za-z0-9._/-' '?' \
+    | cut -c1-60
+}
+
 validate() {
   V_RC=0
   validate_raw "$@" || V_RC=$?
@@ -205,7 +213,7 @@ validate_raw() {
         return 1 ;;
     esac
     if [ -z "$V_ANY" ] && [ "$V_NAME" != "$(basename "$V_DIR")" ]; then
-      V_REASON="directory is '$(basename "$V_DIR")' but extension.conf says '$V_NAME'"
+      V_REASON="directory is '$(tok "$(basename "$V_DIR")")' but extension.conf says '$V_NAME'"
       return 1
     fi
   fi
@@ -241,7 +249,7 @@ validate_raw() {
     return 1
   fi
   if [ "$V_TIER" = ext ]; then
-    V_BAD=$(tree_problem "$V_DIR")
+    V_BAD=$(tok "$(tree_problem "$V_DIR")")
     if [ -n "$V_BAD" ]; then
       V_REASON="holds more than rules: $V_BAD"
       return 1
@@ -279,7 +287,7 @@ rule_names() {
   NAMES=""
   for F in "$1/$2"/*.md; do
     [ -f "$F" ] || continue
-    B=$(basename "$F" .md)
+    B=$(tok "$(basename "$F" .md)")
     NAMES="$NAMES $B"
   done
   safe "${NAMES# }"
@@ -313,7 +321,7 @@ status_line() {
       echo "    ignored: $L"
     done
   else
-    echo "  ${V_NAME:-$(safe "$(basename "$1")")} ($3): INACTIVE, $V_REASON"
+    echo "  ${V_NAME:-$(tok "$(basename "$1")")} ($3): INACTIVE, $V_REASON"
   fi
 }
 
@@ -323,7 +331,7 @@ cmd_status() {
   for D in "$EXT_DIR"/*/; do
     [ -d "$D" ] || continue
     D=${D%/}
-    L=$(status_line "$D" ext "extensions/$(safe "$(basename "$D")")/")
+    L=$(status_line "$D" ext "extensions/$(tok "$(basename "$D")")/")
     LINES="$LINES${LINES:+
 }$L"
   done
